@@ -66,9 +66,46 @@ develop ──────────────┐
 새 기능/개선 → develop에서 새 feature 브랜치 생성
 
 ## 🛠 초기 설정 (최초 1회만)
+### 0. 레포 클론
 ```bash
 git clone https://github.com/JuniorNaver/OrderFlow-Frontend.git   # 레포 클론
 cd OrderFlow-Frontend
-git checkout -b develop          # main에서 develop 생성
-git push -u origin develop       # 원격에 develop 반영
+git checkout develop          # develop 브랜치로 이동
 ```
+
+## ⚙️ 실행 환경 세팅 (이것도 최초 1회만)
+
+### 1. 터미널 열기
+Windows: VS Code에서 Ctrl + ~ (틸드) → 내장 터미널 열기
+
+Mac: Command + J → 내장 터미널 열기
+
+또는 프로젝트 폴더(OrderFlow-Frontend) 안에서 마우스 우클릭 → 터미널 열기
+
+### 2. 라이브러리 설치
+```bash
+npm install
+npm install react-router-dom
+```
+package.json에 정의된 React, Vite 등 모든 라이브러리를 자동 설치합니다.
+
+처음 클론한 팀원이라면 반드시 1회 실행 필요합니다.
+
+node_modules/ 폴더가 생성되면 정상 설치된 것.
+
+### 🚀 개발 서버 실행
+```bash
+npm run dev
+```
+
+개발 서버 실행 후 터미널에 주소가 출력됩니다.
+예:
+```bash
+VITE v5.2.0  ready in 123 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+```
+이 주소를 브라우저 주소창에 입력하면 앱이 실행됩니다.
+
+코드 저장 시 자동 반영(Hot Reload) → 새로고침 필요 없음.
