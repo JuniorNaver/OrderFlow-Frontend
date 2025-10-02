@@ -14,6 +14,13 @@ import NotFound from "./common/components/NotFound";
 // import SDPage from "./features/SD/pages/SDPage";
 import BIPage from "./features/BI/pages/BIPage";
 
+// POS (SD 메인 + 세분화)
+import POSDashboard from "./features/SD/pages/POSDashboard";
+// import Payment from "./features/SD/pages/Payment";
+// import Refund from "./features/SD/pages/Refund";
+// import Sales from "./features/SD/pages/Sales";
+// import Receipt from "./features/SD/pages/Receipt";
+
 // 전역 UI
 import Header from "./components/Header";
 
@@ -21,22 +28,32 @@ function App() {
   return (
     <Router>
       <Header />
-      <Routes>
-        {/* 공용 */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
+      {/* 헤더 높이만큼 아래로 밀어주기 */}
+      <main className="pt-16 px-4">
+        <Routes>
+          {/* 공용 */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
 
-        {/* 도메인 */}
-        {/* <Route path="/pr" element={<PRPage />} /> */}
-        {/* <Route path="/po" element={<POPage />} /> */}
-        {/* <Route path="/gr" element={<GRPage />} /> */}
-        {/* <Route path="/stk" element={<STKPage />} /> */}
-        {/* <Route path="/sd" element={<SDPage />} /> */}
-        <Route path="/bi" element={<BIPage />} />
+          {/* 도메인 */}
+          {/* <Route path="/pr" element={<PRPage />} /> */}
+          {/* <Route path="/po" element={<POPage />} /> */}
+          {/* <Route path="/gr" element={<GRPage />} /> */}
+          {/* <Route path="/stk" element={<STKPage />} /> */}
+          {/* <Route path="/sd" element={<SDPage />} /> */}
+          <Route path="/bi" element={<BIPage />} />
 
-        {/* Fallback */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* POS (SD 메인 + 세분화) */}
+          <Route path="/sd" element={<POSDashboard />} />
+          {/* <Route path="/sd/payment" element={<Payment />} />
+        <Route path="/sd/refund" element={<Refund />} />
+        <Route path="/sd/sales" element={<Sales />} />
+        <Route path="/sd/receipt" element={<Receipt />} /> */}
+
+          {/* Fallback */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
     </Router>
   );
 }
