@@ -84,14 +84,20 @@ Mac: Command + J → 내장 터미널 열기
 
 ### 2. 라이브러리 설치
 ```bash
-npm install
-npm install react-router-dom
+npm install                              # package.json에 정의된 모든 기본 라이브러리 설치 (React, Vite 등)
+
+npm install react-router-dom             # 라우팅(페이지 이동) 라이브러리
+npm install @reduxjs/toolkit react-redux # 전역 상태 관리 (Redux 공식 툴킷 + React 연결)
+npm install @tanstack/react-query        # 서버 상태 관리 (API 통신 + 캐싱 + 자동 리페치)
+npm install axios                        # fetch 대신 더 편리한 HTTP 통신 라이브러리
 ```
-package.json에 정의된 React, Vite 등 모든 라이브러리를 자동 설치합니다.
+npm install → package.json에 정의된 기본 라이브러리를 모두 설치합니다.
 
-처음 클론한 팀원이라면 반드시 1회 실행 필요합니다.
+그 외 라이브러리들은 프로젝트 기능 구현에 필요한 추가 설치입니다.
 
-node_modules/ 폴더가 생성되면 정상 설치된 것.
+처음 클론한 팀원이라면 반드시 위 과정을 1회 실행해야 합니다.
+
+설치가 끝나면 node_modules/ 폴더가 생성되며, 정상 설치된 것입니다.
 
 ### 🚀 개발 서버 실행
 ```bash
