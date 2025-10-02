@@ -1,3 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 공통 스타일 */
+body {
+  @apply bg-gray-50 text-gray-800;
+}
+
+header {
+  @apply sticky top-0 z-50;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
