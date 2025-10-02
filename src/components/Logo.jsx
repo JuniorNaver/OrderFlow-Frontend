@@ -1,7 +1,21 @@
-// src/components/Logo.jsx
-export default function Logo({ size = 28 }) {
+import { useNavigate } from "react-router-dom";
+
+export default function Logo({ size = 28, isPOS = false }) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (isPOS) {
+      navigate("/sd");   // POS 모드일 때
+    } else {
+      navigate("/");     // ERP 모드일 때
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 select-none">
+    <div
+      onClick={handleClick}
+      className="flex items-center gap-2 select-none cursor-pointer"
+    >
       {/* 아이콘 (그래프) */}
       <svg
         xmlns="http://www.w3.org/2000/svg"

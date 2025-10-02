@@ -1,45 +1,17 @@
 import { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Menu, Settings } from "lucide-react";
 import Logo from "./Logo";
 import Drawer from "./Drawer";
 
-export default function Header() {
-  const [isPOS, setIsPOS] = useState(false);
+export default function Header({ menus, isPOS, togglePOS }) {
   const [dateTime, setDateTime] = useState(new Date());
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => setDateTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const togglePOS = () => {
-    setIsPOS(!isPOS);
-    if (!isPOS) {
-      navigate("/sd");
-    } else {
-      navigate("/bi");
-    }
-  };
-
-  const posMenus = [
-    { label: "결제", path: "/sd/payment" },
-    { label: "환불", path: "/sd/refund" },
-    { label: "판매내역 조회", path: "/sd/sales" },
-    { label: "영수증 조회", path: "/sd/receipt" },
-  ];
-
-  const stockMenus = [
-    { label: "발주(PR)", path: "/pr" },
-    { label: "발주(PO)", path: "/po" },
-    { label: "입고(GR)", path: "/gr" },
-    { label: "재고관리(STK)", path: "/stk" },
-    { label: "BI 대시보드", path: "/bi" },
-  ];
-
-  const menus = isPOS ? posMenus : stockMenus;
 
   return (
     <header className="fixed top-0 left-0 w-full h-16 flex items-center justify-between px-4 shadow-md bg-white z-50">
@@ -82,10 +54,10 @@ export default function Header() {
         </div>
 
         {/* 로고 */}
-        <Logo />
+        <Logo isPOS={isPOS} />
       </div>
 
-      {/* 네비게이션 (데스크톱 전용) */}
+      {/* 네비게이션 (데스크톱 전용 → 항상 상위 메뉴만) */}
       <nav className="flex-1 justify-center gap-6 hidden md:flex">
         {menus.map((menu) => (
           <NavLink
@@ -114,13 +86,13 @@ export default function Header() {
         </button>
       </div>
 
-      {/* 분리된 Drawer 컴포넌트 */}
+      {/* Drawer (상위 + 선택된 메뉴의 하위 메뉴까지) */}
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        menus={menus}
         isPOS={isPOS}
         togglePOS={togglePOS}
-        menus={menus}
       />
     </header>
   );
