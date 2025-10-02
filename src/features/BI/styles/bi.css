@@ -1,0 +1,128 @@
+/* =============== OrderFlow BI – scoped base =============== */
+:root {
+  --bi-bg: #f8fafc;         /* slate-50 */
+  --bi-text: #0f172a;       /* slate-900 */
+  --bi-muted: #475569;      /* slate-600 */
+  --bi-border: #e2e8f0;     /* slate-200 */
+  --bi-card: #ffffff;       /* white */
+  --bi-ring: 0 0 0 3px rgba(59, 130, 246, 0.3); /* focus ring */
+}
+
+.bi {
+  color: var(--bi-text);
+  background: var(--bi-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =============== Cards & layout helpers =================== */
+.bi .card {
+  background: var(--bi-card);
+  border: 1px solid var(--bi-border);
+  border-radius: 1rem;      /* rounded-2xl */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.bi .card-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bi .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--bi-border);
+  border-radius: 0.75rem;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.bi .btn:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.bi .btn:focus-visible { outline: none; box-shadow: var(--bi-ring); }
+
+/* =============== Skeleton (로딩 플레이스홀더) ============ */
+.bi .skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400% 100%;
+  animation: bi-skeleton 1.2s ease-in-out infinite;
+  border-radius: 1rem;
+  border: 1px solid var(--bi-border);
+}
+@keyframes bi-skeleton {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* =============== Recharts polish ========================== */
+.recharts-wrapper, .recharts-surface, .recharts-default-legend {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+  font-size: 12px;
+  color: var(--bi-text);
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #e2e8f0; /* slate-200 */
+}
+
+.recharts-tooltip-wrapper {
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.08));
+}
+.recharts-default-tooltip {
+  background: #ffffff !important;
+  border: 1px solid var(--bi-border) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.5rem 0.625rem !important;
+}
+
+/* 파이 차트 라벨이 겹칠 때 줄간격 보정 */
+.recharts-pie-label-text {
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+}
+
+/* =============== Forms ==================================== */
+.bi select, .bi input[type="date"] {
+  border: 1px solid var(--bi-border);
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+}
+.bi select:focus, .bi input[type="date"]:focus {
+  outline: none; box-shadow: var(--bi-ring);
+}
+
+/* =============== Badges (상태 표시) ======================= */
+.bi .badge {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.15rem 0.5rem; border-radius: 9999px;
+  font-size: 0.75rem; line-height: 1rem; font-weight: 600;
+  border: 1px solid var(--bi-border); background: #fff;
+}
+.bi .badge--warn { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }  /* amber */
+.bi .badge--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; } /* red  */
+
+/* =============== Print & dark mode ========================= */
+@media print {
+  .bi header { position: static !important; box-shadow: none !important; }
+  .bi .btn { display: none !important; }
+  .bi .card { break-inside: avoid; box-shadow: none; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bi-bg: #0b1220;
+    --bi-text: #e5e7eb;
+    --bi-muted: #9ca3af;
+    --bi-border: #1f2a37;
+    --bi-card: #0f172a;
+  }
+  .recharts-cartesian-grid-horizontal line,
+  .recharts-cartesian-grid-vertical line { stroke: #263244; }
+  .recharts-default-tooltip {
+    background: #111827 !important; border-color: #374151 !important; color: #e5e7eb;
+  }
+}
