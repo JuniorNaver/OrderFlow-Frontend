@@ -86,10 +86,12 @@ Mac: Command + J → 내장 터미널 열기
 ```bash
 npm install                              # package.json에 정의된 모든 기본 라이브러리 설치 (React, Vite 등)
 
-npm install react-router-dom             # 라우팅(페이지 이동) 라이브러리
+# 하단 라이브러리들은 이미 package.json에 정의되어있기에 상단 npm install만 시행해주면 됨
+npm install react-router-dom             # 라우팅 (페이지 이동)
 npm install @reduxjs/toolkit react-redux # 전역 상태 관리 (Redux 공식 툴킷 + React 연결)
-npm install @tanstack/react-query        # 서버 상태 관리 (API 통신 + 캐싱 + 자동 리페치)
-npm install axios                        # fetch 대신 더 편리한 HTTP 통신 라이브러리
+npm install @tanstack/react-query        # 서버 상태 관리 (API 통신 캐싱, 자동 리페치)
+npm install axios                        # HTTP 통신 라이브러리
+npm install recharts                     # 차트 라이브러리 (BI 시각화)
 ```
 npm install → package.json에 정의된 기본 라이브러리를 모두 설치합니다.
 
