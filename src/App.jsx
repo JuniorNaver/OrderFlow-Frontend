@@ -12,7 +12,7 @@ import NotFound from "./common/components/NotFound";
 // import GRPage from "./features/GR/pages/GRPage";
 // import STKPage from "./features/STK/pages/STKPage";
 // import SDPage from "./features/SD/pages/SDPage";
-// import BIPage from "./features/BI/pages/BIPage";
+import BIPage from "./features/BI/pages/BIPage";
 
 // 전역 UI
 import Header from "./components/Header";
@@ -27,12 +27,12 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         {/* 도메인 */}
-        {/* <Route path="/pr" element={<PRPage />} />
-        <Route path="/po" element={<POPage />} />
-        <Route path="/gr" element={<GRPage />} />
-        <Route path="/stk" element={<STKPage />} />
-        <Route path="/sd" element={<SDPage />} />
-        <Route path="/bi" element={<BIPage />} /> */}
+        {/* <Route path="/pr" element={<PRPage />} /> */}
+        {/* <Route path="/po" element={<POPage />} /> */}
+        {/* <Route path="/gr" element={<GRPage />} /> */}
+        {/* <Route path="/stk" element={<STKPage />} /> */}
+        {/* <Route path="/sd" element={<SDPage />} /> */}
+        <Route path="/bi" element={<BIPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />
