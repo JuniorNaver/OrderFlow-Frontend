@@ -84,7 +84,7 @@ Mac: Command + J → 내장 터미널 열기
 
 ### 2. 라이브러리 설치
 ```bash
-npm install                              # package.json에 정의된 모든 기본 라이브러리 설치 (React, Vite 등)
+npm ci                              # package-lock.json 기준으로 모든 라이브러리 복제 설치 (React, Vite 등)
 ```
 package.json과 package-lock.json 기준으로 React, Vite, Redux Toolkit, React Query, Axios, Recharts, Tailwind CSS 등이 자동 설치됩니다.
 정상적으로 설치되면 node_modules/ 폴더가 생성됩니다.
@@ -103,9 +103,9 @@ recharts : 차트 (BI 시각화)
 tailwindcss : 스타일링
 
 ⚡ 중요: Tailwind, PostCSS, Autoprefixer 설정은 이미 프로젝트에 반영되어 있습니다.
-팀원은 따로 설정할 필요 없이 npm install 후 바로 사용할 수 있습니다.
+팀원은 따로 설정할 필요 없이 npm ci 후 바로 사용할 수 있습니다.
 ```bash
-# 하단 라이브러리들은 이미 package.json에 정의되어있기에 상단 npm install만 시행해주면 됨
+# 하단 라이브러리들은 이미 package.json에 정의되어 있으므로, 별도로 설치할 필요 없습니다.
 npm install react-router-dom             # 라우팅 (페이지 이동)
 npm install @reduxjs/toolkit react-redux # 전역 상태 관리 (Redux 공식 툴킷 + React 연결)
 npm install @tanstack/react-query        # 서버 상태 관리 (API 통신 캐싱, 자동 리페치)
