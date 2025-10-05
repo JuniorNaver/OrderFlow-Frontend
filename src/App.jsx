@@ -11,7 +11,7 @@ import NotFound from "./common/components/NotFound";
 // ERP 도메인
 import BIPage from "./features/BI/pages/BIPage";
 // import PRPage from "./features/PR/pages/PRPage";
-// import POPage from "./features/PO/pages/POPage";
+import POPage from "./features/PO/pages/POPage";
 // import GRPage from "./features/GR/pages/GRPage";
 // import STKPage from "./features/STK/pages/STKPage";
 
@@ -83,7 +83,7 @@ function App() {
 
           {/* ERP 도메인 */}
           {/* <Route path="/pr" element={<PRPage />} /> */}
-          {/* <Route path="/po" element={<POPage />} /> */}
+          <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
           {/* <Route path="/stk" element={<STKPage />} /> */}
           <Route path="/bi" element={<BIPage />} />
