@@ -4,11 +4,10 @@ import React from "react";
 export default function POItemList({ items, onIncrease, onDecrease }) {
   return (
     <div className="bg-white rounded-2xl shadow p-4">
-      <h2 className="text-xl font-semibold mb-3">발주 요청 목록</h2>
       <table className="w-full text-sm">
         <thead className="border-b text-gray-500">
           <tr>
-            <th className="py-2 text-left">상품명</th>
+            <th>상품명</th>
             <th>수량</th>
             <th>매입가</th>
             <th>예상 마진</th>

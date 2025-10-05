@@ -1,62 +1,66 @@
-// PO/pages/POCartPage.jsx
 import React, { useEffect, useState } from "react";
-import { getCartItems, updateQuantity, confirmOrder } from "../api/poApi";
+import { getCartItems } from "../api/poApi";
 import POItemList from "../components/POItemList";
-import POStatusChart from "../components/POStatusChart";
 
-export default function POCartPage() {
+export default function POPage() {
   const [items, setItems] = useState([]);
-  const [chartData, setChartData] = useState([
-    { name: "실온", value: 40 },
-    { name: "냉장", value: 35 },
-    { name: "냉동", value: 25 },
-  ]); 
 
   useEffect(() => {
     getCartItems().then(setItems);
   }, []);
 
-  const handleIncrease = (id) => {
+  // 전체 선택 토글
+  const [selectAll, setSelectAll] = useState(false);
+  const handleSelectAll = () => {
+    const newValue = !selectAll;
+    setSelectAll(newValue);
     setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, quantity: i.quantity + 1 } : i
+      prev.map((item) => ({ ...item, selected: newValue }))
+    );
+  };
+
+  // 개별 선택
+  const handleSelect = (id) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, selected: !item.selected } : item
       )
     );
   };
 
-  const handleDecrease = (id) => {
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id && i.quantity > 1
-          ? { ...i, quantity: i.quantity - 1 }
-          : i
-      )
-    );
-  };
-
-  const handleConfirm = async () => {
-    await confirmOrder();
-    alert("발주가 확정되었습니다.");
+  // 선택된 항목 삭제
+  const handleDeleteSelected = () => {
+    setItems((prev) => prev.filter((item) => !item.selected));
   };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen space-y-6">
-      <h1 className="text-2xl font-bold mb-4">발주 요청 장바구니</h1>
-      <POItemList
-        items={items}
-        onIncrease={handleIncrease}
-        onDecrease={handleDecrease}
-      />
-      <div className="grid grid-cols-2 gap-6">
-        <POStatusChart data={chartData} />
-        <div className="flex items-center justify-center">
-          <button
-            onClick={handleConfirm}
-            className="px-8 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
-          >
-            발주 확정
-          </button>
+      <h1 className="text-2xl font-bold mb-4">장바구니</h1>
+
+      {/* 상단 헤더 */}
+      <div className="bg-white p-4 rounded-xl shadow">
+        <div className="grid grid-cols-4 font-semibold border-b pb-2 mb-2">
+          <div className="col-span-2 flex items-center gap-3">
+            <div className="bg-white p-4  min-w-[700px]">
+            <input
+              type="checkbox"
+              checked={selectAll}
+              onChange={handleSelectAll}
+            />
+            <span
+              onClick={handleDeleteSelected}
+              className="cursor-pointer text-red-500 hover:underline"
+            >
+              전체선택 | 삭제
+            </span>
+            </div>
+          </div>
+          <div className="text-center">매입가</div>
+          <div className="text-center">예상 마진</div>
         </div>
+
+        {/* 아이템 목록 */}
+        <POItemList items={items} onSelect={handleSelect} />
       </div>
     </div>
   );
