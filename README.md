@@ -15,18 +15,16 @@ git pull origin develop        # 최신 코드 가져오기
 git checkout -b feature/BI     # 새 기능 브랜치 생성 (예: BI)
 ```
 ✅ 브랜치 네이밍 규칙
-
 feature/PR → 발주요청
-
 feature/PO → 발주
-
 feature/GR → 입고
-
 feature/STK → 재고
-
 feature/SD → 판매
-
 feature/BI → BI 분석
+
+```powershell
+npm ci                         # 최신 package-lock.json 기준으로 라이브러리 동기화
+```
 
 ## 2️⃣‼ 여기서부터 로컬(개인 컴퓨터)에서 작업 시작
 
