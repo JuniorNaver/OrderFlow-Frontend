@@ -1,8 +1,9 @@
+/* eslint-disable no-unused-vars */
 // src/features/BI/api/biApi.js
 
 const mockDelay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-export async function fetchKpis(filters) {
+export async function fetchKpis(_filters) {
   await mockDelay(300);
   return {
     totalSales: 128_450_000,
@@ -12,7 +13,7 @@ export async function fetchKpis(filters) {
   };
 }
 
-export async function fetchSalesTrend(filters) {
+export async function fetchSalesTrend(_filters) {
   await mockDelay(350);
   const days = 14;
   const base = 6_000_000;
@@ -25,7 +26,7 @@ export async function fetchSalesTrend(filters) {
   }));
 }
 
-export async function fetchCategorySales(filters) {
+export async function fetchCategorySales(_filters) {
   await mockDelay(320);
   return [
     { category: "음료", sales: 34_200_000 },
@@ -36,7 +37,7 @@ export async function fetchCategorySales(filters) {
   ];
 }
 
-export async function fetchInventoryStatus(filters) {
+export async function fetchInventoryStatus(_filters) {
   await mockDelay(280);
   return [
     { name: "정상 재고", value: 62 },
