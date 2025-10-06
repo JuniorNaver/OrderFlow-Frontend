@@ -17,7 +17,7 @@ import POPage from "./features/PO/pages/POPage";
 
 // POS 도메인
 import POSDashboard from "./features/SD/pages/POSDashboard";
-// import Payment from "./features/SD/pages/Payment";
+import SalesRegister from "./features/SD/pages/SalesRegister";
 
 // 전역 UI
 import Header from "./components/Header";
@@ -94,7 +94,7 @@ function App() {
 
           {/* POS 도메인 */}
           <Route path="/sd" element={<POSDashboard />} />
-          {/* <Route path="/sd/payment" element={<Payment />} /> */}
+          <Route path="/sd/sales" element={<SalesRegister />} /> 
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

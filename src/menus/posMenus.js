@@ -1,7 +1,7 @@
 const posMenus = [
   {
     label: "결제",
-    path: "/sd/payment",
+    path: "/sd/Sales",
   },
   {
     label: "환불",
