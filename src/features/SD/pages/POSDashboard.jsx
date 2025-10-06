@@ -24,7 +24,7 @@ export default function POSDashboard() {
       {/* 바로가기 메뉴 */}
       <div className="flex gap-4">
         <Link
-          to="/sd/payment"
+          to="/sd/sales"
           className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
         >
           결제
