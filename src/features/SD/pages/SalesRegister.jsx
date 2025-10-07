@@ -1,4 +1,9 @@
+import PaymentSection from "../components/PaymentSection";
+
 export default function SalesRegister() {
+    const handlePaymentSelect = (method) => {
+        console.log("선택된 결제방식:", method);
+    };
   return (
     <div className="p-10 bg-gray-50 min-h-screen text-[18px]">
       {/* 상단 헤더 */}
@@ -47,19 +52,38 @@ export default function SalesRegister() {
         </div>
 
         {/* 💳 오른쪽: 결제 / 환불 / 조회 / 검색 */}
-        <div className="flex flex-col justify-start gap-5">
-          <button className="bg-blue-500 text-white py-4 rounded-xl hover:bg-blue-600 text-2xl font-bold shadow-lg transition-transform active:scale-95">
-            결제
-          </button>
-          <button className="bg-green-500 text-white py-4 rounded-xl hover:bg-green-600 text-2xl font-bold shadow-lg transition-transform active:scale-95">
+        <div className="grid grid-cols-2 gap-6 justify-items-center">
+         <PaymentSection totalAmount={10000} onSelect={handlePaymentSelect} />
+
+         <button className="bg-red-500 text-white w-40 h-20 rounded-2xl 
+                     hover:bg-red-600 text-xl font-bold shadow-lg 
+                     transition-transform active:scale-95">
             환불
-          </button>
-          <button className="bg-gray-800 text-white py-4 rounded-xl hover:bg-gray-900 text-2xl font-bold shadow-lg transition-transform active:scale-95">
-            영수증 조회
-          </button>
-          <button className="bg-yellow-400 text-white py-4 rounded-xl hover:bg-yellow-500 text-2xl font-bold shadow-lg transition-transform active:scale-95">
+        </button>
+
+        {/* 2행 */}
+        <button className="bg-gray-900 text-white w-40 h-20 rounded-2xl 
+                     hover:bg-gray-800 text-xl font-bold shadow-lg 
+                     transition-transform active:scale-95">
+            영수증
+        </button>
+        <button className="bg-green-500 text-white w-40 h-20 rounded-2xl 
+                     hover:bg-green-600 text-xl font-bold shadow-lg 
+                     transition-transform active:scale-95">
+            보류
+        </button>
+
+        {/* 3행 */}
+        <button className="bg-yellow-400 text-white w-40 h-20 rounded-2xl 
+                     hover:bg-yellow-500 text-xl font-bold shadow-lg 
+                     transition-transform active:scale-95">
             상품 검색
-          </button>
+        </button>
+        <button className="bg-purple-500 text-white w-40 h-20 rounded-2xl 
+                     hover:bg-purple-600 text-xl font-bold shadow-lg 
+                     transition-transform active:scale-95">
+            재고조정
+        </button>
         </div>
       </div>
 
