@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { getCartItems } from "../api/poApi";
-import BudgetProgressBar from "../components/BudgetProgressBar";
+import BudgetBar from "../components/BudgetBar";
 
 export default function POPage() {
   const [items, setItems] = useState([
     { id: 1, name: "햇반(100g)", gtin: "01584123", price: 1000, margin: 500, qty: 2 },
     { id: 2, name: "진라면", gtin: "09843122", price: 1200, margin: 600, qty: 1 },
-    { id: 3, name: "코카콜라 500ml", price: 9000, margin: 4500, qty: 6 },
+    { id: 3, name: "코카콜라 500ml", price: 9000, margin: 4500, qty: 100 },
     { id: 4, name: "삼다수 2L", gtin: "8801234560011", price: 1200, margin: 600, qty: 3 },
     { id: 5, name: "비비고 왕교자", gtin: "8801234560028", price: 9800, margin: 4900, qty: 2 },
     { id: 6, name: "서울우유 1L", gtin: "8801234560035", price: 2600, margin: 1300, qty: 1 },
@@ -81,6 +81,13 @@ export default function POPage() {
   };
 
 
+  // ✅ 총 매입가(= 현재 발주 금액) 계산
+  const [usedBudget, setUsedBudget] = useState(2000000); // 예: 누적 사용 금액
+  const [monthBudget, setMonthBudget] = useState(3000000); // 예: 월 예산
+  const totalPurchasePrice = items.reduce(
+    (sum, it) => sum + (it.totalPrice ?? it.price * it.qty),
+    0
+  );
 
 
 
@@ -218,7 +225,7 @@ export default function POPage() {
               </tr>
             </tfoot>
           </table>
-          <BudgetProgressBar used={1800100} order={910000} budget={2000000} />
+          <BudgetBar used={usedBudget} order={totalPurchasePrice} budget={monthBudget} monthLabel="3월 발주금액"/>
           <div className="flex justify-center mt-10 mb-8">
             <button
               className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl py-4 px-20 rounded-none shadow-md transition-all duration-200"
