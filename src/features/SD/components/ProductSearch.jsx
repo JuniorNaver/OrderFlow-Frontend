@@ -4,9 +4,8 @@ import ProductSearchModal from "./ProductSearchModal";
 function ProductSearch() {
   const [showModal, setShowModal] = useState(false);
 
-  const handleSelectProduct = (product) => {
-    alert(`✅ 선택된 제품: ${product.name} / ₩${product.price}`);
-    setShowModal(false);
+  const handleSelectProduct = () => {
+    setShowModal(false); // 모달 닫기만
   };
 
   return (

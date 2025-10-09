@@ -55,7 +55,21 @@ function ProductSearchModal({ onClose, onSelect }) {
             results.map((product) => (
               <button
                 key={product.id}
-                onClick={() => onSelect(product)}
+                onClick={() => {
+                    if (window.addItemToSales) {
+                        window.addItemToSales({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        qty: 1,
+                        stock: product.stock,
+                        });
+                        alert(`✅ ${product.name}이(가) 판매 목록에 추가되었습니다.`);
+                    } else {
+                        alert("❌ 판매 테이블이 아직 준비되지 않았습니다.");
+                    }
+                    onSelect(product); // 선택 처리
+                    }}
                 className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 transition"
               >
                 <div className="flex justify-between items-center">

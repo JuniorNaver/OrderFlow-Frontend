@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export default function SalesTable() {
-  const [items, setItems] = useState([
-    { id: 1, name: "햇반(100g) 01584123", price: 1000, stock: 5, qty: 0 },
-    { id: 2, name: "코카콜라(500ml) 02847412", price: 2000, stock: 7, qty: 0 },
-    { id: 3, name: "삼다수(2L) 03847412", price: 1500, stock: 10, qty: 0 },
-    { id: 4, name: "진라면(매운맛) 04589612", price: 1200, stock: 8, qty: 0 },
-  ]);
+export default function SalesTable({onTotalChange, onAddItem}) {
+  const [items, setItems] = useState([]);
+
+  const handleAddItem = (product) => {
+    const newItems = [...items, product];
+    setItems(newItems);
+  };
+
+  useEffect(() => {
+    const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+    onTotalChange(total);
+  }, [items, onTotalChange]);
+
+  // ✅ 부모가 이 함수를 쓸 수 있도록 전달
+  useEffect(() => {
+    if (onAddItem) onAddItem(handleAddItem);
+  }, [onAddItem]);
 
   const handleQuantityChange = (id, delta) => {
     setItems((prev) =>
@@ -23,7 +33,7 @@ export default function SalesTable() {
   };
 
   return (
-    <div className="bg-white shadow-xl rounded-2xl p-6">
+   <div className="bg-white shadow-xl rounded-2xl p-6">
       <table className="w-full border-collapse text-lg">
         <thead className="border-b bg-gray-100 text-gray-700 font-semibold">
           <tr>

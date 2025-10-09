@@ -1,32 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-function CardPaymentModal({ onClose, onSuccess }) {
+function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ✅ 실제 검증 로직 (간단한 시뮬레이션)
   const handleSubmit = (e) => {
     e.preventDefault();
+    setLoading(true);
 
     const validCard = "1234-5678-9876-5432";
     const validExpiry = "12/29";
     const validCvc = "777";
 
-    if (cardNumber === validCard && expiry === validExpiry && cvc === validCvc) {
-      alert("💳 결제 성공! 카드 승인 완료되었습니다.");
-      onSuccess(); // 부모에게 성공 알림
-      onClose();
-    } else {
-      setError("❌ 카드 정보가 올바르지 않습니다.");
-    }
+    setTimeout(() => {
+      if (cardNumber === validCard && expiry === validExpiry && cvc === validCvc) {
+        alert("💳 결제 성공! 카드 승인 완료되었습니다.");
+        onSuccess(); // 부모에서 모달 닫기 담당
+      } else {
+        setError("❌ 카드 정보가 올바르지 않습니다.");
+      }
+      setLoading(false);
+    }, 1200);
   };
+
+  // ✅ Enter 키로 바로 결제 실행
+  useEffect(() => {
+    const handleEnter = (e) => {
+      if (e.key === "Enter") handleSubmit(e);
+    };
+    window.addEventListener("keydown", handleEnter);
+    return () => window.removeEventListener("keydown", handleEnter);
+  }, [cardNumber, expiry, cvc]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[350px]">
-        <h2 className="text-2xl font-bold mb-6 text-center">카드 결제</h2>
+        <h2 className="text-2xl font-bold mb-2 text-center">카드 결제</h2>
+        <p className="text-center text-gray-600 mb-6">
+          결제 금액: <span className="font-semibold text-blue-600">₩ {totalAmount.toLocaleString()}</span>
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -74,9 +89,12 @@ function CardPaymentModal({ onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+              disabled={loading}
+              className={`bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
-              결제하기
+              {loading ? "승인 중..." : "결제하기"}
             </button>
           </div>
         </form>
