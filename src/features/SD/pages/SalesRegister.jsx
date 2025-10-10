@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import PaymentSection from "../components/PaymentSection";
-import ProductSearch from "../components/ProductSearch";
+import PaymentSection from "../components/payment/PaymentSection";
+import ProductSearch from "../components/sales/ProductSearch";
 import ReceiptQuery from "../components/receipt/ReceiptQuery";
-import SalesTable from "../components/SalesTable";
+import SalesTable from "../components/sales/SalesTable";
 import { getProductByBarcode } from "../api/productApi";
 import BarcodeListener from "../components/BarcodeListener";
-import SummarySection from "../components/SummarySection";
+import SummarySection from "../components/shared/SummarySection";
 import RefundModal from "../components/refund/RefundModal";
 
 function SalesRegister() {
@@ -106,7 +106,7 @@ function SalesRegister() {
 
           <button
             onClick={handleRefundClick}
-            className="bg-green-500 text-white w-40 h-20 rounded-2xl hover:bg-green-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
+            className="bg-red-500 text-white w-40 h-20 rounded-2xl hover:bg-red-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
           >
             환불
           </button>
