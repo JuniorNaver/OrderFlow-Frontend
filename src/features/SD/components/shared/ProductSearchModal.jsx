@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { searchProductsByName } from "../api/productApi";
+import { searchProductsByName } from "../../api/productApi";
 
 function ProductSearchModal({ onClose, onSelect }) {
   const [query, setQuery] = useState("");

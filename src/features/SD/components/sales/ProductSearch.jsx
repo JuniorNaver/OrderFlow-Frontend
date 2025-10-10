@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ProductSearchModal from "./ProductSearchModal";
+import ProductSearchModal from "../shared/ProductSearchModal";
 
 function ProductSearch() {
   const [showModal, setShowModal] = useState(false);

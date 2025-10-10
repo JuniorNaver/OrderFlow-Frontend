@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { createPayment } from "../api/paymentApi";
+import { createPayment } from "../../api/paymentApi";
 import CardPaymentModal from "./CardPaymentModal";
-import BarcodeListener from "./BarcodeListener";
+import BarcodeListener from "../BarcodeListener";
 
 function PaymentSection({ totalAmount, onSelect, onPaymentComplete, onSuccess }) { // ✅ onSuccess props 추가
   const [showMethods, setShowMethods] = useState(false);
