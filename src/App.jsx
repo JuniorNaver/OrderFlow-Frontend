@@ -83,7 +83,7 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           {/* ERP 도메인 */}
-          <Route path="/pr" element={<PRPage />} />
+          <Route path="/pr/*" element={<PRPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
           {/* <Route path="/stk" element={<STKPage />} /> */}
