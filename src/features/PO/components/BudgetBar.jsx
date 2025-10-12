@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function BudgetProgressBar({ month = "3월", used, order, budget }) {
+export default function BudgetBar({ month = "3월", used, order, budget }) {
   const total = used + order;
   const isOver = total > budget;
 
@@ -15,7 +15,7 @@ export default function BudgetProgressBar({ month = "3월", used, order, budget 
   const overAmount = isOver ? total - budget : 0;
 
   return (
-    <div className="w-full max-w-4xl mt-6 pt-4">
+    <div className="w-full max-w-4xl mt-6 pt-4 mx-auto">
       {/* 상단 라벨 */}
       <div className="flex justify-between items-end mb-2">
         <span className="text-gray-700 font-semibold text-sm">{month} 발주금액</span>
