@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getRecommend, createPurchaseRequest } from "../api/api";
 import ProductCard from "../components/ProductCard";
-import { MOCK_PRODUCTS } from "../mock/data";
+import { CATEGORIES, MOCK_PRODUCTS, placeholder } from "../mock/Categories";
 
 export default function RecommendPage() {
   const { storeId = "" } = useParams();
@@ -17,7 +17,7 @@ export default function RecommendPage() {
   });
 
   const lines =
-    q.data?.items?.map(it => ({ productCode: it.productCode, qty: it.suggestedQty })) ??
+    q.data?.items?.map(it => ({ productCode: it.productCode, qty: Number(it.suggestedQty) || 1 })) ??
     MOCK_PRODUCTS.map(p => ({ productCode: p.productCode, qty: 1 }));
 
 
