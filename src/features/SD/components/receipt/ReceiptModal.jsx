@@ -2,7 +2,7 @@ export default function ReceiptModal({ receipt, onClose }) {
   if (!receipt) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-60">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-[480px] relative">
         <button
           onClick={onClose}
@@ -16,7 +16,7 @@ export default function ReceiptModal({ receipt, onClose }) {
           <p><strong>영수증 번호:</strong> {receipt.receiptId}</p>
           <p><strong>판매 번호:</strong> {receipt.salesId}</p>
           <p><strong>결제 수단:</strong> {receipt.paymentMethod}</p>
-          <p><strong>결제 금액:</strong> ₩{receipt.totalAmount.toLocaleString()}</p>
+          <p><strong>결제 금액:</strong> ₩{receipt.totalAmount?.toLocaleString()}</p>
           <p><strong>결제 일시:</strong> {receipt.createdAt}</p>
         </div>
 

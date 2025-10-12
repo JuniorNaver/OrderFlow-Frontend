@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { searchProductsByName } from "../../api/productApi";
+import { addItemToOrder } from "../../api/sdApi"; // ✅ 추가
 
-function ProductSearchModal({ onClose, onSelect }) {
+function ProductSearchModal({ onClose, onSelect, orderId }) { // ✅ orderId 받기
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ 입력할 때마다 API 호출 (디바운스 없이 단순 구현)
+  // ✅ 입력할 때마다 API 호출
   useEffect(() => {
     const fetchData = async () => {
       if (query.trim() === "") {
@@ -22,6 +23,28 @@ function ProductSearchModal({ onClose, onSelect }) {
 
     fetchData();
   }, [query]);
+
+  // ✅ 상품 추가 이벤트 (서버 연결)
+  const handleAddProduct = async (product) => {
+    try {
+      const itemData = {
+        orderId,
+        gtin: product.gtin,
+        quantity: 1,
+        price: product.price,
+      };
+
+      const added = await addItemToOrder(orderId, itemData);
+      console.log("✅ 추가된 상품:", added);
+
+      alert(`🛒 ${product.name}이(가) 주문에 추가되었습니다.`);
+      if (onSelect) onSelect(added); // 부모에게 전달
+      onClose(); // 모달 닫기
+    } catch (err) {
+      console.error("❌ 상품 추가 실패:", err);
+      alert("상품을 추가하는 중 오류가 발생했습니다.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
@@ -55,21 +78,7 @@ function ProductSearchModal({ onClose, onSelect }) {
             results.map((product) => (
               <button
                 key={product.id}
-                onClick={() => {
-                    if (window.addItemToSales) {
-                        window.addItemToSales({
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        qty: 1,
-                        stock: product.stock,
-                        });
-                        alert(`✅ ${product.name}이(가) 판매 목록에 추가되었습니다.`);
-                    } else {
-                        alert("❌ 판매 테이블이 아직 준비되지 않았습니다.");
-                    }
-                    onSelect(product); // 선택 처리
-                    }}
+                onClick={() => handleAddProduct(product)} // ✅ 수정 포인트
                 className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 transition"
               >
                 <div className="flex justify-between items-center">
@@ -82,7 +91,9 @@ function ProductSearchModal({ onClose, onSelect }) {
             ))
           ) : (
             !loading && (
-              <p className="text-gray-500 text-center py-10">검색 결과가 없습니다.</p>
+              <p className="text-gray-500 text-center py-10">
+                검색 결과가 없습니다.
+              </p>
             )
           )}
         </div>

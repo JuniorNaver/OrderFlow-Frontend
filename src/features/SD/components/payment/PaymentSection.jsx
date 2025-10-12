@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createPayment } from "../../api/paymentApi";
+import { createPayment } from "../../api/paymentApi.js";
 import CardPaymentModal from "./CardPaymentModal";
 import BarcodeListener from "../BarcodeListener";
 
