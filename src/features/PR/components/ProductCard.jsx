@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { placeholder } from "../mock/data";
+import { placeholder } from "../mock/Categories";
 
 /**
  * @param {{ product:{productCode:string, name:string, imageUrl?:string, unitPrice?:number}, onClick?:(product)=>void }} props

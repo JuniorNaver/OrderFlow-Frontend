@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listProducts } from "../api/shop";
 import ProductCard from "../components/ProductCard";
-import { placeholder } from "../mock/data";
+import { placeholder } from "../mock/Categories";
 
 function useDebounced(value, delay = 300) {
   const [v, setV] = useState(value);
