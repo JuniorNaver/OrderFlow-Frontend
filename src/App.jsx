@@ -93,6 +93,12 @@ function App() {
           <Route path="/pr/*" element={<PRPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
+
+          <Route path="/bi" element={<BIPage />} />
+          <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
+          <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
+          <Route path="/bi/profit" element={<div>손익 분석</div>} />
+          <Route path="/bi/order-efficiency" element={<div>발주 효율 분석</div>} />
          
           
            {/* 💡 STK 라우트 블록: index 경로 변경 */}

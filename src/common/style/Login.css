@@ -1,0 +1,277 @@
+/* ========================================================================= */
+/* 1. 로그인 페이지 레이아웃 및 중앙 정렬 */
+/* ========================================================================= */
+
+.login-container {
+    /* 전체 뷰포트를 채우고 내용을 중앙에 배치합니다. */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 수평 중앙 정렬 */
+    padding-top: 150px; /* 상단 네비게이션바 등을 고려하여 여백 설정 */
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.login-container h1 {
+    font-size: 2em;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    width: 300px; /* 폼 너비 설정 */
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================================================= */
+/* 2. 입력 필드 스타일 */
+/* ========================================================================= */
+
+.input-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    width: 50px; /* ID, PW 레이블 너비 고정 */
+    font-weight: bold;
+    color: #555;
+    text-align: left;
+}
+
+.input-group input {
+    flex-grow: 1; /* 나머지 공간을 입력 필드가 차지 */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+/* ========================================================================= */
+/* 3. 버튼 그룹 스타일 */
+/* ========================================================================= */
+
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.button-group button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    width: 48%; /* 두 버튼이 나란히 배치되도록 */
+}
+
+.login-button {
+    background-color: #007bff;
+    color: white;
+}
+
+.login-button:hover {
+    background-color: #0056b3;
+}
+
+.reset-button {
+    background-color: #f8f9fa;
+    color: #007bff;
+    border: 1px solid #007bff;
+}
+
+.reset-button:hover {
+    background-color: #e2e6ea;
+}
+
+.error-message {
+    color: red;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* ========================================================================= */
+/* 4. 비밀번호 초기화 모달 스타일 (팝업이 뜨도록 하는 핵심) */
+/* ========================================================================= */
+
+/* 모달 배경: 전체 화면을 덮고 내용을 중앙에 배치 */
+.modal-backdrop {
+    position: fixed; /* 뷰포트에 고정! 팝업 구현의 핵심입니다. */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* 반투명 배경 */
+    display: flex;
+    justify-content: center; /* 가로 중앙 정렬 */
+    align-items: center; /* 세로 중앙 정렬 */
+    z-index: 1000; /* 다른 요소보다 위에 오도록 설정 */
+}
+
+/* 모달 내용 상자 */
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.modal-content .input-group {
+    margin-bottom: 15px;
+}
+
+.modal-content .button-group {
+    justify-content: flex-end; /* 요청/닫기 버튼을 오른쪽으로 배치 */
+    gap: 10px;
+}
+
+.modal-content .button-group button {
+    width: auto;
+    padding: 8px 15px;
+}
+
+.modal-content .close-button {
+    background-color: #6c757d;
+    color: white;
+}
+
+.modal-content .close-button:hover {
+    background-color: #5a6268;
+}
+
+/* 메시지 스타일 */
+.status-message {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* ========================================================================= */
+/* 4. 비밀번호 초기화 모달 스타일 (팝업이 뜨도록 하는 핵심) */
+/* ========================================================================= */
+
+.modal-backdrop {
+    /* 기존 스타일 유지 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 350px; /* 로그인 폼과 비슷한 너비로 설정 */
+    max-width: 90%; /* 모바일에서도 잘 보이도록 */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content h3 {
+    text-align: center;
+    margin-bottom: 25px; /* 제목과 폼 사이 간격 증가 */
+    color: #333;
+    font-size: 1.5em; /* 제목 크기 키우기 */
+}
+
+/* 모달 내부의 input-group과 button-group은 로그인 폼과 동일한 스타일을 상속받도록 함 */
+/* .modal-content .input-group {
+    // 기존 .input-group 스타일이 적용될 것이므로, 특별한 오버라이드가 필요 없다면 주석처리 또는 삭제
+    // margin-bottom: 15px; 
+} */
+
+/* .modal-content .input-group label {
+    // 기존 .input-group label 스타일이 적용될 것
+    width: 60px; // 모달 내에서 레이블 너비 약간 조정 가능
+} */
+
+/* 모달 내 버튼 스타일 재정의 */
+.modal-content .button-group {
+    margin-top: 20px; /* 버튼 그룹 상단 여백 증가 */
+    justify-content: flex-end; /* 요청/닫기 버튼을 오른쪽으로 배치 */
+    gap: 10px; /* 버튼 사이 간격 */
+    display: flex; /* flexbox 적용 */
+}
+
+.modal-content .button-group button {
+    width: auto; /* 내용에 따라 너비 자동 조절 */
+    padding: 10px 20px; /* 패딩 증가로 버튼 크기 키우기 */
+    font-size: 1em; /* 폰트 크기 조정 */
+}
+
+.modal-content .button-group button[type="submit"] { /* '요청' 버튼 */
+    background-color: #007bff;
+    color: white;
+    border: none;
+}
+
+.modal-content .button-group button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.modal-content .close-button {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+
+.modal-content .close-button:hover {
+    background-color: #5a6268;
+}
+
+/* 메시지 스타일은 기존과 동일 */
+.status-message {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
