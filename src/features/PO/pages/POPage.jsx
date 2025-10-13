@@ -1,10 +1,11 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { getCartItems } from "../api/poApi";
+import { confirmOrder, getCartItems, updateQuantity } from "../api/poApi";
 import BudgetBar from "../components/BudgetBar";
 import CapacityChart from "../components/CapacityChart";
 import ItemList from "../components/ItemList";
 import SavedCartModal from "../components/SavedCart";
+import NeedleChart from "../components/NeedleChart";
 
 export default function POPage() {
   const [items, setItems] = useState([
@@ -43,36 +44,59 @@ export default function POPage() {
     );
   };
 
+
   // 수량 증가
-  const handleIncrease = (id) => {
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === id
-          ? {
+  const handleIncrease = async (itemId, currentQty) => {
+    const newQty = currentQty + 1;
+
+    try {
+      // 서버에 수량 업데이트 요청
+      await updateQuantity(itemId, newQty);
+
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === itemId
+            ? {
               ...it,
               qty: it.qty + 1,
-              totalPrice: (it.qty + 1) * it.price,
-              totalMargin: (it.qty + 1) * it.margin,
+              totalPrice: newQty * it.price,
+              totalMargin: newQty * it.margin,
             }
-          : it
-      )
-    );
+            : it
+        )
+      );
+    } catch (err) {
+      console.error("수량 증가 실패:", err);
+      alert("서버와 통신 중 오류가 발생했습니다.");
+    }
   };
+
   // 수량 감소
-  const handleDecrease = (id) => {
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === id && it.qty > 1
-          ? {
-              ...it,
-              qty: it.qty - 1,
-              totalPrice: (it.qty - 1) * it.price,
-              totalMargin: (it.qty - 1) * it.margin,
-            }
-          : it
-      )
-    );
+  const handleDecrease = async (itemId, currentQty) => {
+    if (currentQty <= 1) return;
+    const newQty = currentQty -1;
+
+    try {
+      await updateQuantity(itemId, newQty);
+
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === itemId 
+            ? {
+                ...it,
+                qty: newQty,
+                totalPrice: newQty * it.price,
+                totalMargin: newQty * it.margin,
+              }
+            : it
+        )
+      );
+    } catch (err) {
+      console.error("수량 감소 실패:", err);
+      alert("서버와 통신 중 오류가 발생했습니다.")
+    }
   };
+
 
   // 총 매입가(= 현재 발주 금액) 계산
   const [usedBudget, setUsedBudget] = useState(2000000); // 예: 누적 사용 금액
@@ -89,15 +113,28 @@ export default function POPage() {
       frozen: { current: 300, incoming: 50, capacity: 600 },
   };
 
-  // 발주버튼
-  const handleOrder = () => {
-  const selectedItems = items.filter(it => it.selected);
+  // 발주확정 버튼
+  const handleOrder = async () => {
+    const selectedItems = items.filter(it => it.selected);
+    
     if (selectedItems.length === 0) {
-      alert("발주할 상품을 선택해주세요.");
+      alert("장바구니가 비어있습니다.");
       return;
     }
-    // TODO: 주문 API 연결 예정
-    alert(`${selectedItems.length}개 상품을 발주합니다.`);
+
+    try {
+      const poId = 1; // 추후 실제 발주 id로 교체하기 
+
+      // 서버에 확정요청 보내기
+      await confirmOrder(poId);
+      alert(`${items.length}개 상품을 발주 확정했습니다.`);
+
+      // 필요시 UI 초기화 or 목록 새로고침
+      // window.location.reload();
+    } catch (err){
+      console.error("발주 요청 실패:", err);
+      alert("발주 중 오류가 발생했습니다.");
+    }
   };
 
   // 저장버튼
@@ -205,13 +242,18 @@ export default function POPage() {
           />
 
           {/* 예산 바 */}
-          <div className="mb-6">
+          <div className="mb-9">
             <BudgetBar 
               used={usedBudget} 
               order={order} 
               budget={monthBudget} 
               monthLabel="3월 발주금액"
             />
+          </div>
+          
+          {/* 바늘 지표계 */}
+          <div className="flex justify-start pl-5 mb-7">
+            <NeedleChart value={65} max={100} />
           </div>
 
           {/* 발주 버튼 */}
