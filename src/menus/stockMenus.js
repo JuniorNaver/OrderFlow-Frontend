@@ -14,11 +14,11 @@ const stockMenus = [
   {
     label: "재고관리(STK)",
     path: "/stk",
-   children: [
-      { label: "현재 재고 현황 조회", path: "/stk/pages/StockStatus" }, // (1')
-      { label: "유통기한 임박 상품 관리", path: "/stk/expire-soon" }, // (2')
-      { label: "유통기한 마감 상품 관리", path: "/stk/expired" }, // (3')
-      { label: "재고 수량 조정", path: "/stk/adjust" }, // (4')
+    children: [
+      { label: "현재 재고 현황 조회", path: "/stk" }, 
+      { label: "유통기한 현황", path: "/stk/expiry" },
+      { label: "유통기한 임박 상품 관리", path: "/stk/expired-management" }, 
+      { label: "재고 수량 조정", path: "/stk/adjustment" }, 
     ],
   },
   {
