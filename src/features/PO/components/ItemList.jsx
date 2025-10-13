@@ -56,16 +56,18 @@ export default function ItemList({
                 <td className="text-center">
                   <div className="inline-flex items-center justify-center gap-3">
                     <button
-                      onClick={() => onDecrease(item.id)}
+                      onClick={() => onDecrease(item.id, item.qty)}
                       className="border w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100"
                     >
                       -
                     </button>
+
                     <span className="w-6 text-center font-medium flex items-center justify-center">
                       {item.qty}
                     </span>
+                    
                     <button
-                      onClick={() => onIncrease(item.id)}
+                      onClick={() => onIncrease(item.id, item.qty)}
                       className="border w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100"
                     >
                       +
