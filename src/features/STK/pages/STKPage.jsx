@@ -81,7 +81,7 @@ function STKPage({ activeMenu }) {
         <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
           {getPageTitle(internalPage)}
         </h2>
-        <CurrentTimeDisplay />
+        {/* <CurrentTimeDisplay /> */}
       </div>
 
       {/* 메인 콘텐츠 영역: 동적으로 선택된 컴포넌트가 렌더링됩니다. */}
