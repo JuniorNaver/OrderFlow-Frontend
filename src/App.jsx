@@ -13,7 +13,14 @@ import BIPage from "./features/BI/pages/BIPage";
 import PRPage from "./features/PR/pages/PRPage";
 import POPage from "./features/PO/pages/POPage";
 // import GRPage from "./features/GR/pages/GRPage";
+
 import STKPage from "./features/STK/pages/STKPage";
+import STKHome from "./features/STK/components/STKHome";
+import CurrentStockDashboard from "./features/STK/components/CurrentStockDashboard";
+import ExpiryDashboard from "./features/STK/components/ExpiryDashboard";
+import ExpiryManagementView from "./features/STK/components/ExpiryManagementView";
+import StockAdjustmentView from "./features/STK/components/StockAdjustmentView";
+import DisposalView from "./features/STK/components/DisposalView";
 
 // POS 도메인
 import POSDashboard from "./features/SD/pages/POSDashboard";
@@ -86,12 +93,29 @@ function App() {
           <Route path="/pr/*" element={<PRPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
-          <Route path="/stk/*" element={<STKPage />} />
-          <Route path="/bi" element={<BIPage />} />
-          <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
-          <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
-          <Route path="/bi/profit" element={<div>손익 분석</div>} />
-          <Route path="/bi/order-efficiency" element={<div>발주 효율 분석</div>} />
+         
+          
+           {/* 💡 STK 라우트 블록: index 경로 변경 */}
+          <Route path="/stk" element={<STKPage />}>
+                
+                {/* 1. 💡 [수정] 인덱스 경로: /stk 접속 시, CurrentStockDashboard를 바로 렌더링 */}
+            <Route index element={<CurrentStockDashboard />} /> 
+            
+            {/* 2. 재고 현황 조회 (기존 경로는 그대로 유지. 이제 인덱스와 동일한 화면) */}
+            <Route path="current-status" element={<CurrentStockDashboard />} />
+            
+            {/* 3. 유통기한 현황 */}
+            <Route path="expiry" element={<ExpiryDashboard />} />
+            
+            {/* 4. 유통기한 임박 상품 관리 */}
+            <Route path="expiry-manage" element={<ExpiryManagementView />} />
+            
+            {/* 5. 재고 수량 조정 */}
+            <Route path="adjust" element={<StockAdjustmentView />} />
+            {/* 5. 폐기 */}
+            <Route path="disposal" element={<DisposalView />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
 
           {/* POS 도메인 */}
           <Route path="/sd" element={<POSDashboard />} />
