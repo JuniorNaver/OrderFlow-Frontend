@@ -13,7 +13,7 @@ import BIPage from "./features/BI/pages/BIPage";
 import PRPage from "./features/PR/pages/PRPage";
 import POPage from "./features/PO/pages/POPage";
 // import GRPage from "./features/GR/pages/GRPage";
-// import STKPage from "./features/STK/pages/STKPage";
+import STKPage from "./features/STK/pages/STKPage";
 
 // POS 도메인
 import POSDashboard from "./features/SD/pages/POSDashboard";
@@ -86,7 +86,7 @@ function App() {
           <Route path="/pr/*" element={<PRPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
-          {/* <Route path="/stk" element={<STKPage />} /> */}
+          <Route path="/stk/*" element={<STKPage />} />
           <Route path="/bi" element={<BIPage />} />
           <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
           <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
