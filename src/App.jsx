@@ -11,6 +11,10 @@ import NotFound from "./common/components/NotFound";
 // ERP 도메인
 import BIPage from "./features/BI/pages/BIPage";
 import PRPage from "./features/PR/pages/PRPage";
+import OrderManagementPage from "./features/PR/pages/OrderManagementPage";
+import RecommendListPage from "./features/PR/pages/RecommendListPage";
+import ProductSearchPage from "./features/PR/pages/ProductSearchPage";
+import ShopPage from "./features/PR/pages/ShopPage";
 import POPage from "./features/PO/pages/POPage";
 // import GRPage from "./features/GR/pages/GRPage";
 // import STKPage from "./features/STK/pages/STKPage";
@@ -25,6 +29,7 @@ import Header from "./components/Header";
 // 메뉴 데이터
 import posMenus from "./menus/posMenus";
 import stockMenus from "./menus/stockMenus";
+
 
 // React Query Client (전역)
 const queryClient = new QueryClient();
@@ -83,7 +88,11 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           {/* ERP 도메인 */}
-          <Route path="/pr/*" element={<PRPage />} />
+          <Route path="/pr" element={<PRPage />} />
+          <Route path="/pr/orders" element={<OrderManagementPage />} /> 
+          <Route path="/pr/recommend" element={<RecommendListPage />} />   
+          <Route path="/pr/search" element={<ProductSearchPage />} />  
+          <Route path="/pr/shop" element={<ShopPage />} />    
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
           {/* <Route path="/stk" element={<STKPage />} /> */}

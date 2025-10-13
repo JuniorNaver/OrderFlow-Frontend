@@ -14,7 +14,7 @@ function useDebounced(value, delay = 300) {
   return v;
 }
 
-export default function SearchProducts() {
+export default function ProductSearchPage() {
   const [q, setQ] = useState("");
   const [categoryId, setCategoryId] = useState("");
 

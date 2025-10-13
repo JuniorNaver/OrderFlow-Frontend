@@ -2,6 +2,12 @@ const stockMenus = [
   {
     label: "발주(PR)",
     path: "/pr",
+    children: [
+      { label: "상품 조회", path: "/pr/orders" },
+      { label: "상품 추천", path: "/pr/recommend" },
+      { label: "상품 검색", path: "/pr/search" },
+      { label: "상품 발주하기", path: "/pr/shop" },
+    ]
   },
   {
     label: "발주(PO)",
