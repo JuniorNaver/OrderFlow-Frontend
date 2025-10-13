@@ -17,7 +17,7 @@ const stockMenus = [
     children: [
       { label: "현재 재고 현황 조회", path: "/stk" }, 
       { label: "유통기한 현황", path: "/stk/expiry" },
-      { label: "유통기한 임박 상품 관리", path: "/stk/expired-management" }, 
+      { label: "폐기 관리 페이지", path: "/stk/disposal" }, 
       { label: "재고 수량 조정", path: "/stk/adjustment" }, 
     ],
   },
