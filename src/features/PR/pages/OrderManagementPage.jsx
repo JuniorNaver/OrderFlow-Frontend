@@ -7,7 +7,7 @@ import OrderLinesTable from "../components/OrderLinesTable";
 import OrderToolbar from "../components/OrderToolbar";
 import { useParams } from "react-router-dom";
 
-export default function OrdersPage() {
+export default function OrderManagementPage() {
   const { storeId = "S001" } = useParams();
   const qc = useQueryClient();
 
