@@ -6,10 +6,10 @@ const API_BASE = "http://localhost:8080/api/stk";
 export const searchProductsByName = async (query) => {
   if (!query || query.trim() === "") return [];
   try {
-    const res = await axios.get(`/api/stk/search`, {
+    const res = await axios.get(`${API_BASE}/search`, {
       params: { name: query },
     });
-    return res.data; // [{gtin, productName, price, quantity}]
+    return res.data;
   } catch (err) {
     console.error("상품 검색 중 오류:", err);
     return [];
