@@ -7,6 +7,7 @@ import "./styles/App.css";
 import Home from "./common/pages/Home";
 import Login from "./common/pages/Login";
 import NotFound from "./common/components/NotFound";
+import AccountManage from "./common/pages/AccountManage";
 
 // ERP 도메인
 import BIPage from "./features/BI/pages/BIPage";
@@ -93,6 +94,7 @@ function App() {
           {/* 공용 */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/account-manage" element={<AccountManage />} />
 
           {/* ERP 도메인 */}
           <Route path="/pr" element={<PRPage />} />
@@ -102,6 +104,7 @@ function App() {
           <Route path="/pr/shop" element={<ShopPage />} />    
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
+          
 
           <Route path="/bi" element={<BIPage />} />
           <Route path="/bi/forecast" element={<div>예상 판매량</div>} />

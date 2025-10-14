@@ -1,5 +1,4 @@
 .modal-backdrop {
-    /* 기존 스타일 유지 */
     position: fixed;
     top: 0;
     left: 0;
@@ -30,16 +29,30 @@
     font-size: 1.5em; /* 제목 크기 키우기 */
 }
 
-/* 모달 내부의 input-group과 button-group은 로그인 폼과 동일한 스타일을 상속받도록 함 */
-/* .modal-content .input-group {
-    // 기존 .input-group 스타일이 적용될 것이므로, 특별한 오버라이드가 필요 없다면 주석처리 또는 삭제
-    // margin-bottom: 15px; 
-} */
+/* 모달 내부 입력 필드 그룹 */
+.modal-content .input-group {
+    display: flex;
+    flex-direction: column; /* ⭐️ 핵심: 자식 요소(레이블, input)를 세로로 쌓이도록 함 */
+    margin-bottom: 15px; /* 각 입력 그룹 간의 하단 여백 */
+}
 
-/* .modal-content .input-group label {
-    // 기존 .input-group label 스타일이 적용될 것
-    width: 60px; // 모달 내에서 레이블 너비 약간 조정 가능
-} */
+.modal-content .input-group label {
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 5px; /* ⭐️ 레이블과 입력 필드 사이의 간격 */
+    text-align: left;
+    width: auto; /* ⭐️ 레이블 너비 고정 해제 (전체 너비를 사용) */
+}
+
+.modal-content .input-group input,
+.modal-content .input-group select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: 0; /* ⭐️ 기존 로그인 폼에서 있을 수 있는 좌측 마진 제거 */
+    width: 100%; /* ⭐️ 부모(.input-group)의 전체 너비를 차지하도록 설정 */
+    box-sizing: border-box; /* 패딩과 보더가 width에 포함되도록 */
+}
 
 /* 모달 내 버튼 스타일 재정의 */
 .modal-content .button-group {

@@ -1,12 +1,10 @@
-// features/STK/components/CurrentStockDashboard.jsx
-
 import React from 'react';
 
 // STK 관련 컴포넌트들을 import합니다.
 import CapacityVisualization from './CapacityVisualization'; 
 import RelocationRequired from './RelocationRequired';         
 import StockStatus from './StockStatus';                       
-// import CurrentTimeDisplay from './CurrentTimeDisplay'; // 👈 이 라인을 삭제해야 합니다.
+
 
 /**
  * 재고 현황 조회 페이지의 메인 대시보드 컴포넌트입니다.

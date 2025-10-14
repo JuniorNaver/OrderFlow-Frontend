@@ -1,0 +1,118 @@
+/* ========================================================================= */
+/* 1. 계정 관리 페이지 레이아웃 및 검색/버튼 그룹 */
+/* ========================================================================= */
+
+.account-manage-container {
+    /* 페이지 내용이 상단 헤더 아래에 위치하도록 여백 설정 */
+    padding: 20px;
+    box-sizing: border-box;
+    max-width: 1400px; /* 적절한 최대 너비 설정 */
+    margin: 0 auto; /* 중앙 정렬 */
+}
+
+.account-manage-container h1 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* 검색 및 액션 버튼 그룹 */
+.top-controls {
+    display: flex;
+    justify-content: space-between; /* 검색창과 버튼 그룹 분리 */
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* 검색 영역 스타일 */
+.search-area {
+    display: flex;
+    gap: 10px;
+}
+
+.search-area input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 300px;
+}
+
+.search-area button {
+    padding: 8px 15px;
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 액션 버튼 영역 (생성/삭제) */
+.action-buttons button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    margin-left: 10px;
+}
+
+.create-btn {
+    background-color: #28a745; /* 생성 버튼 (초록색 계열) */
+    color: white;
+}
+
+.create-btn:hover {
+    background-color: #1e7e34;
+}
+
+.delete-btn {
+    background-color: #dc3545; /* 삭제 버튼 (빨간색 계열) */
+    color: white;
+}
+
+.delete-btn:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* ========================================================================= */
+/* 2. 계정 목록 테이블 스타일 */
+/* ========================================================================= */
+
+.account-table {
+    width: 100%;
+    border-collapse: collapse; /* 셀 경계선을 하나로 합침 */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* 은은한 그림자 */
+    background-color: #fff;
+}
+
+.account-table th, .account-table td {
+    border: 1px solid #e9ecef; /* 밝은 회색 경계선 */
+    padding: 12px 15px;
+    text-align: center; /* 테이블 셀 내용 중앙 정렬 */
+}
+
+.account-table th {
+    background-color: #f8f9fa; /* 헤더 배경색 */
+    color: #495057;
+    font-weight: 600;
+    cursor: pointer; /* 정렬 기능이 있음을 암시 */
+}
+
+.account-table tbody tr:hover {
+    background-color: #f1f1f1; /* 호버 효과 */
+}
+
+.account-table .edit-btn {
+    background-color: #ffc107;
+    color: #333;
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-weight: normal;
+}
+
+.account-table .edit-btn:hover {
+    background-color: #e0a800;
+}
