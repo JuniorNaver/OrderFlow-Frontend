@@ -79,3 +79,15 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* ===== 숫자 input의 스피너 완전 제거 ===== */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type=number] {
+  -moz-appearance: textfield !important; /* Firefox */
+  appearance: textfield !important;      /* Safari 대응 */
+}

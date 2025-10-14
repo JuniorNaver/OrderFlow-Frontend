@@ -27,6 +27,7 @@ function SalesRegister() {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [holdList, setHoldList] = useState([]);
   const [salesItems, setSalesItems] = useState([]); // ✅ 현재 판매중인 상품 목록
+  const [paidTotal, setPaidTotal] = useState(0);//결제누적
 
    // ✅ 주문 생성 (페이지 진입 시 자동 생성)
     useEffect(() => {
@@ -78,12 +79,22 @@ function SalesRegister() {
  // ✅ 결제 완료 처리
   const handlePaymentSuccess = async () => {
     if (!currentOrder) return alert("주문이 없습니다.");
+
+    if (paidTotal < totalAmount) {
+      alert("💳 일부 금액만 결제되었습니다. 남은 금액을 결제해주세요.");
+      return;
+    }
+
     try {
       await completeOrder(currentOrder.orderId);
       alert("💳 결제 완료 및 매출 반영됨!");
       // 다음 주문 자동 생성
       const next = await createOrder();
       setCurrentOrder(next);
+      setTotalAmount(0);
+      setPaidTotal(0);
+      setReceivedAmount(0);
+      setChangeAmount(0);
     } catch (err) {
       console.error("결제 완료 오류:", err);
     }
@@ -191,7 +202,13 @@ function SalesRegister() {
         <div className="grid grid-cols-2 gap-6 justify-items-center">
           <PaymentSection
             totalAmount={totalAmount}
-            onSuccess={handlePaymentSuccess}
+            currentOrder={currentOrder} // ✅ 주문 ID 전달
+            onSuccess={handlePaymentSuccess} // ✅ 주문 완료 처리
+            onPaymentComplete={(received, change) => {
+              setReceivedAmount(received);
+              setChangeAmount(change);
+            }} // ✅ 현금결제 시 요약 반영
+            setPaidTotal={setPaidTotal}
           />
 
           {/* 환불 */}
