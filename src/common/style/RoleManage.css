@@ -1,0 +1,150 @@
+.role-manage-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.role-manage-container h1 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.button-group.top-buttons {
+    display: flex;
+    justify-content: flex-end; /* 오른쪽 정렬 */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.save-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.role-table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+}
+
+.role-table th, .role-table td {
+    border: 1px solid #e9ecef;
+    padding: 12px 15px;
+    text-align: center;
+}
+
+.role-table th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+}
+
+.role-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+.toggle-cell {
+    width: 100px; /* 버튼 셀 너비 고정 */
+}
+
+/* ⭐️ 토글 버튼 스타일 */
+.toggle-btn {
+    width: 60px;
+    height: 30px;
+    border-radius: 15px;
+    border: none;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.toggle-btn.on {
+    background-color: #28a745; /* ON 상태: 초록색 */
+}
+
+.toggle-btn.off {
+    background-color: #dc3545; /* OFF 상태: 빨간색 */
+}
+
+.toggle-cell {
+    width: 100px; 
+    /* ⭐️ 기존의 .toggle-btn 스타일은 제거합니다. */
+}
+
+/* ========================================================================= */
+/* ⭐️ 슬라이드 토글 스위치 (Switch) 스타일 */
+/* ========================================================================= */
+
+/* 스위치 컨테이너 (레이블) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px; /* 너비 */
+    height: 24px; /* 높이 */
+}
+
+/* 기본 HTML 체크박스 숨기기 */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* 슬라이더(배경 바) 스타일 */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc; /* OFF 상태 배경색 (회색) */
+    transition: 0.4s;
+}
+
+/* 슬라이더 버튼 (토글 원) 스타일 */
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+}
+
+/* 체크되면 배경색 변경 (ON 상태 배경색) */
+input:checked + .slider {
+    background-color: #28a745; /* ON 상태 배경색 (초록색) */
+}
+
+/* 체크되면 토글 버튼 위치 변경 (오른쪽으로 슬라이드) */
+input:checked + .slider:before {
+    transform: translateX(24px); /* 48px(너비) - 18px(원 너비) - 3px*2(패딩) = 24px 이동 */
+}
+
+/* 둥근 모양 추가 */
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}

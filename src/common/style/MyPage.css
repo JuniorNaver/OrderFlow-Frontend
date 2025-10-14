@@ -1,0 +1,125 @@
+/* src/style/MyPage.css */
+
+.mypage-container {
+    padding: 30px;
+    box-sizing: border-box;
+    /* 너비 확장 및 중앙 정렬 (이전 수정 반영) */
+    max-width: 800px; 
+    margin: 0 auto; 
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.mypage-container h1 {
+    font-size: 2em;
+    margin-bottom: 20px; /* 간격 줄임 */
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* ========================================================================= */
+/* ⭐️ 변경 불가 핵심 정보 섹션 (아이디/직급) */
+/* ========================================================================= */
+
+.key-info-section {
+    display: flex;
+    justify-content: space-between; /* 양 끝 정렬 */
+    margin-bottom: 20px; /* 폼과의 간격 */
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.key-info-item {
+    flex-grow: 1; /* 너비를 동일하게 분배 */
+    text-align: center;
+    padding: 0 10px;
+}
+
+.key-info-item label {
+    display: block;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.key-info-item span {
+    display: block;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+}
+
+/* ========================================================================= */
+/* ⭐️ 2단 레이아웃을 위한 새로운 컨테이너 스타일 */
+/* ========================================================================= */
+.form-content-two-columns {
+    display: flex;
+    gap: 30px; /* 두 컬럼 사이의 간격 */
+    align-items: flex-start; /* 상단부터 시작하여 내용이 짧아도 바닥에 붙지 않게 함 */
+}
+
+.column-left {
+    flex: 1; /* 왼쪽 열이 사용 가능한 공간을 채우도록 함 */
+}
+
+.column-right {
+    flex: 1; /* 오른쪽 열도 사용 가능한 공간을 채우도록 함 */
+    /* 수평선을 추가하여 왼쪽 정보와 분리 */
+    border-left: 1px solid #eee;
+    padding-left: 30px;
+}
+
+/* ⭐️ 오른쪽 열의 비밀번호 섹션 제목 마진 조정 (수직 공간 압축) */
+.column-right h3 {
+    margin-top: 0; /* 폼 시작 부분에 붙도록 마진 제거 */
+    margin-bottom: 15px; /* 제목 아래 간격 유지 */
+}
+
+/* ========================================================================= */
+/* 폼 요소 (간격 최소화 - 기존 최적화 값 유지) */
+/* ========================================================================= */
+/* 폼 요소 (간격 최소화 - 기존 최적화 값 유지) */
+.mypage-form .input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px; /* 간격 최소화 유지 */
+}
+
+.mypage-form .input-group label {
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 2px;
+    text-align: left;
+    
+    /* ⭐️⭐️ 핵심 수정: 레이블 줄바꿈 방지 ⭐️⭐️ */
+    white-space: nowrap; 
+    
+    /* 폰트 크기를 더 줄여 텍스트가 들어갈 공간을 확보 */
+    font-size: 0.8em; 
+}
+
+.mypage-form .input-group input,
+.mypage-form .input-group select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1em;
+}
+
+.button-group.submit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 15px; /* 마진 최소화 */
+}
+
+.button-group.submit-actions button {
+    padding: 10px 20px;
+    font-size: 1em;
+    
+}
+
