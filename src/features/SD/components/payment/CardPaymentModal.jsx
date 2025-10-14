@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
+  const [amount, setAmount] = useState(totalAmount); // ✅ 결제금액 조정
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -17,8 +18,12 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
 
     setTimeout(() => {
       if (cardNumber === validCard && expiry === validExpiry && cvc === validCvc) {
-        alert("💳 결제 성공! 카드 승인 완료되었습니다.");
-        onSuccess(); // 부모에서 모달 닫기 담당
+        alert(`💳 결제 성공! 승인금액: ₩${amount.toLocaleString()}`);
+        // ✅ 결제 성공 시 조정된 금액을 부모에 전달
+        onSuccess({
+          method: "CARD",
+          amount: amount,
+        });
       } else {
         setError("❌ 카드 정보가 올바르지 않습니다.");
       }
@@ -26,24 +31,42 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
     }, 1200);
   };
 
-  // ✅ Enter 키로 바로 결제 실행
   useEffect(() => {
     const handleEnter = (e) => {
       if (e.key === "Enter") handleSubmit(e);
     };
     window.addEventListener("keydown", handleEnter);
     return () => window.removeEventListener("keydown", handleEnter);
-  }, [cardNumber, expiry, cvc]);
+  }, [cardNumber, expiry, cvc, amount]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[350px]">
         <h2 className="text-2xl font-bold mb-2 text-center">카드 결제</h2>
         <p className="text-center text-gray-600 mb-6">
-          결제 금액: <span className="font-semibold text-blue-600">₩ {totalAmount.toLocaleString()}</span>
+          총 결제금액:{" "}
+          <span className="font-semibold text-blue-600">
+            ₩ {totalAmount.toLocaleString()}
+          </span>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ✅ 결제금액 입력 필드 */}
+          <div>
+            <label className="block text-gray-600 mb-1 text-sm">결제 금액</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="w-full border rounded-lg px-3 py-2 text-right"
+              min="0"
+              max={totalAmount}
+            />
+            <small className="text-gray-400 text-xs">
+              (결제금액은 {totalAmount.toLocaleString()} 이하로 조정 가능)
+            </small>
+          </div>
+
           <div>
             <label className="block text-gray-600 mb-1 text-sm">카드번호</label>
             <input
