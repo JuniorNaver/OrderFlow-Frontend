@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import {  Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getRecommend, createPurchaseRequest } from "../api/api";
 import { placeholder, CATEGORIES, MOCK_PRODUCTS } from "../mock/Categories";
@@ -12,45 +12,37 @@ export default function RecommendListPage() {
   
   const [selectedCategory, setSelectedCategory] = useState("가공식품"); // 대분류
   const [selectedSubCategory, setSelectedSubCategory] = useState(null); // 하위 분류
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [hoverCategory, setHoverCategory] = useState("");
    const [purchaseList, setPurchaseList] = useState({}); 
 
   // 추천 발주 API
   const q = useQuery({
-    queryKey: ["pr-recommend", storeId],
+    queryKey: ["recommend", storeId],
     queryFn: () => getRecommend(storeId),
-    enabled: !!storeId,
-    retry: 0,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 
   useEffect(() => {
-        // 1. 데이터 로드가 성공적이고, 데이터가 존재할 때
-        if (q.isSuccess && q.data) {
-            
-            // 2. 현재 purchaseList가 비어있을 때만 (즉, 초기화가 아직 안 되었을 때만)
-            if (Object.keys(purchaseList).length === 0) {
-                
-                // q.data를 purchaseList 객체 형태로 변환
-                const initialPurchaseList = {};
-                
-                // q.data가 배열 형태라고 가정하고 반복 처리 (실제 API 응답에 따라 수정 필요)
-                // 예: q.data = [{ productCode: 'P001', suggestedQty: 5 }, ...]
-                q.data.forEach(item => {
-                    // 수량이 1 이상인 경우에만 초기 목록에 포함
-                    if (item.suggestedQty > 0) {
-                        initialPurchaseList[item.productCode] = item.suggestedQty;
-                    }
-                });
+    console.log("useEffect 실행됨", { isSuccess: q.isSuccess, dataUpdatedAt: q.dataUpdatedAt, isInitialized });
+  if (!q.isSuccess || isInitialized) return;
 
-                // 3. 변환된 데이터로 상태를 설정하여 최초 초기화 수행
-                if (Object.keys(initialPurchaseList).length > 0) {
-                    setPurchaseList(initialPurchaseList);
-                }
-            }
-        }
-    // 4. 종속성 배열: q.data와 q.isSuccess가 변경될 때만 이 효과를 다시 실행합니다.
-    }, [q.data, q.isSuccess]); 
+  const data = q.data;
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  const initial = {};
+  data.forEach(i => {
+    if (i.suggestedQty > 0) {
+      initial[i.productCode] = i.suggestedQty;
+    }
+  });
+
+  setPurchaseList(initial);
+  setIsInitialized(true);
+}, [q.isSuccess]);
+
   const createMut = useMutation({
     mutationFn: (lines) => createPurchaseRequest(storeId, { storeId, lines }),
   });
@@ -175,6 +167,7 @@ export default function RecommendListPage() {
                   }}
                   // ✅ 수량 변경 핸들러 연결
                   onQtyChange={handleQtyChange}
+                  onImageClick={() => nav(`/pr/product/${p.productCode}`)}
                 />
               ))}
             </div>

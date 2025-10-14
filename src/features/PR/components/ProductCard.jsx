@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
  * onQtyChange?: (productCode: String, qty: number) => void }} props
  */
 
-export default function ProductCard({ product, onClick, onQtyChange }) {
+export default function ProductCard({ product, onClick, onQtyChange, onImageClick }) {
   const nav = useNavigate();
   const { storeId = "S001" } = useParams();
   const img = product.imageUrl || placeholder(product.productCode, 300);
@@ -20,10 +20,10 @@ export default function ProductCard({ product, onClick, onQtyChange }) {
   // 2. 수량이 변경될 때마다 부모 컴포넌트에 알림
   useEffect(() => {
     // onQtyChange 함수가 존재하고, 현재 수량이 initialQty와 다를 때만 실행
-    if (onQtyChange) {
-      onQtyChange(product.productCode, qty);
-    }
-  }, [qty, onQtyChange, product.productCode]); // ✅ qty가 바뀔 때마다 실행
+    if (onQtyChange && qty !== (product.suggestedQty ?? 1)) {
+    onQtyChange(product.productCode, qty);
+  }
+}, [qty, onQtyChange, product.productCode, product.suggestedQty]); // ✅ qty가 바뀔 때마다 실행
 
   const increase = () => setQty(q => q + 1);
   const decrease = () => setQty(q => (q > 1 ? q - 1 : 1));
@@ -48,7 +48,11 @@ export default function ProductCard({ product, onClick, onQtyChange }) {
     <div className="border rounded-2xl p-3 flex flex-col">
       {/* 이미지 */}
       <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-2">
-        <img src={img} alt={product.name} className="w-full h-full object-cover" />
+        <img src={img} 
+        alt={product.name} 
+        className="w-full h-full object-cover cursor-pointer" 
+        onClick={onImageClick}
+        />
       </div>
 
       {/* 상품명 + 가격 */}

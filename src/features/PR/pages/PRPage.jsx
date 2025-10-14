@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, NavLink } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 
 export default function PRPage() {
   // 데모용 storeId 고정 (나중에 로그인/드롭다운으로 교체)
@@ -37,7 +37,7 @@ export default function PRPage() {
         </NavLink>
       </nav>
 
-      {/* 실제 내용은 App.jsx의 Route 자식들이 여기에 표시됨 */}
+      <Outlet/>
     </div>
   );
 }
