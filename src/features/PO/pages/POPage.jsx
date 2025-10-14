@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { confirmOrder, getCartItems, updateQuantity } from "../api/poApi";
+import { confirmOrder, deleteCartItems, getCartItems, saveCart, updateQuantity } from "../api/poApi";
 import BudgetBar from "../components/BudgetBar";
 import CapacityChart from "../components/CapacityChart";
 import ItemList from "../components/ItemList";
@@ -21,38 +21,24 @@ export default function POPage() {
     { id: 10, name: "코카콜라 1.5L", gtin: "8801234560073", price: 2300, margin: 1150, qty: 6 },
   ]);
 
+  // 장바구니 불러오기 (임의의 poId와 status)
+  const [poId] = useState(1);
+  const [status] = useState("PO");
   useEffect(() => {
-    getCartItems().then(setItems);
-  }, []);
-
-  // 전체 선택 토글
-  const [selectAll, setSelectAll] = useState(false);
-  const handleSelectAll = () => {
-    const newValue = !selectAll;
-    setSelectAll(newValue);
-    setItems((prev) =>
-      prev.map((item) => ({ ...item, selected: newValue }))
-    );
-  };
-
-  // 개별 선택
-  const handleSelect = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
-
+    // API 호출 시 poId와 status를 전달
+    getCartItems(poId, status)
+      .then(initialItems => {
+        const initializedItems = initialItems.map(item => ({...item, selected : item.selected ?? false}));
+        setItems(initializedItems);
+      }).catch(err => console.error("장바구니 로드 오류:", err));
+  }, [poId, status]); // poId와 status가 변경되면 다시 로드
 
   // 수량 증가
   const handleIncrease = async (itemId, currentQty) => {
     const newQty = currentQty + 1;
-
     try {
       // 서버에 수량 업데이트 요청
       await updateQuantity(itemId, newQty);
-
       setItems((prev) =>
         prev.map((it) =>
           it.id === itemId
@@ -75,10 +61,8 @@ export default function POPage() {
   const handleDecrease = async (itemId, currentQty) => {
     if (currentQty <= 1) return;
     const newQty = currentQty -1;
-
     try {
       await updateQuantity(itemId, newQty);
-
       setItems((prev) =>
         prev.map((it) =>
           it.id === itemId 
@@ -97,6 +81,25 @@ export default function POPage() {
     }
   };
 
+  // 전체 선택 토글
+  const [selectAll, setSelectAll] = useState(false);
+  const handleSelectAll = () => {
+    const newValue = !selectAll;
+    setSelectAll(newValue);
+    setItems((prev) =>
+      prev.map((item) => ({ ...item, selected: newValue }))
+    );
+  };
+
+  // 개별 선택
+  const handleSelect = (id) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, selected: !item.selected } : item
+      )
+    );
+  };
+
 
   // 총 매입가(= 현재 발주 금액) 계산
   const [usedBudget, setUsedBudget] = useState(2000000); // 예: 누적 사용 금액
@@ -113,40 +116,34 @@ export default function POPage() {
       frozen: { current: 300, incoming: 50, capacity: 600 },
   };
 
-  // 발주확정 버튼
-  const handleOrder = async () => {
-    const selectedItems = items.filter(it => it.selected);
-    
-    if (selectedItems.length === 0) {
-      alert("장바구니가 비어있습니다.");
-      return;
-    }
-
-    try {
-      const poId = 1; // 추후 실제 발주 id로 교체하기 
-
-      // 서버에 확정요청 보내기
-      await confirmOrder(poId);
-      alert(`${items.length}개 상품을 발주 확정했습니다.`);
-
-      // 필요시 UI 초기화 or 목록 새로고침
-      // window.location.reload();
-    } catch (err){
-      console.error("발주 요청 실패:", err);
-      alert("발주 중 오류가 발생했습니다.");
-    }
-  };
-
-  // 저장버튼
-  const handleSave = () => {
-    alert("장바구니가 저장되었습니다. (API 연결 예정)");
-  };
-
   // 삭제버튼
-  const handleDelete = () => {
-    const remaining = items.filter((it) => !it.selected);
-    setItems(remaining);
+  const handleDelete = async () => {
+    const selectedItems = items.filter((it) => it.selected); // 선택된 항목만 필터링
+    if (selectedItems.length === 0) {
+        alert("삭제할 항목을 선택해주세요."); 
+        return;
+    }
+    const itemIdsToDelete = selectedItems.map(it => it.id); // 삭제할 ID 목록 추출
+    try {
+        await deleteCartItems(itemIdsToDelete); 
+        const remaining = items.filter((it) => !it.selected);
+        setItems(remaining);
+    } catch (err) {
+        console.error("상품 삭제 실패:", err);
+        alert("상품 삭제 중 오류가 발생했습니다.");
+    }
   };
+
+  // 장바구니 저장버튼
+  const handleSave = async () => {
+  try {
+    await saveCart(poId, items); // 신규 API 필요
+    alert("장바구니가 성공적으로 저장되었습니다.");
+  } catch (err) {
+    console.error("장바구니 저장 실패:", err);
+    alert("저장 중 오류가 발생했습니다.");
+  }
+};
 
   // 불러오기 버튼 (목록 모달 표시)
   const handleLoad = () => {
@@ -196,6 +193,23 @@ export default function POPage() {
     },
   ]);
 
+  // 발주확정 버튼
+  const handleOrder = async () => {
+    const selectedItems = items.filter(it => it.selected);
+    if (selectedItems.length === 0) {
+      alert("장바구니가 비어있습니다.");
+      return;
+    }
+    try {
+      const poId = 1; // 추후 실제 발주 id로 교체하기 
+      await confirmOrder(poId);
+      alert(`${items.length}개 상품을 발주 확정했습니다.`);
+      // window.location.reload(); // 필요시 UI 초기화 or 목록 새로고침
+    } catch (err){
+      console.error("발주 요청 실패:", err);
+      alert("발주 중 오류가 발생했습니다.");
+    }
+  };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen flex justify-center">

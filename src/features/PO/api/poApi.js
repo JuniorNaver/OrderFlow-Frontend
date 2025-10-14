@@ -4,16 +4,56 @@ const api = axios.create({
   baseURL: "http://localhost:8080/api/po",
 });
 
-//상품 불러오기 
-export const getCartItems = async () => {
-  const res = await api.get("/items");
+//장바구니 불러오기 
+export const getCartItems = async (poId, status) => {
+  const res = await api.get(`/items?poId=${poId}&status=${status}`);
   return res.data;
 };
 
 //수량변경
-export const updateQuantity = async (poId, quantity) => {
-  const res = await api.put(`/update/${poId}`, { quantity });
+export const updateQuantity = async (itemId, newQty) => {
+  const res = await api.put(`/update/${itemId}`, { orderQty : newQty });
   return res.data;
+};
+
+//상품삭제
+export const deleteCartItems = async (itemIds) => {
+  // axios는 'params'에 배열을 전달하면 자동으로 'itemIds=1&itemIds=2...' 형태로 직렬화하여 전송합니다.
+  const res = await api.delete("/delete", { params: { itemIds: itemIds } });  
+  return res.data;
+};
+
+//장바구니 저장
+export const saveCart = async (poId) => {
+  try {
+    const res = await api.post(`/${poId}/save`); // ✅ api 사용
+    return res.data;
+  } catch (error) {
+    console.error("장바구니 저장 API 오류:", error);
+    throw error;
+  }
+};
+
+//저장된 장바구니 목록 불러오기 (Status = S)
+export const getSavedCartList = async () => {
+  try {
+    const res = await api.get(`/saved`); // ✅ /api/po/saved 로 요청
+    return res.data;
+  } catch (error) {
+    console.error("저장된 장바구니 목록 API 오류:", error);
+    throw error;
+  }
+};
+
+//특정 장바구니(헤더 ID)의 아이템 불러오기
+export const getSavedCartItems = async (poId) => {
+  try {
+    const res = await api.get(`/${poId}/items`);
+    return res.data;
+  } catch (error) {
+    console.error("저장된 장바구니 아이템 불러오기 API 오류:", error);
+    throw error;
+  }
 };
 
 //발주확정
