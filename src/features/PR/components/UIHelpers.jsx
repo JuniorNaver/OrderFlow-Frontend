@@ -102,5 +102,5 @@ onSub={() => sub(p.productCode)}
 </div>
 </div>
 </div>
-}
-);
+)
+};
