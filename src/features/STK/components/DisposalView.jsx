@@ -1,12 +1,11 @@
-// features/STK/components/DisposalView.jsx
-
 import React from 'react';
 import DisposalList from './DisposalList'; // 폐기 대상 목록 컴포넌트
 
 /**
  * [새로 추가] 폐기 페이지 뷰 컴포넌트입니다.
- * 스토리보드 (image_98669f.png)에 기반하여 유통기한 당일 제품 목록을 보여줍니다.
+ * 유통기한 당일 제품 목록을 보여줍니다.
  */
+
 const DisposalView = () => {
     return (
         <div style={styles.container}>
