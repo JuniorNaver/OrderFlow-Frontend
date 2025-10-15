@@ -1,5 +1,5 @@
 import { useNavigate, useParams,  } from "react-router-dom";
-import { placeholder } from "../mock/Categories";
+import { placeholder } from "../mock/Categories.mock";
 import { useState, useEffect } from "react";
 
 /**

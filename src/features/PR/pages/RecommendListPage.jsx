@@ -1,7 +1,7 @@
 import {  Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getRecommend, createPurchaseRequest } from "../api/api";
-import { placeholder, CATEGORIES, MOCK_PRODUCTS } from "../mock/Categories";
+import { placeholder, CATEGORIES, MOCK_PRODUCTS } from "../mock/Categories.mock";
 import ProductCard from "../components/ProductCard";
 import { useState, useEffect } from "react";
 
