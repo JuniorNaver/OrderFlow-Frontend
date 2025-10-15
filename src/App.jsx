@@ -39,6 +39,7 @@ import Header from "./components/Header";
 // 메뉴 데이터
 import posMenus from "./menus/posMenus";
 import stockMenus from "./menus/stockMenus";
+import PRBrowse from "./features/PR/pages/PrBrowse";
 
 
 // React Query Client (전역)
@@ -101,7 +102,7 @@ function App() {
           <Route path="/role-manage" element={<RoleManage />} />
 
           {/* ERP 도메인 */}
-          <Route path="/pr" element={<PRPage />} />
+          <Route path="/pr" element={<PRBrowse />} />
           <Route path="/pr/orders" element={<OrderManagementPage />} /> 
           <Route path="/pr/recommend" element={<RecommendListPage />} />   
           <Route path="/pr/search" element={<ProductSearchPage />} />  
