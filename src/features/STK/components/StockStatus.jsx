@@ -1,21 +1,38 @@
-// features/STK/components/StockStatus.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // 👈 useState, useEffect 추가
 import InventoryListComponent from './InventoryListComponent';
-
-// 가상 데이터
-const DUMMY_STOCK_DATA = [
-    { name: '실온제품C', location: 'T-01-01', quantity: '2,500 EA' },
-    { name: '냉동제품D', location: 'F-10-05', quantity: '1,200 EA' },
-    { name: '냉장제품E', location: 'R-03-02', quantity: '550 EA' },
-    { name: '실온제품F', location: 'T-04-10', quantity: '3,100 EA' },
-    { name: '냉동제품G', location: 'F-01-01', quantity: '800 EA' },
-];
+import { fetchStockStatusList } from '../api/stockApi'; // 👈 API import
 
 const StockStatus = () => {
+    const [stockData, setStockData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const data = await fetchStockStatusList(); // API 호출
+                setStockData(data);
+            } catch (error) {
+                console.error("전체 재고 현황 목록을 불러오는 데 실패했습니다.", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+    
+    if (isLoading) {
+        // 로딩 중일 때 빈 목록 컴포넌트에 빈 배열 전달
+        return <InventoryListComponent 
+                    title="전체 재고 현황 (품목별)" 
+                    data={[]} 
+                    headers={['제품명', '보관 위치', '현재 수량']}
+                />;
+    }
+
     return (
         <InventoryListComponent 
             title="전체 재고 현황 (품목별)" 
-            data={DUMMY_STOCK_DATA} 
+            data={stockData} // 👈 상태 데이터 사용
             headers={['제품명', '보관 위치', '현재 수량']}
         />
     );

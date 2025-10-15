@@ -1,23 +1,40 @@
-// features/STK/components/DisposalList.jsx
+import React, { useState, useEffect } from 'react'; // 👈 useState, useEffect 추가
+import { fetchDisposalList } from '../api/stockApi'; // 👈 API import
 
-import React from 'react';
-
-// 가상 데이터: 유통기한이 오늘인 제품 (폐기 대상)
-const DUMMY_DISPOSAL_DATA = [
-    { no: 1, name: '햇반(100g) 01584123', price: 3000, quantity: 0, stock: 5 },
-    { no: 2, name: '컵라면A 01584123', price: 1300, quantity: 0, stock: 10 },
-    { no: 3, name: '생수(2L) 01584123', price: 5200, quantity: 0, stock: 20 },
-    { no: 4, name: '캔커피 01584123', price: 200, quantity: 0, stock: 8 },
-];
+// ⭐️ Mock Data 제거: const DUMMY_DISPOSAL_DATA = ...
 
 /**
  * 폐기 대상 목록을 표시하는 컴포넌트입니다.
- * 스토리보드 (image_98669f.png)의 NO.1 영역을 담당합니다.
  */
 const DisposalList = () => {
+    const [disposalData, setDisposalData] = useState([]); // 상태 추가
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const data = await fetchDisposalList(); // API 호출
+                setDisposalData(data.map(item => ({...item, quantity: 0}))); // 수량 필드 추가
+            } catch (error) {
+                console.error("폐기 목록 데이터를 불러오는 데 실패했습니다.", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+    
+    if (isLoading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}>폐기 목록 로딩 중...</div>;
+    }
+
+    if (disposalData.length === 0) {
+         return <div style={{ textAlign: 'center', padding: '50px' }}>폐기 대상 제품이 없습니다.</div>;
+    }
+
     return (
         <div>
-            {/* 테이블 헤더 */}
+            {/* 테이블 헤더 (생략) */}
             <div style={styles.header}>
                 <span style={{ ...styles.col, flex: 0.5 }}>NO</span>
                 <span style={{ ...styles.col, flex: 3 }}>제품명</span>
@@ -27,19 +44,15 @@ const DisposalList = () => {
             </div>
 
             {/* 목록 아이템 */}
-            {DUMMY_DISPOSAL_DATA.map(item => (
-                <div key={item.no} style={styles.itemRow}>
-                    {/* NO */}
-                    <span style={{ ...styles.col, flex: 0.5 }}>{item.no}</span>
-                    
-                    {/* 제품명 */}
+            {disposalData.map((item, index) => ( // 👈 상태 데이터 사용
+                <div key={item.no || index} style={styles.itemRow}>
+                    {/* NO, 제품명, 단가 (생략) */}
+                    <span style={{ ...styles.col, flex: 0.5 }}>{index + 1}</span>
                     <div style={{ ...styles.col, flex: 3, padding: '0 10px' }}>
                         <div style={styles.productName}>{item.name}</div>
                     </div>
-                    
-                    {/* 단가 */}
                     <span style={{ ...styles.col, flex: 1.5, textAlign: 'right' }}>
-                        {item.price.toLocaleString()}원
+                        {item.price ? item.price.toLocaleString() : 'N/A'}원
                     </span>
                     
                     {/* 수량 입력 */}
@@ -77,7 +90,7 @@ const styles = {
         fontSize: '0.95rem',
         borderRadius: '5px',
         marginBottom: '10px',
-        border: '1px solid #ced4da' // 스토리보드의 박스 형태 구현
+        border: '1px solid #ced4da'
     },
     col: { 
         padding: '0 5px',
