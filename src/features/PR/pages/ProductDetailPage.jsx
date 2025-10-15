@@ -1,7 +1,7 @@
 // ProductDetailPage.jsx
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { MOCK_PRODUCTS, placeholder } from "../mock/Categories";
+import { MOCK_PRODUCTS, placeholder } from "../mock/Categories.mock";
 
 
 
