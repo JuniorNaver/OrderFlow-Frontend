@@ -1,0 +1,1 @@
+export const fmtCount = (n) => new Intl.NumberFormat('ko-KR').format(n ?? 0);
