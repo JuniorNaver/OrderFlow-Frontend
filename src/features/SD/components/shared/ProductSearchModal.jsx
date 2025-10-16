@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { searchProductsByName } from "../../api/productApi";
 import { addItemToOrder } from "../../api/sdApi"; // ✅ 추가
 
-function ProductSearchModal({ onClose, onSelect, orderId }) { // ✅ orderId 받기
+function ProductSearchModal({ onClose, onSelect, orderId }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false); // ✅ 중복 클릭 방지용
 
-  // ✅ 입력할 때마다 API 호출
+  // ✅ 상품 검색
   useEffect(() => {
     const fetchData = async () => {
       if (query.trim() === "") {
@@ -16,35 +17,62 @@ function ProductSearchModal({ onClose, onSelect, orderId }) { // ✅ orderId 받
       }
 
       setLoading(true);
-      const data = await searchProductsByName(query);
-      setResults(data);
-      setLoading(false);
+      try {
+        const data = await searchProductsByName(query);
+        setResults(data || []);
+      } catch (err) {
+        console.error("❌ 상품 검색 실패:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
   }, [query]);
 
-  // ✅ 상품 추가 이벤트 (서버 연결)
+  // ✅ 상품 추가 (서버 연결)
   const handleAddProduct = async (product) => {
-    try {
-      const itemData = {
-        orderId,
-        gtin: product.gtin,
-        quantity: 1,
-        price: product.price,
-      };
+  if (!orderId) {
+    alert("⛔ 주문이 아직 생성되지 않았습니다. 잠시 후 다시 시도하세요.");
+    return;
+  }
 
-      const added = await addItemToOrder(orderId, itemData);
-      console.log("✅ 추가된 상품:", added);
+  if (adding) return;
+  setAdding(true);
 
-      alert(`🛒 ${product.name}이(가) 주문에 추가되었습니다.`);
-      if (onSelect) onSelect(added); // 부모에게 전달
-      onClose(); // 모달 닫기
-    } catch (err) {
-      console.error("❌ 상품 추가 실패:", err);
-      alert("상품을 추가하는 중 오류가 발생했습니다.");
-    }
-  };
+  try {
+    console.log("🧾 주문 ID:", orderId);
+    console.log("🧾 추가 요청 상품:", product);
+
+    const itemData = {
+      orderId,
+      gtin: product.gtin,
+      quantity: 1,
+      price: product.price,
+    };
+
+    const added = await addItemToOrder(orderId, itemData);
+    console.log("✅ 추가된 상품:", added);
+
+    // ✅ 여기서 프론트에서 사용하는 필드명 통일
+    const normalized = {
+      ...added,
+      name: product.productName || product.name, // ✅ 핵심
+      price: product.price,
+      gtin: product.gtin,
+      stock: product.quantity,
+    };
+
+    alert(`🛒 ${normalized.name}이(가) 주문에 추가되었습니다.`);
+    if (onSelect) onSelect(normalized);
+    onClose();
+  } catch (err) {
+    console.error("❌ 상품 추가 실패:", err);
+    alert("상품을 추가하는 중 오류가 발생했습니다.\n(주문 생성 후 다시 시도해주세요)");
+  } finally {
+    setAdding(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
@@ -75,16 +103,24 @@ function ProductSearchModal({ onClose, onSelect, orderId }) { // ✅ orderId 받
         {/* 검색 결과 */}
         <div className="max-h-[300px] overflow-y-auto">
           {!loading && results.length > 0 ? (
-            results.map((product) => (
+            results.map((product, index) => (
               <button
-                key={product.id}
-                onClick={() => handleAddProduct(product)} // ✅ 수정 포인트
-                className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 transition"
+                key={`${product.gtin || product.id || "p"}-${index}`}
+                onClick={() => handleAddProduct(product)}
+                disabled={!orderId || adding} // ✅ 주문 없거나 클릭 중이면 비활성화
+                className={`w-full text-left px-4 py-3 border-b border-gray-100 transition
+                  ${
+                    !orderId || adding
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-blue-50"
+                  }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-800">{product.name}</span>
+                  <span className="font-medium text-gray-800">
+                    {product.name}
+                  </span>
                   <span className="text-gray-600 text-sm">
-                    ₩ {product.price.toLocaleString()}
+                    ₩ {product.price?.toLocaleString() ?? 0}
                   </span>
                 </div>
               </button>

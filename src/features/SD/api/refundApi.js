@@ -1,21 +1,21 @@
 import axios from "axios";
-const API_BASE = "http://localhost:8080/api";
 
-export const getEligibleRefundItems = async ({ receiptId, paymentId }) => {
-  const params = {};
-  if (receiptId) params.receiptId = receiptId;
-  if (paymentId) params.paymentId = paymentId;
-  const { data } = await axios.get(`${API_BASE}/refunds/eligibles`, { params });
-  return data; // { paymentId, items: [{paymentItemId, productName, unitPrice, paidQty, refundedQty, refundableQty, method, transactionNo}], currency, paidAt }
+const API_BASE = "http://localhost:8080/api/refunds";
+
+// ✅ 영수증 번호로 환불 대상 조회
+export const fetchRefundItems = async (receiptNo) => {
+  const res = await axios.get(`${API_BASE}/receipt/${receiptNo}`);
+  return res.data;
 };
 
-export const previewRefund = async (payload) => {
-  // { paymentId, reason, items: [{ paymentItemId, refundQty }] }
-  const { data } = await axios.post(`${API_BASE}/refunds/preview`, payload);
-  return data; // { refundTotal, fee, finalRefund, items:[{...}] }
+// ✅ 환불 요청
+export const requestRefund = async (data) => {
+  const res = await axios.post(`${API_BASE}/process`, data);
+  return res.data;
 };
 
-export const createRefund = async (payload) => {
-  const { data } = await axios.post(`${API_BASE}/refunds`, payload);
-  return data; // { refundId, status, approvedAt, finalRefund }
+// ✅ 결제정보 검증 (카드번호 / 간편결제)
+export const verifyRefundInfo = async (data) => {
+  const res = await axios.post(`${API_BASE}/verify`, data);
+  return res.data;
 };
