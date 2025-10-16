@@ -13,35 +13,33 @@ import InsertNameModal from "../components/InsertNameModal";
 
 export default function POPage() {
   const [items, setItems] = useState(mockItems);
-  const [savedCarts] = useState(mockSavedCarts);
   const [poId, setPoId] = useState(null);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
+  const [savedCarts, setSavedCarts] = useState(mockSavedCarts);
 
 
-
-
-  /** '장바구니 추가' 버튼이랑 연결 */
+  /** '장바구니 추가' 버튼 클릭시 */
   const handleAddToCart = async (product) => {
-  try {
-    // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
-    let currentPoId = poId;
-    if (!currentPoId) {
-      currentPoId = await createPOHeader(); // 💡 여기서 헤더 생성
+    try {
+      // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
+      let currentPoId = poId;
+      if (!currentPoId) {
+        currentPoId = await createPOHeader(); // 💡 여기서 헤더 생성
+      }
+
+      // 2️⃣ 생성된 poId 기준으로 아이템 추가
+      await api.post(`/api/po/${currentPoId}/items`, {
+        productId: product.id,
+        qty: 1,
+      });
+
+      // 3️⃣ 프론트 상태 업데이트
+      setItems((prev) => [...prev, { ...product, qty: 1, selected: false }]);
+    } catch (err) {
+      console.error("상품 추가 실패:", err);
+      alert("장바구니 추가 중 오류가 발생했습니다.");
     }
-
-    // 2️⃣ 생성된 poId 기준으로 아이템 추가
-    await api.post(`/api/po/${currentPoId}/items`, {
-      productId: product.id,
-      qty: 1,
-    });
-
-    // 3️⃣ 프론트 상태 업데이트
-    setItems((prev) => [...prev, { ...product, qty: 1, selected: false }]);
-  } catch (err) {
-    console.error("상품 추가 실패:", err);
-    alert("장바구니 추가 중 오류가 발생했습니다.");
-  }
-};
+  };
 
 
 
@@ -166,8 +164,19 @@ export default function POPage() {
   // 모달에서 이름 입력 후 '저장' 클릭 시 실행
   const handleConfirmSave = async (cartName) => {
     try {
-      await saveCart(poId, cartName); // 백엔드에서 이름 필드 받는 경우
+      if (!poId) {
+        alert("발주 헤더 정보가 없습니다. 장바구니에 상품을 먼저 추가해주세요.");
+        return;
+      }
+
+      // 장바구니 저장 요청
+      await saveCart(poId, cartName);
+
       alert(`'${cartName}' 장바구니가 저장되었습니다.`);
+
+      // ✅ 저장 완료 후 목록을 다시 불러와 최신화
+      const updatedList = await getSavedCartList();
+      setSavedCarts(updatedList);
     } catch (err) {
       console.error("장바구니 저장 실패:", err);
       alert("장바구니 저장 중 오류가 발생했습니다.");
@@ -175,6 +184,8 @@ export default function POPage() {
       setIsNameModalOpen(false);
     }
   };
+
+
 
 
 
