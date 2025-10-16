@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-// 스타일 파일을 임포트했다고 가정 (예: Modal.css)
 import '../style/Modal.css'; 
 
 const PasswordResetModal = ({ isOpen, onClose }) => {
