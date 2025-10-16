@@ -1,4 +1,3 @@
-// features/STK/components/StockAdjustmentView.jsx
 
 import React from 'react';
 
