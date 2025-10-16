@@ -1,16 +1,22 @@
-/* 역할 관리 페이지의 커스텀 토글 스위치 스타일 */
+/* ------------------------------------------------------------------------- */
+/* 커스텀 토글 스위치 스타일 */
+/* ------------------------------------------------------------------------- */
 
 .switch {
     position: relative;
     display: inline-block;
-    width: 48px;
-    height: 24px;
+    width: 48px; /* 너비 */
+    height: 24px; /* 높이 */
 }
+
+/* 체크박스는 숨김 */
 .switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
+
+/* 슬라이더 배경 */
 .slider {
     position: absolute;
     cursor: pointer;
@@ -20,31 +26,42 @@
     bottom: 0;
     background-color: #ccc;
     transition: .4s;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    border-radius: 24px; /* 둥근 모양 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* 약간의 그림자 */
 }
+
+/* 슬라이더 핸들 */
 .slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
     background-color: white;
     transition: .4s;
+    border-radius: 50%; /* 둥근 모양 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4); /* 핸들 그림자 */
 }
+
+/* 체크 되었을 때 배경색 (인디고) */
 input:checked + .slider {
     background-color: #4f46e5; /* indigo-600 */
 }
-input:focus + .slider {
-    box-shadow: 0 0 1px #4f46e5;
-}
+
+/* 체크 되었을 때 핸들 위치 이동 */
 input:checked + .slider:before {
-    transform: translateX(24px);
+    transform: translateX(24px); /* 48px - 4px*2 - 16px = 24px 이동 */
 }
-/* Rounded sliders */
-.slider.round {
-    border-radius: 24px;
+
+/* 토글이 비활성화(disabled) 되었을 때 스타일 */
+input:disabled + .slider {
+    cursor: not-allowed;
+    background-color: #e5e7eb; /* gray-200 */
 }
-.slider.round:before {
-    border-radius: 50%;
+
+/* 토글이 비활성화(disabled) 되었을 때 핸들 스타일 */
+input:disabled + .slider:before {
+    opacity: 0.7;
+    background-color: #d1d5db; /* gray-300 */
 }

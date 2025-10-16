@@ -41,6 +41,7 @@ const RoleManager = () => {
             });
 
             if (!response.ok) {
+                // HTTP 오류 시 (4xx, 5xx)
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -53,11 +54,13 @@ const RoleManager = () => {
                  return;
             }
 
+            // 성공적으로 데이터를 가져온 경우
             setRoles(data);
             setOriginalRoles(data);
 
         } catch (error) {
             console.error("Failed to fetch roles:", error);
+            // 오류 발생 시 더미 데이터 사용
             setRoles(FALLBACK_ROLES);
             setOriginalRoles(FALLBACK_ROLES);
             setMessage('❌ 데이터 로딩 중 오류 발생. 더미 데이터를 사용합니다.');
@@ -67,6 +70,7 @@ const RoleManager = () => {
     }, []);
 
     useEffect(() => {
+        // 컴포넌트 마운트 시 데이터 로드
         fetchRoles();
     }, [fetchRoles]);
 
@@ -79,7 +83,7 @@ const RoleManager = () => {
                         ...role,
                         permissions: {
                             ...role.permissions,
-                            [permissionKey]: !role.permissions[permissionKey]
+                            [permissionKey]: !role.permissions[permissionKey] // 값 반전
                         }
                     }
                     : role
@@ -88,9 +92,12 @@ const RoleManager = () => {
     }, []);
 
     // 변경사항이 있는지 확인하는 함수
-    const hasChanges = roles.some((role, index) =>
-        JSON.stringify(role.permissions) !== JSON.stringify(originalRoles[index]?.permissions)
-    );
+    const hasChanges = roles.some((role, index) => {
+        const originalPermissions = originalRoles[index]?.permissions;
+        // 깊은 복사를 위해 JSON.stringify를 사용해 두 객체의 속성값을 비교
+        return originalPermissions && JSON.stringify(role.permissions) !== JSON.stringify(originalPermissions);
+    });
+
 
     // 3. 저장 함수 (PUT) - 일괄 업데이트 API 호출
     const handleSave = async () => {
@@ -99,6 +106,7 @@ const RoleManager = () => {
         setIsSaving(true);
         setMessage('백엔드 서버로 권한 변경 내용을 전송 중...');
         
+        // 백엔드가 요구하는 페이로드 형태에 맞게 데이터 가공
         const updatePayload = roles.map(role => ({
             roleId: role.roleId,
             permissions: role.permissions
@@ -114,8 +122,9 @@ const RoleManager = () => {
             if (!response.ok) {
                  throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            setOriginalRoles(roles); 
+            
+            // 저장 성공 시, 현재 변경된 상태를 원본 상태로 업데이트 (깊은 복사)
+            setOriginalRoles(roles.map(role => ({ ...role, permissions: { ...role.permissions } }))); 
             setMessage('✅ 권한 설정이 성공적으로 저장되었습니다.');
 
         } catch (error) {
@@ -123,32 +132,36 @@ const RoleManager = () => {
             setMessage('❌ 권한 저장 중 오류가 발생했습니다. 자세한 내용은 콘솔을 확인하세요.');
         } finally {
             setIsSaving(false);
-            setTimeout(() => setMessage(''), 5000);
+            // 메시지를 5초 후 제거
+            setTimeout(() => setMessage(''), 5000); 
         }
     };
 
     // 4. 취소 함수
     const handleCancel = () => {
         if (isSaving) return;
-        setRoles(originalRoles);
+        // 원본 상태로 되돌림 (깊은 복사)
+        setRoles(originalRoles.map(role => ({ ...role, permissions: { ...role.permissions } })));
         setMessage('변경 사항이 취소되었습니다.');
         setTimeout(() => setMessage(''), 3000);
     };
 
+    // 로딩 화면
     if (loading) {
-         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                <p className="ml-3 text-lg font-medium text-gray-700">권한 데이터를 로딩 중입니다...</p>
-            </div>
-        );
+          return (
+              <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  <p className="ml-3 text-lg font-medium text-gray-700">권한 데이터를 로딩 중입니다...</p>
+              </div>
+          );
     }
     
+    // 메인 화면 (Tailwind CSS 기반)
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
             <div className="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10">
-                <header className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h1 className="text-3xl font-extrabold text-gray-900 flex items-center">
+                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
+                    <h1 className="text-3xl font-extrabold text-gray-900 flex items-center mb-4 sm:mb-0">
                         <Settings className="w-7 h-7 mr-3 text-indigo-600" />
                         역할별 권한 관리
                     </h1>
@@ -181,9 +194,17 @@ const RoleManager = () => {
                             <X className="w-4 h-4 mr-2" />
                             취소
                         </button>
+                        <button
+                            onClick={fetchRoles}
+                            className="flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 shadow-md bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-indigo-400 transform hover:scale-[1.02]"
+                        >
+                            <RefreshCcw className="w-4 h-4 mr-2" />
+                            새로고침
+                        </button>
                     </div>
                 </header>
                 
+                {/* 메시지 영역 */}
                 {message && (
                     <div className={`p-3 mb-4 rounded-lg text-sm font-medium ${
                         message.includes('성공') ? 'bg-green-100 text-green-700 border border-green-300' : 
@@ -194,7 +215,8 @@ const RoleManager = () => {
                     </div>
                 )}
 
-                <div className="overflow-x-auto shadow-lg rounded-lg border border-gray-200">
+                {/* 권한 테이블 */}
+                <div className="overflow-x-auto shadow-lg rounded-xl border border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -215,14 +237,16 @@ const RoleManager = () => {
                                     
                                     {PERMISSIONS.map(p => (
                                         <td key={p.key} className="px-6 py-4 whitespace-nowrap text-center">
-                                            {/* 커스텀 토글 스위치 (RoleManager.css 사용) */}
+                                            {/* 커스텀 토글 스위치 (RoleManage.css 사용) */}
                                             <label className="switch">
                                                 <input
                                                     type="checkbox"
                                                     checked={!!role.permissions[p.key]}
                                                     onChange={() => handleToggleRole(role.roleId, p.key)}
+                                                    // 최고 관리자(ROLE_ADMIN)의 권한은 변경 불가
+                                                    disabled={role.roleId === 'ROLE_ADMIN'} 
                                                 />
-                                                <span className="slider round"></span>
+                                                <span className="slider"></span>
                                             </label>
                                         </td>
                                     ))}
@@ -231,9 +255,9 @@ const RoleManager = () => {
                         </tbody>
                     </table>
                 </div>
-                <p className="mt-4 text-sm text-gray-500">
+                <p className="mt-4 text-sm text-gray-500 flex items-center">
                     <RefreshCcw className="w-3 h-3 inline mr-1 text-gray-400" />
-                    데이터 로딩 및 저장은 백엔드 <code className="font-mono text-xs bg-gray-200 px-1 rounded">/api/admin/roles/permissions</code> 엔드포인트를 사용합니다.
+                    데이터 로딩 및 저장은 백엔드 <code className="font-mono text-xs bg-gray-200 px-1 rounded">/api/admin/roles/permissions</code> 엔드포인트를 사용하며, **ROLE_ADMIN의 권한은 변경할 수 없습니다.**
                 </p>
             </div>
         </div>
