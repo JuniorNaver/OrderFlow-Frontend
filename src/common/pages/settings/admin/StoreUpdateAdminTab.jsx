@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { storeAdminApi } from "../../../../api/storeAdminApi";
+import storeAdminApi from "../../../api/storeAdminApi";
 
-export default function StoreUpdateAdminTab() {
+
+const StoreUpdateAdminTab = () => {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
@@ -98,4 +99,6 @@ export default function StoreUpdateAdminTab() {
       )}
     </div>
   );
-}
+};
+
+export default StoreUpdateAdminTab;

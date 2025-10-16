@@ -1,31 +1,32 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { storeConfigApi } from "../../../../api/storeConfigApi";
-import { useAuth } from "../../../../context/AuthContext";
+import { storeConfigApi } from "../../../api/storeConfigApi";
 
-export default function StoreUpdateUserTab() {
-  const { user } = useAuth();
+const StoreUpdateUserTab = ({user}) => {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
 
-  if (!user) return <p className="text-sm text-gray-500">사용자 정보를 불러오는 중...</p>;
-  if (!user.storeId) return <p className="text-sm text-gray-500">지점이 연결되지 않았습니다.</p>;
+  // ✅ Hook은 무조건 컴포넌트 최상단에서 호출되어야 함
+  const storeId = user?.storeId;
 
   const { data: store, isLoading } = useQuery({
-    queryKey: ["store-config", user.storeId],
-    queryFn: () => storeConfigApi.getConfig(user.storeId),
-    enabled: !!user.storeId,
+    queryKey: ["store-config", storeId],
+    queryFn: () => storeConfigApi.getConfig(storeId),
+    enabled: !!storeId, // ✅ user가 없거나 storeId 없으면 자동으로 실행 안 됨
   });
 
   const updateStore = useMutation({
-    mutationFn: (dto) => storeConfigApi.updateConfig(user.storeId, dto),
+    mutationFn: (dto) => storeConfigApi.updateConfig(storeId, dto),
     onSuccess: () => {
-      queryClient.invalidateQueries(["store-config", user.storeId]);
+      queryClient.invalidateQueries(["store-config", storeId]);
       setEditMode(false);
     },
   });
 
+  // ✅ 이제 조건문은 아래쪽에 둬도 안전
+  if (!user) return <p className="text-sm text-gray-500">사용자 정보를 불러오는 중...</p>;
+  if (!storeId) return <p className="text-sm text-gray-500">지점이 연결되지 않았습니다.</p>;
   if (isLoading) return <p className="text-sm text-gray-500">불러오는 중...</p>;
   if (!store) return <p className="text-sm text-gray-500">점포 설정 정보가 없습니다.</p>;
 
@@ -93,4 +94,6 @@ export default function StoreUpdateUserTab() {
       )}
     </div>
   );
-}
+};
+
+export default StoreUpdateUserTab;
