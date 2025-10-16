@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { storeAdminApi } from "../../../../api/storeAdminApi";
+import storeAdminApi from "../../../api/storeAdminApi";
 
-export default function StoreInitAdminTab() {
+const StoreInitAdminTab = () => {
   const queryClient = useQueryClient();
 
   const { data: stores, isLoading } = useQuery({
@@ -76,4 +76,6 @@ export default function StoreInitAdminTab() {
       </div>
     </div>
   );
-}
+};
+
+export default StoreInitAdminTab;

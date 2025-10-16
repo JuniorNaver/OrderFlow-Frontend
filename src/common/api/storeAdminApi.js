@@ -5,7 +5,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-export const storeAdminApi = {
+const storeAdminApi = {
   /** 지점 등록 (init) */
   createStore: (data) => api.post("/master/store/init", data).then((r) => r.data),
 
@@ -18,3 +18,4 @@ export const storeAdminApi = {
   /** 삭제 */
   deleteStore: (storeId) => api.delete(`/master/store/${storeId}`).then((r) => r.data),
 };
+export default storeAdminApi;

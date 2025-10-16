@@ -1,53 +1,61 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { X } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import StoreInitAdminTab from "../admin/StoreInitAdminTab";
-import StoreUpdateAdminTab from "../admin/StoreUpdateAdminTab";
-import StoreUpdateUserTab from "../common/pages/settings/user/StoreUpdateUserTab";
+import StoreInitAdminTab from "../pages/settings/admin/StoreInitAdminTab";
+import StoreUpdateAdminTab from "../pages/settings/admin/StoreUpdateAdminTab";
+import StoreUpdateUserTab from "../pages/settings/user/StoreUpdateUserTab";
 
-// 탭 컴포넌트 임포트
-
-export default function SettingsPanel({ open, onClose }) {
-  const { user } = useAuth();
+const SettingsPanel = ({ open, onClose }) => {
+  const user = { role: "ADMIN" };
   const [visible, setVisible] = useState(false);
+  const [animate, setAnimate] = useState(false);
   const [activeTab, setActiveTab] = useState("store");
 
-  // Drawer와 동일한 부드러운 모션 효과
   useEffect(() => {
     if (open) {
+      // 1️⃣ mount
       setVisible(true);
-      document.body.style.overflow = "hidden"; // 스크롤 잠금
     } else {
+      // 2️⃣ unmount 지연
+      setAnimate(false);
       const timer = setTimeout(() => setVisible(false), 300);
-      document.body.style.overflow = "";
       return () => clearTimeout(timer);
     }
   }, [open]);
 
+  // ✅ mount 후 첫 프레임에서 슬라이드 인 적용
+  useLayoutEffect(() => {
+    if (visible) {
+      requestAnimationFrame(() => {
+        setAnimate(true);
+        document.body.style.overflow = "hidden";
+      });
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
-  // 권한 구분
-  const isAdmin = user?.role === "ADMIN" || user?.roles?.includes("ROLE_ADMIN");
-  const isUser = !isAdmin;
+  const isAdmin = user.role === "ADMIN";
 
   return (
     <div
       className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-        open ? "opacity-100" : "opacity-0 pointer-events-none"
+        animate ? "opacity-100" : "opacity-0"
       }`}
     >
-      {/* 반투명 배경 */}
+      {/* 배경 */}
       <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
+          animate ? "opacity-100" : "opacity-0"
         }`}
         onClick={onClose}
       />
 
       {/* 패널 본체 */}
       <div
-        className={`absolute top-0 right-0 w-full sm:w-[480px] h-full bg-white shadow-2xl transform transition-transform duration-300 ${
-          open ? "translate-x-0" : "translate-x-full"
+        className={`absolute top-0 right-0 w-full sm:w-[480px] h-full bg-white shadow-2xl transform transition-transform duration-300 ease-out ${
+          animate ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* 상단 헤더 */}
@@ -61,7 +69,7 @@ export default function SettingsPanel({ open, onClose }) {
           </button>
         </div>
 
-        {/* 탭 네비게이션 */}
+        {/* 탭 */}
         <div className="flex border-b text-sm font-medium text-gray-600">
           <button
             className={`flex-1 py-2 text-center transition-colors ${
@@ -85,26 +93,23 @@ export default function SettingsPanel({ open, onClose }) {
           </button>
         </div>
 
-        {/* 컨텐츠 영역 */}
+        {/* 콘텐츠 */}
         <div className="p-5 overflow-y-auto h-[calc(100%-110px)]">
-          {/* 🏪 Store 탭 */}
           {activeTab === "store" && (
             <>
               {isAdmin ? (
                 <>
-                  {/* 관리자용: 초기 등록 또는 수정 탭 */}
                   <StoreInitAdminTab />
                   <div className="mt-6 border-t pt-4">
                     <StoreUpdateAdminTab />
                   </div>
                 </>
               ) : (
-                <StoreUpdateUserTab />
+                <StoreUpdateUserTab user={user} />
               )}
             </>
           )}
 
-          {/* 👤 Account 탭 */}
           {activeTab === "account" && (
             <div className="text-sm text-gray-700 space-y-3">
               <p>
@@ -117,7 +122,6 @@ export default function SettingsPanel({ open, onClose }) {
                 <strong>역할:</strong>{" "}
                 {isAdmin ? "관리자 (ADMIN)" : "일반 사용자 (USER)"}
               </p>
-
               <button
                 className="mt-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm"
                 onClick={() => alert("계정 관리 기능은 추후 추가 예정입니다.")}
@@ -130,4 +134,6 @@ export default function SettingsPanel({ open, onClose }) {
       </div>
     </div>
   );
-}
+};
+
+export default SettingsPanel;
