@@ -8,6 +8,8 @@ export default function ItemList({
   onIncrease,
   onDecrease,
 }) {
+  console.log("렌더링된 아이템 목록:", items);
+
   return (
     <div className="bg-white p-6 rounded-xl shadow overflow-x-auto">
       <table className="w-full border-collapse text-lg min-w-[900px]">
@@ -36,7 +38,7 @@ export default function ItemList({
           {items.length > 0 ? (
             items.map((item) => (
               <tr
-                key={item.id}
+                key={item.itemNo}
                 className="border-b hover:bg-gray-50 transition-colors"
               >
                 {/* 상품명 */}
@@ -45,10 +47,10 @@ export default function ItemList({
                     <input
                       type="checkbox"
                       checked={!!item.selected}
-                      onChange={() => onSelect(item.id)}
+                      onChange={() => onSelect(item.itemNo)}
                       className="w-5 h-5"
                     />
-                    <span className="ml-12 text-gray-800">{item.name}</span>
+                    <span className="ml-12 text-gray-800">{item.productName}</span>
                   </div>
                 </td>
 
@@ -56,7 +58,7 @@ export default function ItemList({
                 <td className="text-center">
                   <div className="inline-flex items-center justify-center gap-3">
                     <button
-                      onClick={() => onDecrease(item.id, item.qty)}
+                      onClick={() => onDecrease(item.itemNo, item.qty)}
                       className="border w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100"
                     >
                       -
@@ -67,7 +69,7 @@ export default function ItemList({
                     </span>
                     
                     <button
-                      onClick={() => onIncrease(item.id, item.qty)}
+                      onClick={() => onIncrease(item.itemNo, item.qty)}
                       className="border w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100"
                     >
                       +

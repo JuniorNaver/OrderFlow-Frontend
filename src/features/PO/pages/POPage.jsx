@@ -1,47 +1,67 @@
-import axios from "axios";
+
+import api, { createPOHeader } from "../api/poApi";
 import React, { useEffect, useState } from "react";
-import { confirmOrder, deleteCartItems, getCartItems, saveCart, updateQuantity } from "../api/poApi";
+import { confirmOrder, deleteCartItems, getSavedCartList, saveCart, updateQuantity } from "../api/poApi";
 import BudgetBar from "../components/BudgetBar";
 import CapacityChart from "../components/CapacityChart";
 import ItemList from "../components/ItemList";
-import SavedCartModal from "../components/SavedCart";
+import SavedCartModal from "../components/SavedCartModal";
 import NeedleChart from "../components/NeedleChart";
+import { mockItems, mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
+import Empty from "../components/Empty";
+import InsertNameModal from "../components/InsertNameModal";
 
 export default function POPage() {
-  const [items, setItems] = useState([
-    { id: 1, name: "햇반(100g)", gtin: "01584123", price: 1000, margin: 500, qty: 2 },
-    { id: 2, name: "진라면", gtin: "09843122", price: 1200, margin: 600, qty: 1 },
-    { id: 3, name: "코카콜라 500ml", price: 9000, margin: 4500, qty: 100 },
-    { id: 4, name: "삼다수 2L", gtin: "8801234560011", price: 1200, margin: 600, qty: 3 },
-    { id: 5, name: "비비고 왕교자", gtin: "8801234560028", price: 9800, margin: 4900, qty: 2 },
-    { id: 6, name: "서울우유 1L", gtin: "8801234560035", price: 2600, margin: 1300, qty: 1 },
-    { id: 7, name: "농심 새우깡", gtin: "8801234560042", price: 1500, margin: 750, qty: 5 },
-    { id: 8, name: "CJ 햇반컵밥 불고기덮밥", gtin: "8801234560059", price: 3900, margin: 1950, qty: 2 },
-    { id: 9, name: "오뚜기 진짬뽕", gtin: "8801234560066", price: 1400, margin: 700, qty: 4 },
-    { id: 10, name: "코카콜라 1.5L", gtin: "8801234560073", price: 2300, margin: 1150, qty: 6 },
-  ]);
+  const [items, setItems] = useState(mockItems);
+  const [savedCarts] = useState(mockSavedCarts);
+  const [poId, setPoId] = useState(null);
+  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
 
-  // 장바구니 불러오기 (임의의 poId와 status)
-  const [poId] = useState(1);
-  const [status] = useState("PO");
-  useEffect(() => {
-    // API 호출 시 poId와 status를 전달
-    getCartItems(poId, status)
-      .then(initialItems => {
-        const initializedItems = initialItems.map(item => ({...item, selected : item.selected ?? false}));
-        setItems(initializedItems);
-      }).catch(err => console.error("장바구니 로드 오류:", err));
-  }, [poId, status]); // poId와 status가 변경되면 다시 로드
+
+
+
+  /** '장바구니 추가' 버튼이랑 연결 */
+  const handleAddToCart = async (product) => {
+  try {
+    // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
+    let currentPoId = poId;
+    if (!currentPoId) {
+      currentPoId = await createPOHeader(); // 💡 여기서 헤더 생성
+    }
+
+    // 2️⃣ 생성된 poId 기준으로 아이템 추가
+    await api.post(`/api/po/${currentPoId}/items`, {
+      productId: product.id,
+      qty: 1,
+    });
+
+    // 3️⃣ 프론트 상태 업데이트
+    setItems((prev) => [...prev, { ...product, qty: 1, selected: false }]);
+  } catch (err) {
+    console.error("상품 추가 실패:", err);
+    alert("장바구니 추가 중 오류가 발생했습니다.");
+  }
+};
+
+
+
+
+
+
+
+
+
+
 
   // 수량 증가
-  const handleIncrease = async (itemId, currentQty) => {
+  const handleIncrease = async (itemNo, currentQty) => {
     const newQty = currentQty + 1;
     try {
       // 서버에 수량 업데이트 요청
-      await updateQuantity(itemId, newQty);
+      await updateQuantity(itemNo, newQty);
       setItems((prev) =>
         prev.map((it) =>
-          it.id === itemId
+          it.itemNo === itemNo
             ? {
               ...it,
               qty: it.qty + 1,
@@ -58,14 +78,14 @@ export default function POPage() {
   };
 
   // 수량 감소
-  const handleDecrease = async (itemId, currentQty) => {
+  const handleDecrease = async (itemNo, currentQty) => {
     if (currentQty <= 1) return;
     const newQty = currentQty -1;
     try {
-      await updateQuantity(itemId, newQty);
+      await updateQuantity(itemNo, newQty);
       setItems((prev) =>
         prev.map((it) =>
-          it.id === itemId 
+          it.itemNo === itemNo 
             ? {
                 ...it,
                 qty: newQty,
@@ -81,6 +101,10 @@ export default function POPage() {
     }
   };
 
+
+
+
+
   // 전체 선택 토글
   const [selectAll, setSelectAll] = useState(false);
   const handleSelectAll = () => {
@@ -95,10 +119,14 @@ export default function POPage() {
   const handleSelect = (id) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
+        item.itemNo === id ? { ...item, selected: !item.selected } : item
       )
     );
   };
+
+
+
+
 
 
   // 총 매입가(= 현재 발주 금액) 계산
@@ -109,13 +137,6 @@ export default function POPage() {
     0
   );
 
-  // 창고 용량 임시데이터 
-  const warehouseData = {
-      room: { current: 600, incoming: 200, capacity: 1000 },
-      cold: { current: 400, incoming: 100, capacity: 800 },
-      frozen: { current: 300, incoming: 50, capacity: 600 },
-  };
-
   // 삭제버튼
   const handleDelete = async () => {
     const selectedItems = items.filter((it) => it.selected); // 선택된 항목만 필터링
@@ -123,7 +144,7 @@ export default function POPage() {
         alert("삭제할 항목을 선택해주세요."); 
         return;
     }
-    const itemIdsToDelete = selectedItems.map(it => it.id); // 삭제할 ID 목록 추출
+    const itemIdsToDelete = selectedItems.map(it => it.itemNo); // 삭제할 ID 목록 추출
     try {
         await deleteCartItems(itemIdsToDelete); 
         const remaining = items.filter((it) => !it.selected);
@@ -134,21 +155,38 @@ export default function POPage() {
     }
   };
 
-  // 장바구니 저장버튼
-  const handleSave = async () => {
-  try {
-    await saveCart(poId, items); // 신규 API 필요
-    alert("장바구니가 성공적으로 저장되었습니다.");
-  } catch (err) {
-    console.error("장바구니 저장 실패:", err);
-    alert("저장 중 오류가 발생했습니다.");
-  }
-};
 
-  // 불러오기 버튼 (목록 모달 표시)
-  const handleLoad = () => {
-    setShowSavedList(true);
+
+
+  // 장바구니 저장버튼
+  const handleSave = () => {
+    setIsNameModalOpen(true);
   };
+
+  // 모달에서 이름 입력 후 '저장' 클릭 시 실행
+  const handleConfirmSave = async (cartName) => {
+    try {
+      await saveCart(poId, cartName); // 백엔드에서 이름 필드 받는 경우
+      alert(`'${cartName}' 장바구니가 저장되었습니다.`);
+    } catch (err) {
+      console.error("장바구니 저장 실패:", err);
+      alert("장바구니 저장 중 오류가 발생했습니다.");
+    } finally {
+      setIsNameModalOpen(false);
+    }
+  };
+
+
+
+  // '불러오기' 버튼 클릭시 
+  const handleLoad = async () => {
+    const list = await getSavedCartList();
+    console.log("저장된 장바구니:", list);
+    setShowSavedList(true); // 목업데이터 출력 
+  };
+
+  // 불러오기 임시 데이터 
+  const [showSavedList, setShowSavedList] = useState(false); // 모달 표시 여부
 
   // 특정 저장본을 클릭했을 때
   const handleSelectSavedCart = (cart) => {
@@ -161,37 +199,9 @@ export default function POPage() {
     setShowSavedList(false);
   };
 
-  // 불러오기 임시 데이터 
-  const [showSavedList, setShowSavedList] = useState(false); // 모달 표시 여부
-  const [savedCarts] = useState([
-    {
-      id: "cart-001",
-      name: "2월 발주 리스트",
-      date: "2025-02-20",
-      items: [
-        { id: 11, name: "코카콜라 1.5L", price: 2300, margin: 1150, qty: 10 },
-        { id: 12, name: "삼다수 2L", price: 1200, margin: 600, qty: 5 },
-      ],
-    },
-    {
-      id: "cart-002",
-      name: "3월 초 매입 리스트",
-      date: "2025-03-02",
-      items: [
-        { id: 21, name: "햇반컵밥 불고기덮밥", price: 3900, margin: 1950, qty: 3 },
-        { id: 22, name: "비비고 왕교자", price: 9800, margin: 4900, qty: 2 },
-      ],
-    },
-    {
-      id: "cart-003",
-      name: "테스트용 장바구니",
-      date: "2025-03-15",
-      items: [
-        { id: 31, name: "진라면 매운맛", price: 1300, margin: 600, qty: 4 },
-        { id: 32, name: "농심 새우깡", price: 1500, margin: 750, qty: 6 },
-      ],
-    },
-  ]);
+
+
+
 
   // 발주확정 버튼
   const handleOrder = async () => {
@@ -213,8 +223,12 @@ export default function POPage() {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
+      {items.length === 0 ? (
+          
+          <Empty handleLoad={handleLoad}/>
+
+      ) : (
       <div className="w-full max-w-7xl flex items-stretch space-x-8">
-        
         {/* 왼쪽 영역 */}
         <div className="flex-1 flex flex-col ">
           {/* 헤더 */}
@@ -284,10 +298,11 @@ export default function POPage() {
         {/* 오른쪽 영역(CapacityChart) */}
         <div className="w-[350px] relative">
           <div className="sticky top-20">
-            <CapacityChart data={warehouseData} />
+            <CapacityChart data={mockWarehouseData} />
           </div>
         </div>
       </div>
+      )}
 
       {/* 불러오기 모달 표시 */}
       {showSavedList && (
@@ -297,6 +312,12 @@ export default function POPage() {
           onClose={handleCloseModal}
         />
       )}
+
+      <InsertNameModal
+        isOpen={isNameModalOpen}
+        onClose={() => setIsNameModalOpen(false)}
+        onConfirm={handleConfirmSave}
+      />
     </div>
   );
-}
+};

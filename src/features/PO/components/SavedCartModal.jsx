@@ -14,10 +14,23 @@ export default function SavedCartModal({ carts, onSelect, onClose }) {
               onClick={() => onSelect(cart)}
               className="p-4 border rounded-lg hover:bg-blue-50 cursor-pointer transition"
             >
-              <div className="font-semibold text-lg">{cart.name}</div>
-              <div className="text-gray-500 text-sm">{cart.date}</div>
-              <div className="text-gray-400 text-xs mt-1">
-                {cart.items.length}개 품목
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-semibold text-lg">{cart.name}</div>
+                  <div className="text-gray-500 text-sm">{cart.date}</div>
+                  <div className="text-gray-400 text-xs mt-1">
+                    {cart.items.length}개 품목
+                  </div>
+                </div>
+                <button
+                  className="text-red-500 underline hover:text-red-600 font-medium text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation(); // 리스트 클릭 이벤트와 분리
+                    alert(`${cart.name} 삭제 클릭됨`);
+                  }}
+                >
+                  삭제
+                </button>
               </div>
             </li>
           ))}
