@@ -1,15 +1,15 @@
 const posMenus = [
   {
+    label: "POS 홈",
+    path: "/sd"
+  },
+  {
     label: "결제",
-    path: "/sd/Sales",
+    path: "/sd/sales",
   },
   {
     label: "환불",
     path: "/sd/refund",
-  },
-  {
-    label: "판매내역 조회",
-    path: "/sd/sales",
   },
   {
     label: "영수증 조회",
