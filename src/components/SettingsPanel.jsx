@@ -1,66 +1,58 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import StoreInitTab from "../common/pages/settings/admin/StoreInitTab";
-import StoreUpdateTab from "../common/pages/settings/user/StoreUpdateTab";
-import { useAuth } from "../common/context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
+import StoreInitAdminTab from "../admin/StoreInitAdminTab";
+import StoreUpdateAdminTab from "../admin/StoreUpdateAdminTab";
+import StoreUpdateUserTab from "../common/pages/settings/user/StoreUpdateUserTab";
 
-
-// import AccountManageTab from "../common/pages/settings/account/AccountManageTab";
-// import AccountUpdateTab from "../common/pages/settings/account/AccountUpdateTab";
-// import RoleSettingsTab from "../common/pages/settings/RoleSettingsTab";
-// import SystemSettingsTab from "../common/pages/settings/SystemSettingsTab";
+// 탭 컴포넌트 임포트
 
 export default function SettingsPanel({ open, onClose }) {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("system");
-  const { user } = useAuth(); // ✅ 전역 user 접근
-  const isAdmin = user?.role === "ADMIN";
+  const [activeTab, setActiveTab] = useState("store");
 
+  // Drawer와 동일한 부드러운 모션 효과
   useEffect(() => {
     if (open) {
-      const t = setTimeout(() => setVisible(true), 10);
-      return () => clearTimeout(t);
+      setVisible(true);
+      document.body.style.overflow = "hidden"; // 스크롤 잠금
     } else {
-      setVisible(false);
+      const timer = setTimeout(() => setVisible(false), 300);
+      document.body.style.overflow = "";
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
-  // ✅ 역할별 탭 구성
-  const tabs = isAdmin
-    ? [
-      { key: "store-init", label: "지점 초기 설정" },
-      { key: "account-manage", label: "계정 관리" },
-      { key: "role", label: "권한 관리" },
-      { key: "system", label: "시스템 환경" },
-    ]
-    : [
-      { key: "store-update", label: "지점 정보 수정" },
-      { key: "account-update", label: "계정 정보" },
-      { key: "system", label: "시스템 환경" },
-    ];
+  if (!visible) return null;
 
-  // 기본 탭 고정 (권한에 따라)
-  useEffect(() => {
-    setActiveTab(isAdmin ? "store-init" : "store-update");
-  }, [isAdmin]);
+  // 권한 구분
+  const isAdmin = user?.role === "ADMIN" || user?.roles?.includes("ROLE_ADMIN");
+  const isUser = !isAdmin;
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
-      {/* 오버레이 */}
+    <div
+      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+        open ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
+    >
+      {/* 반투명 배경 */}
       <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${visible ? "opacity-30" : "opacity-0"
-          }`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
         onClick={onClose}
-      ></div>
+      />
 
-      {/* 본체 */}
+      {/* 패널 본체 */}
       <div
-        className={`absolute top-0 right-0 w-[420px] h-full bg-white shadow-lg p-4 flex flex-col transform transition-transform duration-300 ease-out ${visible ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={`absolute top-0 right-0 w-full sm:w-[480px] h-full bg-white shadow-2xl transform transition-transform duration-300 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
       >
-        {/* 헤더 */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold">설정</h2>
+        {/* 상단 헤더 */}
+        <div className="flex items-center justify-between px-5 py-3 border-b bg-gray-50">
+          <h2 className="text-lg font-semibold">⚙️ 설정</h2>
           <button
             onClick={onClose}
             className="p-1 text-gray-600 hover:text-black transition-colors"
@@ -69,33 +61,71 @@ export default function SettingsPanel({ open, onClose }) {
           </button>
         </div>
 
-        {/* 탭 */}
-        <div className="flex border-b mb-4">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2 text-sm font-medium border-b-2 transition-all duration-200 ${activeTab === tab.key
-                  ? "border-blue-500 text-blue-600 font-semibold"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* 탭 네비게이션 */}
+        <div className="flex border-b text-sm font-medium text-gray-600">
+          <button
+            className={`flex-1 py-2 text-center transition-colors ${
+              activeTab === "store"
+                ? "text-blue-600 border-b-2 border-blue-600 bg-gray-50"
+                : "hover:text-blue-500"
+            }`}
+            onClick={() => setActiveTab("store")}
+          >
+            지점 설정
+          </button>
+          <button
+            className={`flex-1 py-2 text-center transition-colors ${
+              activeTab === "account"
+                ? "text-blue-600 border-b-2 border-blue-600 bg-gray-50"
+                : "hover:text-blue-500"
+            }`}
+            onClick={() => setActiveTab("account")}
+          >
+            계정 설정
+          </button>
         </div>
 
-        {/* 탭 콘텐츠 */}
-        <div className="flex-1 overflow-y-auto text-sm text-gray-700">
-          {/* 관리자용 */}
-          {activeTab === "store-init" && isAdmin && <StoreInitTab />}
-          {/* {activeTab === "account-manage" && isAdmin && <AccountManageTab />}
-          {activeTab === "role" && isAdmin && <RoleSettingsTab />} */}
+        {/* 컨텐츠 영역 */}
+        <div className="p-5 overflow-y-auto h-[calc(100%-110px)]">
+          {/* 🏪 Store 탭 */}
+          {activeTab === "store" && (
+            <>
+              {isAdmin ? (
+                <>
+                  {/* 관리자용: 초기 등록 또는 수정 탭 */}
+                  <StoreInitAdminTab />
+                  <div className="mt-6 border-t pt-4">
+                    <StoreUpdateAdminTab />
+                  </div>
+                </>
+              ) : (
+                <StoreUpdateUserTab />
+              )}
+            </>
+          )}
 
-          {/* 공용(관리자+점장) */}
-          {activeTab === "store-update" && <StoreUpdateTab />}
-          {/* {activeTab === "account-update" && <AccountUpdateTab />}
-          {activeTab === "system" && <SystemSettingsTab />} */}
+          {/* 👤 Account 탭 */}
+          {activeTab === "account" && (
+            <div className="text-sm text-gray-700 space-y-3">
+              <p>
+                <strong>이름:</strong> {user?.name || "-"}
+              </p>
+              <p>
+                <strong>이메일:</strong> {user?.email || "-"}
+              </p>
+              <p>
+                <strong>역할:</strong>{" "}
+                {isAdmin ? "관리자 (ADMIN)" : "일반 사용자 (USER)"}
+              </p>
+
+              <button
+                className="mt-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm"
+                onClick={() => alert("계정 관리 기능은 추후 추가 예정입니다.")}
+              >
+                계정 관리
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
