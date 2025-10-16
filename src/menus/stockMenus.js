@@ -3,10 +3,7 @@ const stockMenus = [
     label: "발주(PR)",
     path: "/pr",
     children: [
-      { label: "실온 상품", path: "/pr/room-temp" },
-      { label: "냉장 상품", path: "/pr/fridge" },
-      { label: "냉동 상품", path: "/pr/frozen" },
-      { label: "기타 상품", path: "/pr/others" },
+      { label: "상품 발주", path: "/pr" },
       { label: "발주 추천 상품", path: "/pr/recommend" },
       { label: "재고 부족 상품", path: "/pr/out-of-stock" },
     ]

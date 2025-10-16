@@ -1,12 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { getCategories, getCorners } from "../api/browse";
-import { useMemo } from "react";
-import { Home, PackageOpen, Refrigerator, Snowflake, Sun, ChevronLeft } from "lucide-react";
+import React, {useEffect, useMemo, useState} from "react";
+import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
+import { fetchCorners, fetchCategories } from "../api/browse";
 
-import { Card, CardHeader, CardTitle, CardContent } from "../../../common/components/common/Card";
-import { Badge } from "../../../common/components/common/Badge";
-import { Skeleton } from "../../../common/components/common/Skeleton";
 const ZONES = [
   { key: "room",    label: "실온", icon: <Sun className="h-5 w-5" /> },
   { key: "chilled", label: "냉장", icon: <Refrigerator className="h-5 w-5" /> },
@@ -15,150 +10,104 @@ const ZONES = [
 ];
 
 export default function PRBrowse() {
-  const nav = useNavigate();
-  const { zone: zoneParam, cornerId } = useParams();
+  const [zone, setZone] = useState("room");     // 내부값은 영문 키 권장
+  const [corners, setCorners] = useState([]);   // [{id,name,categoryCount}]
+  const [cornerId, setCornerId] = useState(null);
+  const [kans, setKans] = useState([]);         // [{id,name,childrenCount}]
+  const [loadingCorners, setLoadingCorners] = useState(false);
+  const [loadingKans, setLoadingKans] = useState(false);
 
-  const zone = zoneParam ?? "room";
-  const mode = cornerId ? "category" : "corner";
-
-  const {
-    data: corners,
-    isLoading: cornersLoading,
-    error: cornersError,
-  } = useQuery({
-    queryKey: ["pr-corners", zone],
-    queryFn: () => getCorners(zone),
-    enabled: mode === "corner",
-  });
-
-  const {
-    data: categories,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useQuery({
-    queryKey: ["pr-categories", zone, cornerId],
-    queryFn: () => getCategories(zone, cornerId),
-    enabled: mode === "category",
-  });
-
-  const title = useMemo(() => {
-    const m = ZONES.find(z => z.key === zone);
-    return m ? m.label : "실온";
+  // 존 변경 → 코너 로드
+  useEffect(() => {
+    setLoadingCorners(true);
+    setCornerId(null);
+    setKans([]);
+    fetchCorners(zone).then(setCorners).finally(() => setLoadingCorners(false));
   }, [zone]);
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Home className="h-5 w-5" />
-            <h1 className="text-xl font-bold">발주 카테고리</h1>
-            <span className="text-slate-400">/</span>
-            <span className="text-slate-700">{title}</span>
-            {mode === "category" && (
-              <>
-                <span className="text-slate-400">/</span>
-                <span className="text-slate-700">코너</span>
-              </>
-            )}
-          </div>
+  // 코너 선택 → KAN 로드
+  useEffect(() => {
+    if (!cornerId) return;
+    setLoadingKans(true);
+    fetchCategories(zone, cornerId).then(setKans).finally(() => setLoadingKans(false));
+  }, [zone, cornerId]);
 
-          {/* 존 선택 탭 */}
-          <div className="flex gap-2">
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* 헤더: 존 탭 */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+        <div className="mx-auto max-w-6xl px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xl font-bold text-gray-900">
+            <div className="h-8 w-8 rounded-xl bg-black text-white grid place-items-center">OF</div>
+            <span>OrderFlow 발주(PR)</span>
+          </div>
+          <nav className="flex gap-2">
             {ZONES.map(z => (
               <button
                 key={z.key}
-                onClick={() => nav(`/pr/browse/${z.key}`)}
-                className={`px-3 py-1 rounded-full text-sm border flex items-center gap-1
-                  ${z.key === zone ? "bg-black text-white" : "bg-white hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 rounded-xl border ${zone===z.key?'bg-black text-white':'bg-white'}`}
+                onClick={() => setZone(z.key)}
               >
-                {z.icon}
                 {z.label}
               </button>
             ))}
-          </div>
+          </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        {/* 뒤로가기 (카테고리 화면일 때) */}
-        {mode === "category" && (
-          <button
-            onClick={() => nav(`/pr/browse/${zone}`)}
-            className="mb-4 inline-flex items-center gap-1 text-slate-600 hover:text-slate-900"
-          >
-            <ChevronLeft className="h-4 w-4" /> 코너로 돌아가기
-          </button>
-        )}
+      <main className="mx-auto max-w-6xl px-5 py-6 space-y-6">
+        {/* 코너 선택기 (한 개만) */}
+        <div className="rounded-2xl border bg-white p-4 space-y-3">
+          <label className="block text-sm font-medium mb-1">코너</label>
+          {loadingCorners ? (
+            <div className="text-sm text-gray-500">코너 불러오는 중…</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {corners.map(c => (
+                <button
+                  key={c.id}
+                  className={`text-left p-3 rounded-xl border hover:shadow ${cornerId===c.id?'ring-2 ring-black':''}`}
+                  onClick={()=>setCornerId(c.id)}
+                >
+                  <div className="font-medium">{c.name || '기타'}</div>
+                  <div className="text-sm text-gray-500">KAN {c.categoryCount}</div>
+                </button>
+              ))}
+              {!corners.length && <div className="text-sm text-gray-500">코너 없음</div>}
+            </div>
+          )}
+        </div>
 
-        {/* 코너 목록 */}
-        {mode === "corner" && (
-          <>
-            {cornersLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-28 w-full" />
-                ))}
-              </div>
-            )}
-            {cornersError && (
-              <div className="text-red-500">코너를 불러오지 못했어요.</div>
-            )}
-            {corners && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {corners.map(c => (
-                  <Card
-                    key={c.id}
-                    onClick={() => nav(`/pr/browse/${zone}/${c.id}`)}
-                    className="cursor-pointer hover:shadow-md transition"
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-semibold">{c.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm text-slate-600 flex items-center justify-between">
-                      <span>{c.desc || ""}</span>
-                      <Badge variant="secondary">KAN {c.categoryCount}</Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        {/* KAN 리스트 (소분류 라벨) */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-gray-900">
+              {cornerId ? `선택 코너: ${cornerId.replaceAll('_',' ')}` : '코너를 선택하세요'}
+            </h2>
+            {cornerId && <div className="text-sm text-gray-500">{kans.length} KAN</div>}
+          </div>
 
-        {/* 카테고리(KAN) 목록 */}
-        {mode === "category" && (
-          <>
-            {categoriesLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <Skeleton key={i} className="h-28 w-full" />
+          {cornerId && (
+            loadingKans ? (
+              <div className="text-sm text-gray-500">카테고리 불러오는 중…</div>
+            ) : (
+              <ul className="divide-y rounded-xl border bg-white">
+                {kans.map(k => (
+                  <li key={k.id} className="p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{k.name || '기타'}</div>
+                      <div className="text-xs text-gray-500">KAN: {k.id}</div>
+                    </div>
+                    <div className="text-sm text-gray-600">{k.childrenCount}개 상품</div>
+                  </li>
                 ))}
-              </div>
-            )}
-            {categoriesError && (
-              <div className="text-red-500">카테고리를 불러오지 못했어요.</div>
-            )}
-            {categories && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map(c => (
-                  <Link key={c.id} to={`/pr/list?kan=${c.id}`} className="block">
-                    <Card className="hover:shadow-md transition">
-                      <CardHeader className="pb-2 flex items-center justify-between">
-                        <CardTitle className="text-base font-semibold">{c.name}</CardTitle>
-                        <Badge variant="secondary">{c.id}</Badge>
-                      </CardHeader>
-                      <CardContent className="text-sm text-slate-600">
-                        상품 {c.childrenCount}개
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                {!kans.length && <li className="p-3 text-gray-500">해당 코너의 KAN이 없습니다</li>}
+              </ul>
+            )
+          )}
+        </section>
+
+        {/* 상품 그리드는 나중에 KAN 클릭 → 상품 API 붙일 때 렌더 */}
       </main>
     </div>
   );
