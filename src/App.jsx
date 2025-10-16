@@ -46,13 +46,17 @@ import PRBrowse from "./features/PR/pages/PrBrowse";
 const queryClient = new QueryClient();
 
 function App() {
-  const [isPOS, setIsPOS] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-
   // 정규식 상수
   const POS_ROUTE = /^\/(sd)/;
   const ERP_ROUTE = /^\/(pr|po|gr|stk|bi)/;
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  // ✅ 초기값을 현재 경로로 설정
+  const [isPOS, setIsPOS] = useState(() => POS_ROUTE.test(location.pathname));
+
+
+
 
   // 현재 경로를 localStorage에 저장
   useEffect(() => {
@@ -83,7 +87,7 @@ function App() {
       return next;
     });
   };
-  
+
 
   // 현재 모드에 따른 메뉴
   const menus = isPOS ? posMenus : stockMenus;
@@ -103,36 +107,36 @@ function App() {
 
           {/* ERP 도메인 */}
           <Route path="/pr" element={<PRBrowse />} />
-          <Route path="/pr/orders" element={<OrderManagementPage />} /> 
-          <Route path="/pr/recommend" element={<RecommendListPage />} />   
-          <Route path="/pr/search" element={<ProductSearchPage />} />  
-          <Route path="/pr/shop" element={<ShopPage />} />    
+          <Route path="/pr/orders" element={<OrderManagementPage />} />
+          <Route path="/pr/recommend" element={<RecommendListPage />} />
+          <Route path="/pr/search" element={<ProductSearchPage />} />
+          <Route path="/pr/shop" element={<ShopPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
-          
+
 
           <Route path="/bi" element={<BIPage />} />
           <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
           <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
           <Route path="/bi/profit" element={<div>손익 분석</div>} />
           <Route path="/bi/order-efficiency" element={<div>발주 효율 분석</div>} />
-         
-          
-           {/* 💡 STK 라우트 블록: index 경로 변경 */}
+
+
+          {/* 💡 STK 라우트 블록: index 경로 변경 */}
           <Route path="/stk" element={<STKPage />}>
-                
-                {/* 1. 💡 [수정] 인덱스 경로: /stk 접속 시, CurrentStockDashboard를 바로 렌더링 */}
-            <Route index element={<CurrentStockDashboard />} /> 
-            
+
+            {/* 1. 💡 [수정] 인덱스 경로: /stk 접속 시, CurrentStockDashboard를 바로 렌더링 */}
+            <Route index element={<CurrentStockDashboard />} />
+
             {/* 2. 재고 현황 조회 (기존 경로는 그대로 유지. 이제 인덱스와 동일한 화면) */}
             <Route path="current-status" element={<CurrentStockDashboard />} />
-            
+
             {/* 3. 유통기한 현황 */}
             <Route path="expiry" element={<ExpiryDashboard />} />
-            
+
             {/* 4. 유통기한 임박 상품 관리 */}
             <Route path="expiry-manage" element={<ExpiryManagementView />} />
-            
+
             {/* 5. 재고 수량 조정 */}
             <Route path="adjust" element={<StockAdjustmentView />} />
             {/* 5. 폐기 */}
@@ -142,7 +146,7 @@ function App() {
 
           {/* POS 도메인 */}
           <Route path="/sd" element={<POSDashboard />} />
-          <Route path="/sd/sales" element={<SalesRegister />} /> 
+          <Route path="/sd/sales" element={<SalesRegister />} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
