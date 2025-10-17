@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useState} from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
-import { fetchCorners, fetchCategories } from "../api/browse";
+import { fetchCorners, fetchCategories, fetchProducts } from "../api/browse";
 
 const ZONES = [
   { key: "room",    label: "실온", icon: <Sun className="h-5 w-5" /> },
@@ -195,7 +195,7 @@ export default function PRBrowse() {
                     }`}
                     disabled={!p.orderable}
                   >
-                    담기
+                    장바구니
                   </button>
                 </div>
               ))}
