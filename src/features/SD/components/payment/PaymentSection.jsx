@@ -12,13 +12,17 @@ function PaymentSection({
   onSelect,
   onPaymentComplete,
   onSuccess,
-  setPaidTotal,
 }) {
   const [loading, setLoading] = useState(false);
+  const [paidTotal, setPaidTotal] = useState(0); // ✅ 누적 결제 금액
   const [showMethods, setShowMethods] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [showEasyModal, setShowEasyModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+
+  // ✅ 남은 금액 계산
+  const remainingAmount = Math.max(totalAmount - paidTotal, 0);
 
   const paymentMap = {
     "카드 결제": "CARD",
@@ -37,25 +41,26 @@ function PaymentSection({
         ...extraData,
       });
 
-      // 2️⃣ 결제 완료 처리
-      alert(`✅ ${method} 결제 성공!`);
+      // 2️⃣ 누적 결제 금액 갱신
+      const newPaidTotal = paidTotal + Number(amount);
+      setPaidTotal(newPaidTotal);
 
-      // 3️⃣ 금액/거스름돈 업데이트
-      if (setPaidTotal) setPaidTotal((prev) => prev + Number(amount));
-      if (onSelect) onSelect(method);
-      if (onPaymentComplete)
-        onPaymentComplete(Number(amount), extraData.change ?? 0);
+      const remaining = totalAmount - newPaidTotal;
 
-      // 4️⃣ 주문 완료 및 새 주문 생성
-      await completeOrder(currentOrder.orderId);
-      const newOrder = await createOrder();
+      // 3️⃣ 안내 메시지
+      alert(`✅ ${method} 결제 성공! (남은 금액: ₩${remaining.toLocaleString()})`);
 
-      // 5️⃣ 로컬/화면 초기화
-      localStorage.setItem("currentOrder", JSON.stringify(newOrder));
-      if (window.clearSalesItems) window.clearSalesItems();
-      console.log("🆕 새 주문으로 초기화됨:", newOrder);
+      // 4️⃣ 아직 결제 금액이 남은 경우
+      if (remaining > 0) {
+        console.log(`💡 아직 ₩${remaining.toLocaleString()} 남았습니다.`);
+        if (onSelect) onSelect(method);
+        if (onPaymentComplete)
+          onPaymentComplete(Number(amount), extraData.change ?? 0);
+        return;
+      }
 
-      if (onSuccess) onSuccess(newOrder);
+      // 5️⃣ 모든 결제 완료 → 결제 완료 모달 표시
+      setShowCompleteModal(true);
     } catch (error) {
       console.error("결제 처리 중 오류:", error);
       alert("결제 처리 중 오류가 발생했습니다.");
@@ -85,7 +90,7 @@ function PaymentSection({
     }
     setShowMethods(false);
   };
-
+  
   return (
     <div className="w-full max-w-[400px]">
       <BarcodeListener
@@ -124,7 +129,7 @@ function PaymentSection({
       {/* 💳 카드 결제 모달 */}
       {showCardModal && (
         <CardPaymentModal
-          totalAmount={totalAmount}
+          totalAmount={remainingAmount} // ✅ 남은 금액 전달
           onClose={() => setShowCardModal(false)}
           onSuccess={({ amount }) => handlePaymentSuccess("CARD", amount)}
         />
@@ -133,10 +138,10 @@ function PaymentSection({
       {/* 💵 현금 결제 모달 */}
       {showCashModal && (
         <CashPaymentModal
-          totalAmount={totalAmount}
+          totalAmount={remainingAmount} // ✅ 남은 금액 전달
           onClose={() => setShowCashModal(false)}
           onSuccess={({ receivedAmount, change }) =>
-            handlePaymentSuccess("CASH", totalAmount, {
+            handlePaymentSuccess("CASH", remainingAmount, {
               receivedAmount,
               change,
             })
@@ -147,16 +152,46 @@ function PaymentSection({
       {/* ⚡ 간편 결제 모달 */}
       {showEasyModal && (
         <EasyPaymentModal
-          totalAmount={totalAmount}
+          totalAmount={remainingAmount} // ✅ 남은 금액 전달
           currentOrder={currentOrder}
           onClose={() => setShowEasyModal(false)}
           onSuccess={({ impUid }) =>
-            handlePaymentSuccess("EASY", totalAmount, { impUid })
+            handlePaymentSuccess("EASY", remainingAmount, { impUid })
           }
         />
+      )}
+
+      {/* ✅ 결제 완료 모달 */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[380px] text-center">
+            <h2 className="text-2xl font-bold text-green-600 mb-3">✅ 결제 완료</h2>
+            <p className="text-gray-700 mb-4">결제가 모두 완료되었습니다.</p>
+            <p className="font-semibold mb-6">
+              영수증 출력 또는 거스름돈을 확인하세요.
+            </p>
+
+            <button
+              onClick={async () => {
+                await completeOrder(currentOrder.orderId);
+                const newOrder = await createOrder();
+                localStorage.setItem("currentOrder", JSON.stringify(newOrder));
+                if (window.clearSalesItems) window.clearSalesItems();
+                setShowCompleteModal(false);
+                setPaidTotal(0);
+                if (onSuccess) onSuccess(newOrder);
+              }}
+              className="bg-blue-500 text-white px-6 py-2 rounded-xl hover:bg-blue-600 font-bold"
+            >
+              다음 주문으로
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
 export default PaymentSection;
+
+

@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 
 function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
-  const [amount, setAmount] = useState(totalAmount); // ✅ 결제금액 조정
+  const [amount, setAmount] = useState(totalAmount);
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ totalAmount 바뀔 때마다 최신 금액으로 동기화
+  useEffect(() => {
+    setAmount(totalAmount);
+  }, [totalAmount]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,7 +24,6 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
     setTimeout(() => {
       if (cardNumber === validCard && expiry === validExpiry && cvc === validCvc) {
         alert(`💳 결제 성공! 승인금액: ₩${amount.toLocaleString()}`);
-        // ✅ 결제 성공 시 조정된 금액을 부모에 전달
         onSuccess({
           method: "CARD",
           amount: amount,
@@ -31,27 +35,18 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
     }, 1200);
   };
 
-  useEffect(() => {
-    const handleEnter = (e) => {
-      if (e.key === "Enter") handleSubmit(e);
-    };
-    window.addEventListener("keydown", handleEnter);
-    return () => window.removeEventListener("keydown", handleEnter);
-  }, [cardNumber, expiry, cvc, amount]);
-
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[350px]">
         <h2 className="text-2xl font-bold mb-2 text-center">카드 결제</h2>
         <p className="text-center text-gray-600 mb-6">
-          총 결제금액:{" "}
+          남은 결제금액:{" "}
           <span className="font-semibold text-blue-600">
             ₩ {totalAmount.toLocaleString()}
           </span>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ✅ 결제금액 입력 필드 */}
           <div>
             <label className="block text-gray-600 mb-1 text-sm">결제 금액</label>
             <input
@@ -78,25 +73,20 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
             />
           </div>
 
-          <div>
-            <label className="block text-gray-600 mb-1 text-sm">유효기간</label>
+          <div className="flex gap-2">
             <input
               type="text"
               value={expiry}
               onChange={(e) => setExpiry(e.target.value)}
               placeholder="MM/YY"
-              className="w-full border rounded-lg px-3 py-2"
+              className="flex-1 border rounded-lg px-3 py-2"
             />
-          </div>
-
-          <div>
-            <label className="block text-gray-600 mb-1 text-sm">CVC</label>
             <input
               type="password"
               value={cvc}
               onChange={(e) => setCvc(e.target.value)}
-              placeholder="***"
-              className="w-full border rounded-lg px-3 py-2"
+              placeholder="CVC"
+              className="flex-1 border rounded-lg px-3 py-2"
             />
           </div>
 
