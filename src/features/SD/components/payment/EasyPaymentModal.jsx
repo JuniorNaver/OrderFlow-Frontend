@@ -15,14 +15,12 @@ function EasyPaymentModal({ totalAmount, currentOrder, onClose, onSuccess }) {
     try {
       setLoading(true);
       setError("");
-
       IMP.init("imp66451012");
-
 
       const data = {
         pg: pg === "kakaopay"
-            ? "kakaopay.TC0ONETIME"
-            : "toss_brandpay.tosstest",
+          ? "kakaopay.TC0ONETIME"
+          : "toss_brandpay.tosstest",
         pay_method: pg === "kakaopay" ? "card" : "tosspay",
         merchant_uid: `order_${new Date().getTime()}`,
         name: "POS 간편결제",
@@ -30,22 +28,27 @@ function EasyPaymentModal({ totalAmount, currentOrder, onClose, onSuccess }) {
         buyer_email: "test@orderflow.com",
         buyer_name: "테스트 고객",
         buyer_tel: "010-1234-5678",
-        };
+      };
 
       // ✅ 결제창 호출
       IMP.request_pay(data, async (rsp) => {
         if (rsp.success) {
-          // 백엔드 검증 요청
           try {
             const res = await axios.post("http://localhost:8080/api/payments", {
               orderId: currentOrder?.orderId,
               amount: totalAmount,
               paymentMethod: "EASY",
-              impUid: rsp.imp_uid, // 아임포트 거래 고유값
+              impUid: rsp.imp_uid,
             });
 
-            onSuccess(res.data);
+            // ✅ PaymentSection → SalesRegister로 전달
             alert("✅ 간편결제 성공!");
+            onSuccess({
+              method: "EASY",
+              amount: totalAmount,
+              impUid: rsp.imp_uid,
+              response: res.data,
+            });
             onClose();
           } catch (err) {
             console.error(err);
@@ -65,7 +68,7 @@ function EasyPaymentModal({ totalAmount, currentOrder, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl p-6 shadow-lg w-[380px]">
         <h2 className="text-2xl font-bold text-center mb-4">간편결제</h2>
 

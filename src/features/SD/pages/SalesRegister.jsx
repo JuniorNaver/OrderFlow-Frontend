@@ -32,31 +32,46 @@ function SalesRegister() {
 
   // ✅ 1. 주문 생성 (첫 진입 시)
   useEffect(() => {
-    let mounted = true;
-    Promise.resolve().then(async () => {
-      try {
-        const saved = localStorage.getItem("currentOrder");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (mounted) setCurrentOrder(parsed);
-          return;
-        }
+  let mounted = true;
+  Promise.resolve().then(async () => {
+    try {
+      const saved = localStorage.getItem("currentOrder");
 
-        const order = await createOrder();
-        if (mounted) {
-          setCurrentOrder(order);
-          localStorage.setItem("currentOrder", JSON.stringify(order));
-          console.log("🧾 새 주문 생성:", order);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+
+        // ✅ 기존 주문 상태 확인 (백엔드 조회)
+        const res = await fetch(`http://localhost:8080/api/sd/${parsed.orderId}`);
+        if (res.ok) {
+          const data = await res.json();
+
+          // ✅ 미완료 주문이면 그대로 이어서 사용
+          if (data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
+            console.log("♻️ 기존 주문 복원:", data);
+            setCurrentOrder(data);
+            localStorage.setItem("currentOrder", JSON.stringify(data));
+            return;
+          }
         }
-      } catch (err) {
-        console.error("❌ 주문 생성 오류:", err);
-        alert("주문 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+
+      // ✅ 없거나 이미 완료된 경우 → 새 주문 생성
+      const order = await createOrder();
+      if (mounted) {
+        setCurrentOrder(order);
+        localStorage.setItem("currentOrder", JSON.stringify(order));
+        console.log("🆕 새 주문 생성:", order);
+      }
+    } catch (err) {
+      console.error("❌ 주문 생성 오류:", err);
+      alert("주문 생성 중 오류가 발생했습니다.");
+    }
+  });
+
+  return () => {
+    mounted = false;
+  };
+}, []);
 
   // ✅ 2. 상품 추가 (ProductSearchModal → SalesTable)
   const handleItemAdded = (item) => {
@@ -108,40 +123,46 @@ function SalesRegister() {
   };
 
   // ✅ 3. 결제 완료 → 주문 확정 + 새 주문 생성
-  const handlePaymentSuccess = async () => {
-    if (!currentOrder) return alert("주문이 없습니다.");
+ const handlePaymentSuccess = async () => {
+  if (!currentOrder) return alert("주문이 없습니다.");
 
-    // ✅ ① 최신 paidTotal 동기화 (혹시라도 0으로 남아있을 경우)
-    const finalPaid = paidTotal > 0 ? paidTotal : totalAmount;
+  const finalPaid = paidTotal > 0 ? paidTotal : totalAmount;
+  if (Math.abs(finalPaid - totalAmount) > 1e-3) {
+    alert("💳 일부 금액만 결제되었습니다. 남은 금액을 결제해주세요.");
+    return;
+  }
 
-    // ✅ ② 부동소수 오차 감안하여 비교
-    if (Math.abs(finalPaid - totalAmount) > 1e-3) {
-      alert("💳 일부 금액만 결제되었습니다. 남은 금액을 결제해주세요.");
-      return;
-    }
+  try {
+    await completeOrder(currentOrder.orderId);
+    alert("💳 결제 완료 및 매출 반영됨!");
 
-    try {
-      await completeOrder(currentOrder.orderId);
-      alert("💳 결제 완료 및 매출 반영됨!");
+    // ✅ 1️⃣ 로컬스토리지 완전 초기화
+    localStorage.removeItem("currentOrder");
 
-      // ✅ 새 주문 생성 및 초기화
-      const next = await createOrder();
-      setCurrentOrder(next);
-      localStorage.setItem("currentOrder", JSON.stringify(next));
+    // ✅ 2️⃣ 새 주문 생성
+    const next = await createOrder();
 
-      // ✅ UI 상태 초기화
-      setTotalAmount(0);
-      setPaidTotal(0);
-      setReceivedAmount(0);
-      setChangeAmount(0);
-      if (window.addItemToSales) window.addItemToSales({ reset: true });
+    // ✅ 3️⃣ 상태 갱신
+    setCurrentOrder(next);
+    localStorage.setItem("currentOrder", JSON.stringify(next));
 
-      console.log("🆕 새 주문으로 초기화됨:", next);
-    } catch (err) {
-      console.error("결제 완료 오류:", err);
-      alert("결제 완료 중 오류가 발생했습니다.");
-    }
-  };
+    // ✅ 4️⃣ 화면 상태 초기화
+    setSalesItems([]);
+    setTotalAmount(0);
+    setPaidTotal(0);
+    setReceivedAmount(0);
+    setChangeAmount(0);
+
+    // ✅ 5️⃣ SalesTable 리셋
+    if (window.addItemToSales) window.addItemToSales({ reset: true });
+
+    console.log("🆕 새 주문으로 완전히 초기화됨:", next);
+  } catch (err) {
+    console.error("결제 완료 오류:", err);
+    alert("결제 완료 중 오류가 발생했습니다.");
+  }
+
+};
 
   // ✅ 4. 바코드 스캔 상품 추가
   const handleBarcodeScan = async (code) => {
