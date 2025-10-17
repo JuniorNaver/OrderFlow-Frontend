@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useState} from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
-import { fetchCorners, fetchCategories, fetchProducts } from "../api/browse";
+import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 
 const ZONES = [
   { key: "room",    label: "실온", icon: <Sun className="h-5 w-5" /> },
@@ -19,7 +19,10 @@ export default function PRBrowse() {
   const [cornerId, setCornerId] = useState(null);
   
   // 상품 관련
-  const [products, setProducts] = useState([]); 
+  const [products, setProducts] = useState([]);
+  const [availableByGtin, setAvailableByGtin] = useState({}); // { [gtin]: number }
+  const [adding, setAdding] = useState({});                    // { [gtin]: boolean }
+  const [toast, setToast] = useState(null);                    // 가벼운 알림 
   const [loadingCorners, setLoadingCorners] = useState(false);
   const [loadingKans, setLoadingKans] = useState(false);
   const [loadingProds, setLoadingProds] = useState(false);
@@ -74,6 +77,39 @@ export default function PRBrowse() {
     }
   }
 
+  // 상품 로드후 -> 각 상품의 가용재고 조회
+  useEffect(() => {
+    if (!products?.length) { setAvailableByGtin({}); return; }
+    let abort = false;
+    (async () => {
+      try {
+        const pairs = await Promise.all(products.map(async (p) => {
+          const inv = await fetchAvailable(p.gtin); // { gtin, available }
+          return [p.gtin, inv?.available ?? 0];
+        }));
+        if (!abort) setAvailableByGtin(Object.fromEntries(pairs));
+      } catch (e) {
+        if (!abort) setToast(e.message || "재고 조회 실패");
+      }
+    })();
+    return () => { abort = true; };
+  }, [products]);
+
+  // 상품 담기
+  async function addOne(gtin) {
+    if (adding[gtin]) return;
+    setAdding(a => ({ ...a, [gtin]: true }));
+    try {
+      await reserve(gtin, 1); // POST /inventory/reserve
+      setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - 1) }));
+      setToast("담겼어요.");
+    } catch (e) {
+      setToast(e.message || "담기에 실패했어요.");
+    } finally {
+      setAdding(a => ({ ...a, [gtin]: false }));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더: 존 탭 */}
@@ -113,7 +149,7 @@ export default function PRBrowse() {
                   onClick={()=>setCornerId(c.id)} // c.id = slug
                 >
                   <div className="font-medium">{c.name || '기타'}</div>
-                  <div className="text-sm text-gray-500">KAN {c.categoryCount}</div>
+                  <div className="text-sm text-gray-500">{c.categoryCount ? `${c.categoryCount}개의 카테고리` : '카테고리 없음'}</div>
                 </button>
               ))}
               {!corners.length && <div className="text-sm text-gray-500">코너 없음</div>}
@@ -185,18 +221,26 @@ export default function PRBrowse() {
                     <div className="text-sm text-gray-500">{p.gtin}</div>
                     <div className="text-sm font-medium line-clamp-2">{p.name}</div>
                     <div className="text-base font-semibold">
-                      {p.price ? Number(p.price).toLocaleString() : "-"}
+                      {p.price ? Number(p.price).toLocaleString() : "-"}원
+                      {p.unit && (
                       <span className="ml-1 text-sm text-gray-500">{p.unit || ""}</span>
+                      )}
                     </div>
                   </div>
-                  <button
-                    className={`mt-3 w-full rounded-xl text-sm py-2 ${
-                      p.orderable ? "bg-gray-900 text-white hover:opacity-90" : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    }`}
-                    disabled={!p.orderable}
-                  >
-                    장바구니
-                  </button>
+                  <div className="text-xs text-gray-500">
+                     가용재고: {availableByGtin[p.gtin] ?? 0}
+                   </div>
+                   <button
+                   onClick={() => addOne(p.gtin)}
+                   className={`mt-3 w-full rounded-xl text-sm py-2 ${
+                     p.orderable && (availableByGtin[p.gtin] ?? 0) > 0 && !adding[p.gtin]
+                       ? "bg-gray-900 text-white hover:opacity-90"
+                       : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                   }`}
+                   disabled={!p.orderable || (availableByGtin[p.gtin] ?? 0) <= 0 || !!adding[p.gtin]}
+                 >
+                   {adding[p.gtin] ? "담는 중…" : "담기"}
+                 </button>
                 </div>
               ))}
             </div>
