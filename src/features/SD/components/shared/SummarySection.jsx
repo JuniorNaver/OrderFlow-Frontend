@@ -1,4 +1,9 @@
-export default function SummarySection({ totalAmount, receivedAmount, changeAmount }) {
+export default function SummarySection({
+  totalAmount,
+  receivedAmount,
+  changeAmount,
+  remainingAmount, // ✅ 추가
+}) {
   return (
     <div className="mt-10 bg-white shadow-xl rounded-2xl p-6 grid grid-cols-2 gap-8 text-lg">
       <div>
@@ -19,7 +24,9 @@ export default function SummarySection({ totalAmount, receivedAmount, changeAmou
       <div>
         <div className="flex justify-between border-b py-2">
           <span>받을 금액</span>
-          <span>₩ {totalAmount.toLocaleString()}</span>
+          <span className="text-red-600 font-semibold">
+            ₩ {remainingAmount.toLocaleString()} {/* ✅ 남은 금액 표시 */}
+          </span>
         </div>
         <div className="flex justify-between border-b py-2">
           <span>받은 금액</span>

@@ -1,18 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
   const [received, setReceived] = useState("");
   const [change, setChange] = useState(0);
   const [error, setError] = useState("");
 
+  // ✅ totalAmount이 바뀔 때마다 금액 리셋
+  useEffect(() => {
+    setReceived("");
+    setChange(0);
+    setError("");
+  }, [totalAmount]);
+
   const handleInput = (e) => {
     const value = Number(e.target.value);
     setReceived(value);
-
-    // 거스름돈 계산
     setChange(value - totalAmount);
 
-    // 실시간 유효성 검사
     if (totalAmount <= 0) {
       setError("❌ 결제할 금액이 없습니다.");
     } else if (value < totalAmount) {
@@ -23,7 +27,6 @@ function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
   };
 
   const handleConfirm = () => {
-    // 방어 로직
     if (totalAmount <= 0) {
       alert("❌ 결제할 금액이 없습니다.");
       return;
@@ -46,6 +49,13 @@ function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
       <div className="bg-white p-6 rounded-2xl shadow-xl w-[380px]">
         <h2 className="text-2xl font-bold mb-4 text-green-700">💵 현금 결제</h2>
+
+        <p className="text-gray-700 mb-2">
+          남은 결제 금액:{" "}
+          <span className="font-semibold text-blue-600">
+            ₩ {totalAmount.toLocaleString()}
+          </span>
+        </p>
 
         <label className="block text-gray-600 mb-1">받은 금액</label>
         <input
@@ -74,7 +84,7 @@ function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!!error} // ❗ 에러 있을 때 버튼 비활성화
+            disabled={!!error}
             className={`px-4 py-2 rounded-md text-white ${
               error
                 ? "bg-gray-400 cursor-not-allowed"

@@ -29,6 +29,7 @@ function SalesRegister() {
   const [receivedAmount, setReceivedAmount] = useState(0);
   const [changeAmount, setChangeAmount] = useState(0);
   const [paidTotal, setPaidTotal] = useState(0);
+  const [remainingAmount, setRemainingAmount] = useState(0);
 
   // ✅ 1. 주문 생성 (첫 진입 시)
   useEffect(() => {
@@ -326,8 +327,9 @@ function SalesRegister() {
       {/* 하단 요약 */}
       <SummarySection
         totalAmount={totalAmount}
-        receivedAmount={receivedAmount}
+        receivedAmount={paidTotal}
         changeAmount={changeAmount}
+        remainingAmount={Math.max(totalAmount - paidTotal, 0)}
       />
 
       {/* 모달 */}
