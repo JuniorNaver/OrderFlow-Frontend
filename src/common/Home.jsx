@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from "recharts";
 // 🔥 BI 모듈 fetch 함수 (지금은 더미데이터, 나중에 API로 교체)
-import { fetchSalesTrend } from "../../features/BI/api/biApi";
+import { fetchSalesTrend } from "../features/BI/api/biApi";
 
 // ---------- Helpers ----------
 function currencyKRW(n) {

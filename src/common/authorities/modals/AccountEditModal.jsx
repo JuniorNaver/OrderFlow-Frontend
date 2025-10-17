@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import '../style/Modal.css'; // 모달 스타일은 재사용합니다.
+import '../styles/Modal.css'; // 모달 스타일은 재사용합니다.
 
 const AccountEditModal = ({ isOpen, onClose, onSave, accountData }) => {
   const [formData, setFormData] = useState(accountData);

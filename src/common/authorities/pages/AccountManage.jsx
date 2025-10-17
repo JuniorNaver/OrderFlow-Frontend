@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import AccountCreateModal from '../components/AccountCreateModal';
-import AccountEditModal from '../components/AccountEditModal'; // ⭐️ 1. 수정 팝업 임포트
-import '../style/AccountManage.css';
+import AccountCreateModal from '../modals/AccountCreateModal';
+import AccountEditModal from '../modals/AccountEditModal'; // ⭐️ 1. 수정 팝업 임포트
+import '../styles/AccountManage.css';
 
 // 임시 데이터 (실제로는 API에서 가져옵니다)
 const DUMMY_ACCOUNTS = [

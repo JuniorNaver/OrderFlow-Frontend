@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./styles/App.css";
 
 // 공용 페이지
-import Home from "./common/pages/Home";
-import Login from "./common/pages/Login";
-import MyPage from "./common/pages/MyPage";
-import AccountManage from "./common/pages/AccountManage";
-import RoleManage from "./common/pages/RoleManage";
-import NotFound from "./common/components/NotFound";
+import Home from "./common/Home";
+import Login from "./common/authorities/pages/Login";
+import MyPage from "./common/authorities/pages/MyPage";
+import AccountManage from "./common/authorities/pages/AccountManage";
+import RoleManage from "./common/authorities/pages/RoleManage";
+import NotFound from "./components/error/NotFound";
 
 // ERP 도메인
 import BIPage from "./features/BI/pages/BIPage";
@@ -29,7 +29,7 @@ import ExpiryManagementView from "./features/STK/components/ExpiryManagementView
 import StockAdjustmentView from "./features/STK/components/StockAdjustmentView";
 import DisposalView from "./features/STK/components/DisposalView";
 
-// POS 도메인
+// ---------------------- POS 도메인 ----------------------
 import POSDashboard from "./features/SD/pages/POSDashboard";
 import SalesRegister from "./features/SD/pages/SalesRegister";
 
@@ -37,8 +37,8 @@ import SalesRegister from "./features/SD/pages/SalesRegister";
 import Header from "./components/Header";
 
 // 메뉴 데이터
-import posMenus from "./menus/posMenus";
-import stockMenus from "./menus/stockMenus";
+import posMenus from "./components/menus/posMenus";
+import stockMenus from "./components/menus/stockMenus";
 import PRBrowse from "./features/PR/pages/PrBrowse";
 
 
