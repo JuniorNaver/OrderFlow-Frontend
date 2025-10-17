@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function SavedCartModal({ carts, onSelect, onClose }) {
+export default function SavedCartModal({ carts, onSelect, onClose, onDelete }) {
   if (!carts) return null;
 
   return (
@@ -10,7 +10,7 @@ export default function SavedCartModal({ carts, onSelect, onClose }) {
         <ul className="space-y-3 max-h-[400px] overflow-y-auto">
           {carts.map((cart) => (
             <li
-              key={cart.id}
+              key={cart.itemNo}
               onClick={() => onSelect(cart)}
               className="p-4 border rounded-lg hover:bg-blue-50 cursor-pointer transition"
             >
@@ -24,10 +24,7 @@ export default function SavedCartModal({ carts, onSelect, onClose }) {
                 </div>
                 <button
                   className="text-red-500 underline hover:text-red-600 font-medium text-sm"
-                  onClick={(e) => {
-                    e.stopPropagation(); // 리스트 클릭 이벤트와 분리
-                    alert(`${cart.name} 삭제 클릭됨`);
-                  }}
+                  onClick={(e) => onDelete(e, cart)}
                 >
                   삭제
                 </button>

@@ -1,5 +1,5 @@
 
-import api, { createPOHeader } from "../api/poApi";
+import api, { createPOHeader, deleteSavedCart } from "../api/poApi";
 import React, { useEffect, useState } from "react";
 import { confirmOrder, deleteCartItems, getSavedCartList, saveCart, updateQuantity } from "../api/poApi";
 import BudgetBar from "../components/BudgetBar";
@@ -156,12 +156,13 @@ export default function POPage() {
 
 
 
+
   // 장바구니 저장버튼
   const handleSave = () => {
     setIsNameModalOpen(true);
   };
 
-  // 제목 입력 후 '저장' 클릭 시 
+  // 저장시, 제목 입력
   const handleConfirmSave = async (cartName) => {
     try {
       // 장바구니 저장 요청
@@ -180,11 +181,7 @@ export default function POPage() {
     }
   };
 
-
-
-
-
-  // '불러오기' 버튼 클릭시 
+  // '불러오기' 버튼 클릭
   const handleLoad = async () => {
     const list = await getSavedCartList();
     console.log("저장된 장바구니:", list);
@@ -200,14 +197,30 @@ export default function POPage() {
     setShowSavedList(false);
   };
 
-  // 모달 닫기
-  const handleCloseModal = () => {
-    setShowSavedList(false);
+  // 불러오기 삭제 버튼 
+  const handleDeleteSavedCart = async (e, cart) => {
+    e.stopPropagation();
+    if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
+
+    try {
+      await deleteSavedCart(cart.itemNo); // 서버 호출
+    } catch (err) {
+      console.error("장바구니 삭제 실패:", err);
+      // 필요하면 alert 추가
+    } finally {
+      // ✅ 서버 성공/실패와 관계없이 UI는 즉시 갱신
+      setSavedCarts((prev) => prev.filter((c) => String(c.itemNo) !== String(cart.itemNo)));
+    }
   };
 
 
 
 
+
+  // 모달 닫기
+  const handleCloseModal = () => {
+    setShowSavedList(false);
+  };
 
   // 발주확정 버튼
   const handleOrder = async () => {
@@ -316,6 +329,7 @@ export default function POPage() {
           carts={savedCarts}
           onSelect={handleSelectSavedCart}
           onClose={handleCloseModal}
+          onDelete={handleDeleteSavedCart}
         />
       )}
 

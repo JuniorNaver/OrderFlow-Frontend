@@ -32,15 +32,16 @@ export const deleteCartItems = async (itemIds) => {
 
 
 
+
+
 //장바구니 저장
 export const saveCart = async (poId, body) => {
-  return api.post(`/api/po/save/${poId}`, body);
-  // body = { remarks: "입력한 제목" }
+  return api.post(`save/${poId}`, body); // body = { remarks: "입력한 제목" }
 };
 
-//저장된 장바구니 목록 불러오기 (Status = S)
+//불러오기 (Status = S)
 export const getSavedCartList = async () => {
-  const res = await api.get(`/saved`); // ✅ /api/po/saved 로 요청
+  const res = await api.get(`/saved`); 
   return res.data;
 };
 
@@ -54,6 +55,12 @@ export const getSavedCartItems = async (poId) => {
     throw error;
   }
 };
+
+//저장된 장바구니 삭제 
+export const deleteSavedCart = async (poId) => {
+  return api.delete(`/saved/${poId}`);
+}
+
 
 
 
