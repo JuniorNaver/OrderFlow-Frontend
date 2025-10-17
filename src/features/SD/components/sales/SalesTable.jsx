@@ -3,46 +3,31 @@ import { useState, useEffect } from "react";
 export default function SalesTable({ onTotalChange, onAddItem }) {
   const [items, setItems] = useState([]);
 
-  // ✅ 부모에서 상품 추가 요청
+  // ✅ 상품 추가 함수
   const handleAddItem = (product) => {
-    // 방어 로직: 동일 상품 중복 방지
-    const existing = items.find((it) => it.id === product.id);
-    if (existing) {
-      setItems((prev) =>
-        prev.map((it) =>
+    if (!product?.id) return;
+
+    setItems((prev) => {
+      const existing = prev.find((it) => it.id === product.id);
+      if (existing) {
+        // 동일 상품이면 수량 +1, 재고 -1
+        return prev.map((it) =>
           it.id === product.id
-            ? { ...it, qty: it.qty + 1, stock: it.stock - 1 }
+            ? { ...it, qty: it.qty + 1, stock: Math.max(0, it.stock - 1) }
             : it
-        )
-      );
-      return;
-    }
+        );
+      }
 
-    const safeProduct = {
-      ...product,
-      qty: product.qty ?? 1,
-      price: Number(product.price) || 0,
-      stock: product.stock ?? 0,
-      originalStock: product.stock ?? 0,
-    };
-
-    setItems((prev) => [...prev, safeProduct]);
+      const safeProduct = {
+        ...product,
+        qty: product.qty ?? 1,
+        price: Number(product.price) || 0,
+        stock: product.stock ?? 0,
+        originalStock: product.stock ?? 0,
+      };
+      return [...prev, safeProduct];
+    });
   };
-
-  // ✅ 총액 계산
-  useEffect(() => {
-    const total = items.reduce((sum, item) => {
-      const price = Number(item.price) || 0;
-      const qty = Number(item.qty) || 0;
-      return sum + price * qty;
-    }, 0);
-    onTotalChange(total);
-  }, [items, onTotalChange]);
-
-  // ✅ 부모가 추가 함수 등록 가능하게
-  useEffect(() => {
-    if (onAddItem) onAddItem(handleAddItem);
-  }, [onAddItem]);
 
   // ✅ 수량 변경
   const handleQuantityChange = (id, delta) => {
@@ -51,7 +36,7 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
         if (item.id !== id) return item;
 
         let newQty = item.qty + delta;
-        let newStock = item.stock - delta; // 재고 반대로 움직임
+        let newStock = item.stock - delta; // 재고 반대 방향으로 변화
 
         if (newQty < 1) return item; // 최소 1개
         if (newStock < 0) {
@@ -72,6 +57,37 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
     }
   };
 
+  // ✅ 총액 계산 → 부모로 전달
+  useEffect(() => {
+    const total = items.reduce(
+      (sum, item) => sum + (Number(item.price) || 0) * (item.qty || 0),
+      0
+    );
+    if (onTotalChange) onTotalChange(total);
+  }, [items, onTotalChange]);
+
+  // ✅ 외부에서 접근할 수 있게 window 등록
+  useEffect(() => {
+    // 상품 추가 전역 함수
+    window.addItemToSales = handleAddItem;
+
+    // ✅ 결제 완료 시 PaymentSection에서 호출하는 초기화 함수
+    window.clearSalesItems = () => {
+      setItems([]);
+      if (onTotalChange) onTotalChange(0); // 총액도 0으로 초기화
+      console.log("🧹 상품 목록 초기화 완료");
+    };
+
+    // 부모에서도 직접 전달 가능하게 등록
+    if (onAddItem) onAddItem(handleAddItem);
+
+    // cleanup
+    return () => {
+      delete window.addItemToSales;
+      delete window.clearSalesItems;
+    };
+  }, [onAddItem, onTotalChange]);
+
   return (
     <div className="bg-white shadow-xl rounded-2xl p-6">
       <table className="w-full border-collapse text-lg">
@@ -85,10 +101,14 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
             <th className="p-3 text-center w-[80px]">삭제</th>
           </tr>
         </thead>
+
         <tbody>
           {items.map((item, idx) => (
-            <tr key={item.id} className="border-b hover:bg-gray-50 text-gray-800">
-              <td className="p-3">{idx + 1}</td>
+            <tr
+              key={item.id} // ✅ key 경고 해결
+              className="border-b hover:bg-gray-50 text-gray-800"
+            >
+              <td className="p-3 text-center">{idx + 1}</td>
               <td className="p-3">{item.name || "이름없음"}</td>
               <td className="p-3 text-right">
                 ₩{item.price ? Number(item.price).toLocaleString() : 0}
@@ -121,6 +141,7 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
               </td>
             </tr>
           ))}
+
           {items.length === 0 && (
             <tr>
               <td colSpan="6" className="text-center text-gray-400 p-4">

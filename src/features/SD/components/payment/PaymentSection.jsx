@@ -1,14 +1,22 @@
 import { useState } from "react";
 import { createPayment } from "../../api/paymentApi.js";
 import CardPaymentModal from "./CardPaymentModal";
-import BarcodeListener from "../BarcodeListener";
 import CashPaymentModal from "./CashPaymentModal";
 import EasyPaymentModal from "./EasyPaymentModal";
+import BarcodeListener from "../BarcodeListener";
+import { createOrder, completeOrder } from "../../api/sdApi.js";
 
-function PaymentSection({ totalAmount, currentOrder, onSelect, onPaymentComplete, onSuccess, setPaidTotal }) { 
+function PaymentSection({
+  totalAmount,
+  currentOrder,
+  onSelect,
+  onPaymentComplete,
+  onSuccess,
+  setPaidTotal,
+}) {
+  const [loading, setLoading] = useState(false);
   const [showMethods, setShowMethods] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [showEasyModal, setShowEasyModal] = useState(false);
 
@@ -18,136 +26,82 @@ function PaymentSection({ totalAmount, currentOrder, onSelect, onPaymentComplete
     "간편 결제": "EASY",
   };
 
-  // ✅ 바코드 스캔 처리
-  const handleBarcodeScan = async (data) => {
-    console.log("📡 바코드 감지:", data);
-    const [type, method, salesId, amount] = data.split("|");
-
-    if (type === "PAYMENT") {
-      if (method === "CARD") {
-        setShowCardModal(true);
-      } else {
-        await handleBarcodePayment(method, salesId, amount);
-      }
-    }
-  };
-
-  // 바코드 결제
-  const handleBarcodePayment = async (method, salesId, amount) => {
-    setLoading(true);
+  // ✅ 결제 성공 공통 처리
+  const handlePaymentSuccess = async (method, amount, extraData = {}) => {
     try {
+      // 1️⃣ 결제 내역 DB에 저장
       await createPayment({
-        orderId: Number(salesId),
-        totalAmount: Number(amount),
-        paymentMethod: method,
-      });
-
-      alert(` ${method} 결제 완료 (바코드)`);
-
-      if (onSelect) onSelect(method);
-      if (onPaymentComplete)
-        onPaymentComplete(Number(amount), Number(amount));
-      if (onSuccess) onSuccess(); //  추가됨
-    } catch (e) {
-      console.error(e);
-      alert("바코드 결제 중 오류 발생");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  //  결제 방식 선택 (수동)
-  const handleSelectMethod = (methodName) => {
-    const method = paymentMap[methodName];
-
-    // 카드 결제는 모달 먼저 띄움
-    if (method === "CARD") {
-      setShowCardModal(true);
-      setShowMethods(false);
-      return;
-    }
-
-    // 현금 결제는 모달로
-    if (method === "CASH") {
-      setShowCashModal(true);
-      setShowMethods(false);
-      return;
-    }
-
-      // ✅ 간편결제 (카카오/토스)
-    if (method === "EASY") {
-      setShowEasyModal(true);
-      setShowMethods(false);
-      return;
-    }
-
-    // 현금/간편 결제는 바로 결제 실행
-    handlePaymentRequest(method, methodName);
-  };
-
-  // 실제 결제 처리 (공통 함수)
-  const handlePaymentRequest = async (method, displayName) => {
-    setLoading(true);
-    try {
-      const result = await createPayment({
         orderId: currentOrder?.orderId,
-        amount: totalAmount,
+        amount: Number(amount),
         paymentMethod: method,
+        ...extraData,
       });
 
-      alert(`${displayName} 완료되었습니다.`);
+      // 2️⃣ 결제 완료 처리
+      alert(`✅ ${method} 결제 성공!`);
+
+      // 3️⃣ 금액/거스름돈 업데이트
+      if (setPaidTotal) setPaidTotal((prev) => prev + Number(amount));
       if (onSelect) onSelect(method);
       if (onPaymentComplete)
-        onPaymentComplete(totalAmount, result.receivedAmount || totalAmount);
-      if (onSuccess) onSuccess();
-    } catch (e) {
-      console.error(e);
-      alert("결제 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-      setShowMethods(false);
-    }
-  };
+        onPaymentComplete(Number(amount), extraData.change ?? 0);
 
-  // 카드 결제 모달 → 결제 성공 시
- const handleCardSuccess = async () => {
-    try {
-      await createPayment({
-        orderId: currentOrder?.orderId, // 백엔드 시퀀스 값
-        amount: totalAmount,             // BigDecimal 매핑
-        paymentMethod: "CARD",           // Enum (CARD, CASH, SIMPLE)
-      });
+      // 4️⃣ 주문 완료 및 새 주문 생성
+      await completeOrder(currentOrder.orderId);
+      const newOrder = await createOrder();
 
-      alert("카드 결제 성공!");
-      if (onSelect) onSelect("CARD");
+      // 5️⃣ 로컬/화면 초기화
+      localStorage.setItem("currentOrder", JSON.stringify(newOrder));
+      if (window.clearSalesItems) window.clearSalesItems();
+      console.log("🆕 새 주문으로 초기화됨:", newOrder);
 
-      if (setPaidTotal) setPaidTotal(prev => prev + totalAmount);
-
-      if (onPaymentComplete) onPaymentComplete(totalAmount, totalAmount);
-
-      if (onSuccess) onSuccess();
-    } catch (e) {
-      console.error(e);
-      alert("카드 결제 중 오류 발생");
+      if (onSuccess) onSuccess(newOrder);
+    } catch (error) {
+      console.error("결제 처리 중 오류:", error);
+      alert("결제 처리 중 오류가 발생했습니다.");
     } finally {
       setShowCardModal(false);
+      setShowCashModal(false);
+      setShowEasyModal(false);
+      setLoading(false);
     }
+  };
+
+  // ✅ 수동 결제 선택
+  const handleSelectMethod = (methodName) => {
+    const method = paymentMap[methodName];
+    switch (method) {
+      case "CARD":
+        setShowCardModal(true);
+        break;
+      case "CASH":
+        setShowCashModal(true);
+        break;
+      case "EASY":
+        setShowEasyModal(true);
+        break;
+      default:
+        break;
+    }
+    setShowMethods(false);
   };
 
   return (
     <div className="w-full max-w-[400px]">
-      {/* 바코드 리스너 */}
-      <BarcodeListener onBarcodeScan={handleBarcodeScan} />
+      <BarcodeListener
+        onBarcodeScan={(method, salesId, amount) =>
+          handlePaymentSuccess(method, amount)
+        }
+      />
 
-      {/* 결제 버튼 */}
+      {/* ✅ 결제 버튼 */}
       <div className="relative">
         <button
-          onClick={() => setShowMethods((prev) => !prev)}
+          onClick={() => setShowMethods((p) => !p)}
           disabled={loading}
-          className={`bg-blue-500 text-white w-40 h-20 rounded-2xl 
-                      hover:bg-blue-600 text-xl font-bold shadow-lg 
-                      transition-transform active:scale-95 
-                      ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-blue-500 text-white w-40 h-20 rounded-2xl hover:bg-blue-600 text-xl font-bold shadow-lg transition-transform active:scale-95 ${
+            loading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           {loading ? "처리 중..." : "결제하기"}
         </button>
@@ -158,8 +112,7 @@ function PaymentSection({ totalAmount, currentOrder, onSelect, onPaymentComplete
               <button
                 key={i}
                 onClick={() => handleSelectMethod(name)}
-                className="w-full text-left px-6 py-3 text-base font-medium 
-                           hover:bg-gray-100 border-b last:border-none transition"
+                className="w-full text-left px-6 py-3 text-base font-medium hover:bg-gray-100 border-b last:border-none transition"
               >
                 {name}
               </button>
@@ -168,50 +121,40 @@ function PaymentSection({ totalAmount, currentOrder, onSelect, onPaymentComplete
         )}
       </div>
 
-      {/* 카드 결제 모달 */}
+      {/* 💳 카드 결제 모달 */}
       {showCardModal && (
         <CardPaymentModal
           totalAmount={totalAmount}
           onClose={() => setShowCardModal(false)}
-          onSuccess={handleCardSuccess}
+          onSuccess={({ amount }) => handlePaymentSuccess("CARD", amount)}
         />
       )}
 
+      {/* 💵 현금 결제 모달 */}
       {showCashModal && (
         <CashPaymentModal
           totalAmount={totalAmount}
           onClose={() => setShowCashModal(false)}
-          onSuccess={({ receivedAmount, change }) => {
-            createPayment({
-              orderId: currentOrder?.orderId,
-              amount: totalAmount,
-              paymentMethod: "CASH",
+          onSuccess={({ receivedAmount, change }) =>
+            handlePaymentSuccess("CASH", totalAmount, {
               receivedAmount,
               change,
-            }).then(() => {
-              alert("현금결제 완료");
+            })
+          }
+        />
+      )}
 
-              if (setPaidTotal) setPaidTotal(prev => prev + totalAmount);
-
-              if (onPaymentComplete) onPaymentComplete(receivedAmount, change);
-            });
-          }}
-      />
-    )}
-
-    {showEasyModal && (
-      <EasyPaymentModal
-        totalAmount={totalAmount}
-        currentOrder={currentOrder}
-        onClose={() => setShowEasyModal(false)}
-        onSuccess={() => {
-          alert("✅ 간편결제 완료!"); // ① 알림
-          if (setPaidTotal) setPaidTotal(prev => prev + totalAmount); // ② 결제금액 반영
-          if (onPaymentComplete) onPaymentComplete(totalAmount, totalAmount); // ③ 상위 콜백
-        }}
-      />
-    )}
-
+      {/* ⚡ 간편 결제 모달 */}
+      {showEasyModal && (
+        <EasyPaymentModal
+          totalAmount={totalAmount}
+          currentOrder={currentOrder}
+          onClose={() => setShowEasyModal(false)}
+          onSuccess={({ impUid }) =>
+            handlePaymentSuccess("EASY", totalAmount, { impUid })
+          }
+        />
+      )}
     </div>
   );
 }
