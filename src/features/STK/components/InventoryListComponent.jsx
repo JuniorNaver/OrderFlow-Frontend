@@ -1,4 +1,3 @@
-// features/STK/components/InventoryListComponent.jsx
 import React from 'react';
 
 const styles = {
@@ -20,11 +19,12 @@ const InventoryListComponent = ({ title, data, headers }) => {
             {data.length === 0 ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>조회된 데이터가 없습니다.</div>
             ) : (
-                data.map((item, index) => (
+                data.map((rowArray, index) => ( // rowArray는 ['제품명', '보관 위치', '현재 수량'] 형태의 배열입니다.
                     <div key={index} style={styles.item}>
-                        <span style={styles.col}>{item.name}</span>
-                        <span style={styles.col}>{item.location}</span>
-                        <span style={{ ...styles.col, textAlign: 'right' }}>{item.quantity}</span>
+                        {/* ⭐️ 배열 인덱스 접근으로 수정 */}
+                        <span style={styles.col}>{rowArray[0]}</span>
+                        <span style={styles.col}>{rowArray[1]}</span>
+                        <span style={{ ...styles.col, textAlign: 'right' }}>{rowArray[2]}</span>
                     </div>
                 ))
             )}
