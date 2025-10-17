@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Save, X, Settings, RefreshCcw, Loader2 } from 'lucide-react'; 
-import '../style/RoleManage.css';
+import '../styles/RoleManage.css';
 
 // API 기본 URL (실제 백엔드 주소로 변경 필요)
 const API_BASE_URL = 'http://localhost:8080/api/admin/roles/permissions';

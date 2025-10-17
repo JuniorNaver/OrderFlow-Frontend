@@ -1,8 +1,8 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 import { X } from "lucide-react";
-import StoreInitAdminTab from "../pages/settings/admin/StoreInitAdminTab";
-import StoreUpdateAdminTab from "../pages/settings/admin/StoreUpdateAdminTab";
-import StoreUpdateUserTab from "../pages/settings/user/StoreUpdateUserTab";
+import StoreInitAdminTab from "../common/settings/admin/StoreInitAdminTab";
+import StoreUpdateAdminTab from "../common/settings/admin/StoreUpdateAdminTab";
+import StoreUpdateUserTab from "../common/settings/user/StoreUpdateUserTab";
 
 const SettingsPanel = ({ open, onClose }) => {
   const user = { role: "ADMIN" };

@@ -161,16 +161,11 @@ export default function POPage() {
     setIsNameModalOpen(true);
   };
 
-  // 모달에서 이름 입력 후 '저장' 클릭 시 실행
+  // 제목 입력 후 '저장' 클릭 시 
   const handleConfirmSave = async (cartName) => {
     try {
-      if (!poId) {
-        alert("발주 헤더 정보가 없습니다. 장바구니에 상품을 먼저 추가해주세요.");
-        return;
-      }
-
       // 장바구니 저장 요청
-      await saveCart(poId, cartName);
+      await saveCart(poId, { remarks: cartName});
 
       alert(`'${cartName}' 장바구니가 저장되었습니다.`);
 

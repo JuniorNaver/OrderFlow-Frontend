@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import '../style/Modal.css'; 
+import '../styles/Modal.css'; 
 
 const PasswordResetModal = ({ isOpen, onClose }) => {
     // 폼 입력 상태 관리

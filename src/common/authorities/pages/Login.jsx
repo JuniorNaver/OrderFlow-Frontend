@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom'; // ⭐️ 페이지 이동을 위해 추가
-import '../style/Login.css';
+import '../styles/Login.css';
 
 // ⭐️ API 기본 URL 정의
 const API_BASE_URL = 'http://localhost:8080';

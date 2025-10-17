@@ -1,5 +1,5 @@
 import React, { useState} from 'react';
-import '../style/MyPage.css'; 
+import '../styles/MyPage.css'; 
 
 // ⭐️ 임시 사용자 데이터 (기존과 동일)
 const DUMMY_USER_DATA = {

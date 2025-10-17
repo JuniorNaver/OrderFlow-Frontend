@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { storeConfigApi } from "../../../api/storeConfigApi";
+import { storeConfigApi } from "../api/storeConfigApi";
 
 const StoreUpdateUserTab = ({user}) => {
   const queryClient = useQueryClient();

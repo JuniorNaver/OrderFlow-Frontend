@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { Menu, Settings } from "lucide-react";
 import Logo from "./Logo";
 import Drawer from "./Drawer";
-import SettingsPanel from "../common/components/SettingsPanel";
+import SettingsPanel from "./SettingsPanel";
 
 export default function Header({ menus, isPOS, togglePOS }) {
   const [dateTime, setDateTime] = useState(new Date());
