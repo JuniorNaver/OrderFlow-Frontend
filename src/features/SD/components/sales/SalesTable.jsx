@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function SalesTable({ onTotalChange, onAddItem }) {
+export default function SalesTable({ onTotalChange, onAddItem, onItemsChange }) {
   const [items, setItems] = useState([]);
 
   // ✅ 상품 추가 함수
@@ -66,6 +66,11 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
     if (onTotalChange) onTotalChange(total);
   }, [items, onTotalChange]);
 
+  // ✅ 상품 리스트 변경 시 부모에게 알림
+  useEffect(() => {
+    if (onItemsChange) onItemsChange(items);
+  }, [items, onItemsChange]);
+  
   // ✅ 외부에서 접근할 수 있게 window 등록
   useEffect(() => {
     // 상품 추가 전역 함수
@@ -101,13 +106,9 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
             <th className="p-3 text-center w-[80px]">삭제</th>
           </tr>
         </thead>
-
         <tbody>
           {items.map((item, idx) => (
-            <tr
-              key={item.id} // ✅ key 경고 해결
-              className="border-b hover:bg-gray-50 text-gray-800"
-            >
+            <tr key={item.id} className="border-b hover:bg-gray-50 text-gray-800">
               <td className="p-3 text-center">{idx + 1}</td>
               <td className="p-3">{item.name || "이름없음"}</td>
               <td className="p-3 text-right">
@@ -141,7 +142,6 @@ export default function SalesTable({ onTotalChange, onAddItem }) {
               </td>
             </tr>
           ))}
-
           {items.length === 0 && (
             <tr>
               <td colSpan="6" className="text-center text-gray-400 p-4">
