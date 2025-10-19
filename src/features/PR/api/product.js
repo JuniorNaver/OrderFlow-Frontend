@@ -1,0 +1,44 @@
+// src/api/products.js
+import { get,post,put,del } from "./http";
+
+/** 단건 상세 */
+export function getProduct(gtin) {
+  return get(`/api/products/${encodeURIComponent(gtin)}`);
+}
+
+/** 카테고리/이름/GTIN 검색 */
+export function listProducts({
+  name,
+  gtin,
+  category,                 // 컨트롤러 @RequestParam(name="category")
+  page = 0,
+  size = 20,
+  sort = "productName,asc",
+} = {}) {
+  const qs = new URLSearchParams();
+  if (name) qs.set("name", name);
+  if (gtin) qs.set("gtin", gtin);
+  if (category) qs.set("category", category);
+  qs.set("page", String(page));
+  qs.set("size", String(size));
+  qs.set("sort", sort);
+  return get(`/api/products?${qs.toString()}`); // Page<ProductResponseDTO>
+}
+
+/** 연관 상품 (카테고리 기준, 현재 상품 제외는 컴포넌트에서 필터) */
+export async function getRelated(category, { page = 0, size = 8 } = {}) {
+  const qs = new URLSearchParams({ category, page, size });
+  const pageResp = await get(`/api/products?${qs.toString()}`);
+  return pageResp?.content ?? []; // Page 보호
+}
+
+/** 생성/수정/삭제 */
+export function createProduct(payload) {
+  return post(`/api/products`, payload);
+}
+export function updateProduct(gtin, payload) {
+  return put(`/api/products/${encodeURIComponent(gtin)}`, payload);
+}
+export function deleteProduct(gtin) {
+  return del(`/api/products/${encodeURIComponent(gtin)}`);
+}

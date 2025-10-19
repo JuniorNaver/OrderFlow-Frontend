@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
+import { Link } from "react-router-dom";
 
 const ZONES = [
   { key: "room",    label: "실온", icon: <Sun className="h-5 w-5" /> },
@@ -174,8 +175,11 @@ export default function PRBrowse() {
                 {kans.map(k => (
                   <li
                     key={k.id}
+                    role="button"
+                    tabIndex={0}
                     className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
                     onClick={() => onClickKan(k.id)}
+                    onKeyDown={(e) => e.key === "Enter" && onClickKan(k.id)}
                     title="상품 보기"
                   >
                     <div>
@@ -210,39 +214,40 @@ export default function PRBrowse() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {products.map(p => (
                 <div key={p.gtin} className="border rounded-2xl bg-white p-3">
-                  <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden grid place-items-center">
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.name} className="object-cover w-full h-full" />
-                    ) : (
-                      <div className="text-xs text-gray-400">이미지 없음</div>
-                    )}
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <div className="text-sm text-gray-500">{p.gtin}</div>
-                    <div className="text-sm font-medium line-clamp-2">{p.name}</div>
-                    <div className="text-base font-semibold">
-                      {p.price ? Number(p.price).toLocaleString() : "-"}원
-                      {p.unit && (
-                      <span className="ml-1 text-sm text-gray-500">{p.unit || ""}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                     가용재고: {availableByGtin[p.gtin] ?? 0}
-                   </div>
-                   <button
-                   onClick={() => addOne(p.gtin)}
-                   className={`mt-3 w-full rounded-xl text-sm py-2 ${
-                     p.orderable && (availableByGtin[p.gtin] ?? 0) > 0 && !adding[p.gtin]
-                       ? "bg-gray-900 text-white hover:opacity-90"
-                       : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                   }`}
-                   disabled={!p.orderable || (availableByGtin[p.gtin] ?? 0) <= 0 || !!adding[p.gtin]}
-                 >
-                   {adding[p.gtin] ? "담는 중…" : "담기"}
-                 </button>
+              {/* 클릭 영역: 상세 페이지로 */}
+            <Link to={`/pr/detail/${p.gtin}`} className="block group">
+                <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden grid place-items-center">
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.name} className="object-contain w-full h-full" />
+                  ) : (
+                    <div className="text-xs text-gray-400">이미지 없음</div>
+                  )}
                 </div>
-              ))}
+                <div className="mt-3 space-y-1">
+                  <div className="text-sm text-gray-500">GTIN {p.gtin}</div>
+                  <div className="text-sm font-medium line-clamp-2 group-hover:underline">{p.name}</div>
+                  <div className="text-base font-semibold">
+                    {Number.isFinite(Number(p.price)) ? Number(p.price).toLocaleString() : "-"}원
+                    {p.unit && <span className="ml-1 text-sm text-gray-500">{p.unit}</span>}
+                  </div>
+                </div>
+              </Link>
+
+            {/* 링크 밖: 담기 버튼 */}
+              <div className="mt-2 text-xs text-gray-500">가용재고: {availableByGtin[p.gtin] ?? 0}</div>
+              <button
+                onClick={() => addOne(p.gtin)}
+                className={`mt-3 w-full rounded-xl text-sm py-2 ${
+                  p.orderable && (availableByGtin[p.gtin] ?? 0) > 0 && !adding[p.gtin]
+                    ? "bg-gray-900 text-white hover:opacity-90"
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                }`}
+                disabled={!p.orderable || (availableByGtin[p.gtin] ?? 0) <= 0 || !!adding[p.gtin]}
+              >
+                {adding[p.gtin] ? "담는 중…" : "담기"}
+              </button>
+            </div>
+          ))}
             </div>
           )}
 

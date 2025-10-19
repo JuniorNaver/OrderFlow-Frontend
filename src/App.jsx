@@ -40,6 +40,7 @@ import Header from "./components/Header";
 import posMenus from "./components/menus/posMenus";
 import stockMenus from "./components/menus/stockMenus";
 import PRBrowse from "./features/PR/pages/PrBrowse";
+import ProductDetailPage from "./features/PR/pages/ProductDetailPage";
 
 
 // React Query Client (전역)
@@ -109,7 +110,7 @@ function App() {
           <Route path="/pr" element={<PRBrowse />} />
           <Route path="/pr/orders" element={<OrderManagementPage />} />
           <Route path="/pr/recommend" element={<RecommendListPage />} />
-          <Route path="/pr/search" element={<ProductSearchPage />} />
+          <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
           <Route path="/pr/shop" element={<ShopPage />} />
           <Route path="/po" element={<POPage />} />
           {/* <Route path="/gr" element={<GRPage />} /> */}
