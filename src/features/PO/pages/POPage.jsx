@@ -10,38 +10,135 @@ import NeedleChart from "../components/NeedleChart";
 import { mockItems, mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
 import Empty from "../components/Empty";
 import InsertNameModal from "../components/InsertNameModal";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getProduct } from "../../PR/api/product";
+
+// ✅ 여기(컴포넌트 밖)에 헬퍼 정의
+async function resolveProductIdOrGtin(raw) {
+  if (raw.id || raw.productId) return { productId: raw.id ?? raw.productId };
+
+  const gtin = raw.gtin || raw.productCode;
+  if (!gtin) return {};
+
+  try {
+    const p = await getProduct(gtin);
+    if (p?.id) return { productId: p.id };
+    return { gtin };
+  } catch {
+    return { gtin };
+  }
+}
 
 export default function POPage() {
-  const [items, setItems] = useState(mockItems);
+  const [items, setItems] = useState([]);
   const [poId, setPoId] = useState(null);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [savedCarts, setSavedCarts] = useState(mockSavedCarts);
 
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  /** '장바구니 추가' 버튼 클릭시 */
+
+  /** '장바구니 추가' 버튼 클릭시  */
   const handleAddToCart = async (product) => {
     try {
       // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
       let currentPoId = poId;
       if (!currentPoId) {
         currentPoId = await createPOHeader(); // 💡 여기서 헤더 생성
+        setPoId(currentPoId);                 // 저장
       }
 
-      // 2️⃣ 생성된 poId 기준으로 아이템 추가
-      await api.post(`/api/po/${currentPoId}/items`, {
-        productId: product.id,
+      const res = await api.post(`/api/po/${currentPoId}/items`, {
+      productId: product.id, // 또는 gtin 사용시 백엔드 스펙에 맞춰 바꾸기
+      qty: 1,
+    });
+
+    // 서버가 itemNo를 돌려준다고 가정
+    const serverItem = res.data; // { itemNo, price, ... }
+    setItems((prev) => [
+      ...prev,
+      {
+        itemNo: serverItem.itemNo,
+        gtin: product.gtin ?? product.productCode,
+        productName: product.productName,
+        imageUrl: product.imageUrl,
+        price: serverItem.price ?? product.price ?? 0,
         qty: 1,
+        totalPrice: (serverItem.price ?? product.price ?? 0) * 1,
+        selected: false,
+      },
+    ]);
+  } catch (err) {
+    console.error("상품 추가 실패:", err);
+    alert("장바구니 추가 중 오류가 발생했습니다.");
+  }
+};
+
+  
+  // 2) 상세에서 넘어온 품목을 장바구니에 합치기
+  useEffect(() => {
+    const s = location.state;
+    if (!s || !Array.isArray(s.items) || s.items.length === 0) return;
+
+   (async () => {
+    try {
+      // 1) 헤더 보장
+      let currentPoId = poId;
+      if (!currentPoId) {
+        currentPoId = await createPOHeader();
+        setPoId(currentPoId);
+      }
+
+      // 2) 넘어온 품목들 서버 라인 생성 (중복시 수량 합산하는 API가 있으면 그걸 호출)
+      const created = [];
+      for (const raw of s.items) {
+        const idOrGtin = await resolveProductIdOrGtin(raw);
+        const payload = { ...idOrGtin, qty: Number(raw.qty || 1) };
+        const res = await api.post(`/api/po/${currentPoId}/items`, payload);
+        const server = res.data; // { itemNo, price, ... } 가정
+
+        created.push({
+          itemNo: server.itemNo,                   // ✅ 서버 라인 id
+          gtin: raw.gtin || raw.productCode,
+          productName: raw.productName || "",
+          imageUrl: raw.imageUrl || "",
+          price: Number(server.price ?? raw.price ?? 0),
+          qty: Number(raw.qty || 1),
+          totalPrice: Number(server.price ?? raw.price ?? 0) * Number(raw.qty || 1),
+          selected: false,
+        });
+      }
+
+      // 3) 클라 상태 병합(같은 GTIN은 수량 합치기)
+      setItems(prev => {
+        const byGtin = new Map(prev.map(p => [p.gtin, { ...p }]));
+        created.forEach(it => {
+          if (byGtin.has(it.gtin)) {
+            const ex = byGtin.get(it.gtin);
+            const newQty = ex.qty + it.qty;
+            byGtin.set(it.gtin, {
+              ...ex,
+              qty: newQty,
+              totalPrice: newQty * (ex.price || 0),
+            });
+          } else {
+            byGtin.set(it.gtin, it);
+          }
+        });
+        return Array.from(byGtin.values());
       });
 
-      // 3️⃣ 프론트 상태 업데이트
-      setItems((prev) => [...prev, { ...product, qty: 1, selected: false }]);
-    } catch (err) {
-      console.error("상품 추가 실패:", err);
-      alert("장바구니 추가 중 오류가 발생했습니다.");
+      // 4) 중복 추가 방지
+      navigate("/po", { replace: true, state: null });
+    } catch (e) {
+      console.error(e);
+      // 필요시 토스트
     }
-  };
+  })();
+}, [location.state, navigate, poId]);
 
-
+  
 
 
 
@@ -229,14 +326,18 @@ export default function POPage() {
       alert("장바구니가 비어있습니다.");
       return;
     }
+    if (!poId) {
+      alert("발주 헤더가 없습니다. 다시 시도해 주세요.");
+      return;
+    }
     try {
-      const poId = 1; // 추후 실제 발주 id로 교체하기 
-      await confirmOrder(poId);
-      alert(`${items.length}개 상품을 발주 확정했습니다.`);
-      // window.location.reload(); // 필요시 UI 초기화 or 목록 새로고침
-    } catch (err){
-      console.error("발주 요청 실패:", err);
-      alert("발주 중 오류가 발생했습니다.");
+      // 선택 라인만 확정하는 스펙이라면 itemNo 배열도 전달
+    // await confirmOrder(poId, selectedItems.map(it => it.itemNo));
+    await confirmOrder(poId);
+    alert(`${selectedItems.length}개 상품을 발주 확정했습니다.`);
+  } catch (err) {
+    console.error("발주 요청 실패:", err);
+    alert("발주 중 오류가 발생했습니다.");
     }
   };
 
