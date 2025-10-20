@@ -1,8 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // ⭐️ 페이지 이동을 위해 추가
+// 💡 useNavigate는 더 이상 필요 없으므로 import를 완전히 제거합니다.
 import '../styles/Login.css';
 
-// ⭐️ API 기본 URL 정의
+// 💡 useAuth 훅 임포트
+import { useAuth } from '../component/useAuth';
+
+
+// ⭐️ API 기본 URL 정의 (PasswordResetModal에서 사용)
 const API_BASE_URL = 'http://localhost:8080';
 
 // =========================================================================
@@ -20,20 +24,16 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
         setMessage('');
 
         try {
-            // 스프링 부트 비밀번호 초기화 요청 API (새로 정의된 엔드포인트 가정)
             const response = await fetch(`${API_BASE_URL}/api/auth/password/reset-request`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // 서버의 DTO에 맞게 userId와 email을 전송
                 body: JSON.stringify({ userId: id, email }),
             });
 
             if (response.ok) {
-                // 성공 (200 OK 또는 204 No Content)
                 setMessage('이메일로 비밀번호 재설정 링크가 발송되었습니다. 확인해 주세요.');
                 setIsSuccess(true);
             } else {
-                // 실패 (예: 400 Bad Request, 사용자 없음 등)
                 const errorText = await response.text();
                 setMessage(errorText || '비밀번호 초기화 요청에 실패했습니다. 정보를 확인해 주세요.');
                 setIsSuccess(false);
@@ -104,51 +104,34 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
 };
 
 // =========================================================================
-// 메인 로그인 컴포넌트 (API 연결)
+// 메인 로그인 컴포넌트 (useAuth 통합)
 // =========================================================================
 const LoginPage = () => {
-    // ⭐️ navigate 훅 추가
-    const navigate = useNavigate();
+    // 💡 useAuth 훅을 사용하여 login 함수 가져오기
+    const { login } = useAuth(); 
 
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // ⭐️ 로그인 처리 핸들러 (API 연결)
+    // ⭐️ 로그인 처리 핸들러 (useAuth 연결)
     const handleLoginSubmit = useCallback(async (e) => {
         e.preventDefault();
         setError('');
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, password }),
-            });
+            // login 함수 내부에서 API 호출, 토큰 저장 및 페이지 이동이 모두 처리됩니다.
+            await login(userId, password); 
 
-            if (response.ok) {
-                // 1. 성공 시 TokenResponseDTO (JSON) 파싱
-                const tokenResponse = await response.json(); 
-                
-                // 2. 토큰 저장
-                localStorage.setItem('accessToken', tokenResponse.accessToken);
-                localStorage.setItem('refreshToken', tokenResponse.refreshToken);
-                
-                // 3. 메인 페이지로 이동
-                // alert('로그인 성공!'); // (선택 사항)
-                navigate('/'); 
-            } else {
-                // 4. 실패 처리 (401 Unauthorized 등)
-                const errorText = await response.text(); 
-                setError(errorText || '아이디 또는 비밀번호가 일치하지 않습니다.');
-            }
         } catch (err) {
-            console.error('API 통신 오류:', err);
-            setError('서버와 통신할 수 없습니다. 서버 상태를 확인해 주세요.');
+            console.error('로그인 오류:', err); 
+            // AuthService에서 던져진 오류 메시지를 표시합니다.
+            const errorMessage = err.response?.data?.message || err.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.';
+            setError(errorMessage);
         }
 
-    }, [userId, password, navigate]);
+    }, [userId, password, login]); // 의존성 배열 유지
 
     return (
         <div className="login-container">
