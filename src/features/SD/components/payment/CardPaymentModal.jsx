@@ -38,9 +38,9 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 flex justify-center items-center z-[2000]">
-      {/* 🔲 어두운 반투명 배경 */}
+      {/* 🔲 어두운 반투명 + 블러 배경 (카드 결제와 동일) */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-
+      
       {/* 💳 카드 결제창 */}
       <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-[350px] z-[2100]">
         <h2 className="text-2xl font-bold mb-2 text-center">카드 결제</h2>
