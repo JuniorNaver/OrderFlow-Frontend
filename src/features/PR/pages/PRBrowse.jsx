@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useState, useRef, useCallback} from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 import { Link } from "react-router-dom";
@@ -28,6 +28,20 @@ export default function PRBrowse() {
   const [loadingKans, setLoadingKans] = useState(false);
   const [loadingProds, setLoadingProds] = useState(false);
   const [error, setError] = useState(null);
+  const [qtyByGtin, setQtyByGtin] = useState({});
+
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((msg, duration = 1500) => {
+    setToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), duration);
+  }, []);
+
+  useEffect(() => {
+    return () => { // 언마운트 시 타이머 정리
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   // 존 변경 → 코너 로드
   useEffect(() => {
@@ -96,21 +110,56 @@ export default function PRBrowse() {
     return () => { abort = true; };
   }, [products]);
 
+  // products가 바뀔 때 수량 초기화
+  useEffect(() => {
+    if (!products?.length) { setQtyByGtin({}); return; }
+    const init = Object.fromEntries(products.map(p => [p.gtin, 1]));
+    setQtyByGtin(init);
+  }, [products]);
+
+  // ★ 추가
+function incQty(gtin) {
+  setQtyByGtin(m => {
+    const cur = m[gtin] ?? 1;
+    const avail = availableByGtin[gtin] ?? 0;
+    const next = Math.min(cur + 1, Math.max(1, avail)); // 재고 초과 방지
+    return { ...m, [gtin]: next };
+  });
+}
+function decQty(gtin) {
+  setQtyByGtin(m => ({ ...m, [gtin]: Math.max(1, (m[gtin] ?? 1) - 1) }));
+}
+function setQty(gtin, val) {
+  const num = Number(val);
+  setQtyByGtin(m => {
+    const avail = availableByGtin[gtin] ?? 0;
+    const safe = Number.isFinite(num) ? Math.min(Math.max(1, num), Math.max(1, avail)) : (m[gtin] ?? 1);
+    return { ...m, [gtin]: safe };
+  });
+}
+
   // 상품 담기
-  async function addOne(gtin) {
+  async function addMany(gtin, qty) {
     if (adding[gtin]) return;
+    const avail = availableByGtin[gtin] ?? 0;
+    if (avail <= 0 || qty <= 0) return;
+
     setAdding(a => ({ ...a, [gtin]: true }));
+
+    // 낙관적 감소
+    setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - qty) }));
     try {
-      await reserve(gtin, 1); // POST /inventory/reserve
-      setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - 1) }));
-      setToast("담겼어요.");
+      await reserve(gtin, qty); // POST /inventory/reserve
+      showToast("담겼어요.");
+      setQtyByGtin(m => ({ ...m, [gtin]: 1 }));
     } catch (e) {
-      setToast(e.message || "담기에 실패했어요.");
+      setAvailableByGtin(m => ({ ...m, [gtin]: (m[gtin] ?? 0) + qty }));
+      showToast(e.message || "담기에 실패했어요.");
     } finally {
       setAdding(a => ({ ...a, [gtin]: false }));
     }
   }
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더: 존 탭 */}
@@ -119,6 +168,11 @@ export default function PRBrowse() {
           <div className="flex items-center gap-3 text-xl font-bold text-gray-900">
             <div className="h-8 w-8 rounded-xl bg-black text-white grid place-items-center">OF</div>
             <span>OrderFlow 발주(PR)</span>
+            {toast && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-xl bg-black text-white text-sm px-4 py-2 shadow transition-opacity duration-300" role="status" aria-live="polite">
+          {toast}
+        </div>
+      )}
           </div>
           <nav className="flex gap-2">
             {ZONES.map(z => (
@@ -212,52 +266,98 @@ export default function PRBrowse() {
 
           {!loadingProds && !error && products.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map(p => (
-                <div key={p.gtin} className="border rounded-2xl bg-white p-3">
-              {/* 클릭 영역: 상세 페이지로 */}
-            <Link to={`/pr/detail/${p.gtin}`} className="block group">
-                <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden grid place-items-center">
-                  {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} className="object-contain w-full h-full" />
-                  ) : (
-                    <div className="text-xs text-gray-400">이미지 없음</div>
-                  )}
-                </div>
-                <div className="mt-3 space-y-1">
-                  <div className="text-sm text-gray-500">GTIN {p.gtin}</div>
-                  <div className="text-sm font-medium line-clamp-2 group-hover:underline">{p.name}</div>
-                  <div className="text-base font-semibold">
-                    {Number.isFinite(Number(p.price)) ? Number(p.price).toLocaleString() : "-"}원
-                    {p.unit && <span className="ml-1 text-sm text-gray-500">{p.unit}</span>}
-                  </div>
-                </div>
-              </Link>
+              {products.map(p => {
+  const avail = availableByGtin[p.gtin] ?? 0;
+  const qty   = qtyByGtin[p.gtin] ?? 1;
+  const canAdd = p.orderable && avail > 0 && qty <= avail && !adding[p.gtin];
+  const noStock = avail <= 0;
 
-            {/* 링크 밖: 담기 버튼 */}
-              <div className="mt-2 text-xs text-gray-500">가용재고: {availableByGtin[p.gtin] ?? 0}</div>
-              <button
-                onClick={() => addOne(p.gtin)}
-                className={`mt-3 w-full rounded-xl text-sm py-2 ${
-                  p.orderable && (availableByGtin[p.gtin] ?? 0) > 0 && !adding[p.gtin]
-                    ? "bg-gray-900 text-white hover:opacity-90"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                }`}
-                disabled={!p.orderable || (availableByGtin[p.gtin] ?? 0) <= 0 || !!adding[p.gtin]}
-              >
-                {adding[p.gtin] ? "담는 중…" : "담기"}
-              </button>
-            </div>
-          ))}
+  return (
+    <div key={p.gtin} className="border rounded-2xl bg-white p-3">
+      {/* 클릭 영역: 상세 페이지로 */}
+      <Link to={`/pr/detail/${p.gtin}`} className="block group">
+        <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden grid place-items-center">
+          {p.imageUrl ? (
+            <img src={p.imageUrl} alt={p.name} className="object-contain w-full h-full" />
+          ) : (
+            <div className="text-xs text-gray-400">이미지 없음</div>
+          )}
+        </div>
+        <div className="mt-3 space-y-1">
+          <div className="text-sm text-gray-500">GTIN {p.gtin}</div>
+          <div className="text-sm font-medium line-clamp-2 group-hover:underline">{p.name}</div>
+          <div className="text-base font-semibold">
+            {Number.isFinite(Number(p.price)) ? Number(p.price).toLocaleString() : "-"}원
+            {p.unit && <span className="ml-1 text-sm text-gray-500">{p.unit}</span>}
+          </div>
+        </div>
+      </Link>
+
+      {/* 가용재고 + 상태 뱃지 */}
+      <div className="mt-2 flex items-center justify-between">
+        <div className="text-xs text-gray-500">가용재고: {avail}</div>
+        {!p.orderable && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+            발주불가
+          </span>
+        )}
+      </div>
+
+      {/* 수량 컨트롤 */}
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="수량 감소"
+          onClick={() => decQty(p.gtin)}
+          className="px-3 py-1 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-50"
+          disabled={qty <= 1 || !!adding[p.gtin] || noStock}
+        >
+          -
+        </button>
+        <input
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(p.gtin, e.target.value)}
+          className="w-16 px-2 py-1 rounded-lg border text-sm text-center"
+          disabled={!!adding[p.gtin] || noStock}
+        />
+        <button
+          type="button"
+          aria-label="수량 증가"
+          onClick={() => incQty(p.gtin)}
+          className="px-3 py-1 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-50"
+          disabled={qty >= avail || !!adding[p.gtin] || noStock}
+        >
+          +
+        </button>
+      </div>
+
+      {/* 담기 버튼 */}
+      <button
+        onClick={() => addMany(p.gtin, qty)}
+        className={`mt-3 w-full rounded-xl text-sm py-2 ${
+          canAdd ? "bg-gray-900 text-white hover:opacity-90"
+                 : "bg-gray-200 text-gray-500 cursor-not-allowed"
+        }`}
+        disabled={!canAdd}
+      >
+        {adding[p.gtin] ? "담는 중…" : !p.orderable ? "발주불가" : avail <= 0 ? "품절" : "장바구니"}
+      </button>
+    </div>
+  );
+})}
             </div>
           )}
 
-          {!loadingProds && !error && products.length === 0 && (
-            <div className="p-6 text-sm text-gray-500 border rounded-xl bg-white">
-              선택한 KAN에 상품이 없어요.
-            </div>
-          )}
         </section>
+        {toast && (
+  <div className="fixed bottom-4 right-4 z-50 rounded-xl bg-black text-white text-sm px-4 py-2 shadow">
+    {toast}
+  </div>
+)}
       </main>
     </div>
   );
+  
 }

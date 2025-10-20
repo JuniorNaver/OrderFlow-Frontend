@@ -50,9 +50,9 @@ export default function ProductDetailPage() {
   });
 
   const priceText = useMemo(() => {
-    if (!product?.price) return "-";
-    const n = Number(product.price);
-    return Number.isFinite(n) ? "-" : `${n.toLocaleString()}원`;
+    if (!product?.price && product?.price !== 0) return "-";
+  const n = Number(product.price);
+  return Number.isFinite(n) ? `${n.toLocaleString()}원` : "-";
   }, [product]);
 
   if (!gtin) return <ErrorBox text="잘못된 접근입니다." onBack={() => nav(-1)} />;
@@ -65,7 +65,22 @@ export default function ProductDetailPage() {
       : "-";
 
   const goPO = () =>
-    nav("/po", { state: { from: "product-detail", items: [{ productCode: product.gtin, qty: 1 }] } });
+  nav("/po", {
+    replace: false,
+    state: {
+      from: "product-detail",
+      items: [
+        {
+         productCode: product.gtin,   // 또는 gtin
+        qty: 1,
+        price: Number(product.price ?? 0),
+        productName: product.productName,
+        imageUrl: product.imageUrl,
+        id: product.id,              // 있으면 더 좋아
+        },
+      ],
+    },
+  });
 
   return (
     <div className="p-6 space-y-6">
