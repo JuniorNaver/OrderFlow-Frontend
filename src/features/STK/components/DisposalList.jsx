@@ -50,17 +50,18 @@ const DisposalList = () => {
         );
     };
 
-    // 폐기 페이지 이동 핸들러 (선택된 재고를 가지고 이동)
+   // 폐기 페이지 이동 핸들러 (선택된 재고를 가지고 이동)
     const handleGoToDisposalPage = () => {
         const selectedForDisposal = disposalData.filter(item => item.quantity > 0);
-        
+
         if (selectedForDisposal.length === 0) {
             alert("폐기할 수량을 1개 이상 입력해주세요.");
             return;
         }
 
-        // 실제 폐기 처리 페이지 (예: StockAdjustmentView.jsx)로 라우팅
-        navigate('/stk/adjustment/disposal', { state: { items: selectedForDisposal } });
+        // ⭐️ 경로를 '/stk/adjustment/disposal'에서 '/stk/disposal'로 변경하여 라우팅 오류를 회피합니다.
+        // (App.jsx의 라우팅 정의와 일치하도록 수정이 필요)
+        navigate('/stk/disposal', { state: { items: selectedForDisposal } });
     };
 
     const totalCount = disposalData.reduce((sum, item) => sum + (item.quantity || 0), 0);
