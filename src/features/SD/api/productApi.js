@@ -19,7 +19,7 @@ export const searchProductsByName = async (query) => {
 export const getProductByBarcode = async (barcode) => {
   try {
     const res = await axios.get(`${API_BASE}/barcode/${barcode}`);
-    return res.data; // { gtin, productName, price, quantity }
+    return res.data; // StockResponse 객체 반환
   } catch (err) {
     console.error("바코드 검색 중 오류:", err);
     return null;

@@ -1,32 +1,55 @@
 import { useState, useEffect } from "react";
+import { addItemToOrder } from "../../api/sdApi.js";
 
-export default function SalesTable({ onTotalChange, onAddItem, onItemsChange }) {
+export default function SalesTable({
+  currentOrder,
+  onTotalChange,
+  onAddItem,
+  onItemsChange,
+}) {
   const [items, setItems] = useState([]);
 
-  // ✅ 상품 추가 함수
-  const handleAddItem = (product) => {
-    if (!product?.id) return;
+  // ✅ 상품 추가 (DB 저장 + 화면 반영)
+  const handleAddItem = async (product) => {
+    const productId = product.id || product.gtin;
+    if (!productId || !currentOrder?.orderId) return;
 
-    setItems((prev) => {
-      const existing = prev.find((it) => it.id === product.id);
-      if (existing) {
-        // 동일 상품이면 수량 +1, 재고 -1
-        return prev.map((it) =>
-          it.id === product.id
-            ? { ...it, qty: it.qty + 1, stock: Math.max(0, it.stock - 1) }
-            : it
-        );
-      }
+    try {
+      // ✅ DB에 SalesItem insert (선반영)
+      const savedItem = await addItemToOrder(currentOrder.orderId, {
+        gtin: product.gtin || product.id,
+        quantity: 1,
+        price: product.price || 0,
+      });
 
-      const safeProduct = {
-        ...product,
-        qty: product.qty ?? 1,
-        price: Number(product.price) || 0,
-        stock: product.stock ?? 0,
-        originalStock: product.stock ?? 0,
-      };
-      return [...prev, safeProduct];
-    });
+      console.log("✅ DB 저장 완료:", savedItem);
+
+      // ✅ UI 반영
+      setItems((prev) => {
+        const existing = prev.find((it) => it.gtin === productId || it.id === productId);
+        if (existing) {
+          return prev.map((it) =>
+            it.gtin === productId || it.id === productId
+              ? { ...it, qty: it.qty + 1, stock: Math.max(0, it.stock - 1) }
+              : it
+          );
+        }
+
+        const safeProduct = {
+          id: savedItem.id || productId,
+          gtin: product.gtin || productId,
+          name: product.name || product.productName || "상품명 미등록",
+          qty: product.qty ?? 1,
+          price: Number(product.price) || Number(savedItem.sdPrice) || 0,
+          stock: savedItem.stockQuantity ?? product.stock ?? 0,
+          originalStock: savedItem.stockQuantity ?? product.stock ?? 0,
+        };
+        return [...prev, safeProduct];
+      });
+    } catch (err) {
+      console.error("❌ 상품 추가 실패:", err);
+      alert("상품을 추가하지 못했습니다.");
+    }
   };
 
   // ✅ 수량 변경
@@ -36,9 +59,9 @@ export default function SalesTable({ onTotalChange, onAddItem, onItemsChange }) 
         if (item.id !== id) return item;
 
         let newQty = item.qty + delta;
-        let newStock = item.stock - delta; // 재고 반대 방향으로 변화
+        let newStock = item.stock - delta;
 
-        if (newQty < 1) return item; // 최소 1개
+        if (newQty < 1) return item;
         if (newStock < 0) {
           alert("재고 수량이 부족합니다!");
           return item;
@@ -66,32 +89,24 @@ export default function SalesTable({ onTotalChange, onAddItem, onItemsChange }) 
     if (onTotalChange) onTotalChange(total);
   }, [items, onTotalChange]);
 
-  // ✅ 상품 리스트 변경 시 부모에게 알림
+  // ✅ 전역 함수 등록 (바코드/검색 등에서 접근)
   useEffect(() => {
-    if (onItemsChange) onItemsChange(items);
-  }, [items, onItemsChange]);
-  
-  // ✅ 외부에서 접근할 수 있게 window 등록
-  useEffect(() => {
-    // 상품 추가 전역 함수
     window.addItemToSales = handleAddItem;
 
-    // ✅ 결제 완료 시 PaymentSection에서 호출하는 초기화 함수
-    window.clearSalesItems = () => {
-      setItems([]);
-      if (onTotalChange) onTotalChange(0); // 총액도 0으로 초기화
-      console.log("🧹 상품 목록 초기화 완료");
-    };
+    if (!window.clearSalesItems) {
+      window.clearSalesItems = () => {
+        console.log("🧹 결제 완료 후 상품 목록 초기화");
+        setItems([]);
+        if (onTotalChange) onTotalChange(0);
+      };
+    }
 
-    // 부모에서도 직접 전달 가능하게 등록
     if (onAddItem) onAddItem(handleAddItem);
 
-    // cleanup
     return () => {
       delete window.addItemToSales;
-      delete window.clearSalesItems;
     };
-  }, [onAddItem, onTotalChange]);
+  }, [onAddItem, onTotalChange, currentOrder]);
 
   return (
     <div className="bg-white shadow-xl rounded-2xl p-6">
@@ -108,7 +123,7 @@ export default function SalesTable({ onTotalChange, onAddItem, onItemsChange }) 
         </thead>
         <tbody>
           {items.map((item, idx) => (
-            <tr key={item.id} className="border-b hover:bg-gray-50 text-gray-800">
+            <tr key={item.id || item.gtin} className="border-b hover:bg-gray-50 text-gray-800">
               <td className="p-3 text-center">{idx + 1}</td>
               <td className="p-3">{item.name || "이름없음"}</td>
               <td className="p-3 text-right">
