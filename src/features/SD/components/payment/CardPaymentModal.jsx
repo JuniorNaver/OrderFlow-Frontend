@@ -27,6 +27,7 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
         onSuccess({
           method: "CARD",
           amount: amount,
+          paidAmount: amount,
         });
       } else {
         setError("❌ 카드 정보가 올바르지 않습니다.");
@@ -36,8 +37,12 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-[350px]">
+    <div className="fixed inset-0 flex justify-center items-center z-[2000]">
+      {/* 🔲 어두운 반투명 배경 */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+      {/* 💳 카드 결제창 */}
+      <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-[350px] z-[2100]">
         <h2 className="text-2xl font-bold mb-2 text-center">카드 결제</h2>
         <p className="text-center text-gray-600 mb-6">
           남은 결제금액:{" "}
@@ -47,6 +52,7 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 결제 금액 */}
           <div>
             <label className="block text-gray-600 mb-1 text-sm">결제 금액</label>
             <input
@@ -62,6 +68,7 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
             </small>
           </div>
 
+          {/* 카드 번호 */}
           <div>
             <label className="block text-gray-600 mb-1 text-sm">카드번호</label>
             <input
@@ -73,37 +80,40 @@ function CardPaymentModal({ totalAmount, onClose, onSuccess }) {
             />
           </div>
 
+          {/* MM/YY + CVC */}
           <div className="flex gap-2">
             <input
               type="text"
               value={expiry}
               onChange={(e) => setExpiry(e.target.value)}
               placeholder="MM/YY"
-              className="flex-1 border rounded-lg px-3 py-2"
+              className="w-2/3 border rounded-lg px-3 py-2"
             />
             <input
               type="password"
               value={cvc}
               onChange={(e) => setCvc(e.target.value)}
               placeholder="CVC"
-              className="flex-1 border rounded-lg px-3 py-2"
+              className="w-1/3 border rounded-lg px-3 py-2"
             />
           </div>
 
+          {/* 에러 메시지 */}
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
+          {/* 버튼 */}
           <div className="flex justify-between mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
+              className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 ${
+              className={`bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition ${
                 loading ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >

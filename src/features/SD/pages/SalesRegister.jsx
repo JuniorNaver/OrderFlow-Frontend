@@ -209,110 +209,136 @@ function SalesRegister() {
   };
 
   return (
-    <div className="p-10 bg-gray-50 min-h-screen text-[18px] relative overflow-visible">
-      <div className="flex justify-between items-center mb-10 w-full max-w-[1440px] mx-auto">
-        <h1 className="text-4xl font-bold">판매등록</h1>
-        {currentOrder && (
-          <div className="flex items-center text-gray-600 gap-2">
-            <span>🧾</span>
-            <span>
-              주문번호:{" "}
-              <b className="text-gray-800">
-                {currentOrder.orderNo || `ID-${currentOrder.orderId}`}
-              </b>
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-10">
-        <div className="col-span-2 relative">
-          <SalesTable
-            onTotalChange={setTotalAmount}
-            onAddItem={(fn) => (window.addItemToSales = fn)}
-            onItemsChange={setSalesItems}
-          />
-          <BarcodeListener onBarcodeScan={handleBarcodeScan} />
+  <div className="p-10 bg-gray-50 min-h-screen text-[18px] relative overflow-visible">
+    {/* 상단 헤더 */}
+    <div className="flex justify-between items-center mb-10 w-full max-w-[1440px] mx-auto">
+      <h1 className="text-4xl font-bold">판매등록</h1>
+      {currentOrder && (
+        <div className="flex items-center text-gray-600 gap-2">
+          <span>🧾</span>
+          <span>
+            주문번호:{" "}
+            <b className="text-gray-800">
+              {currentOrder.orderNo || `ID-${currentOrder.orderId}`}
+            </b>
+          </span>
         </div>
-
-        <div className="grid grid-cols-2 gap-6 justify-items-center relative z-[1000]">
-          <PaymentSection
-            totalAmount={totalAmount}
-            currentOrder={currentOrder}
-            onSuccess={handlePaymentSuccess}
-            onPaymentComplete={(received, change) => {
-              setReceivedAmount(received);
-              setChangeAmount(change);
-              setPaidTotal(received);
-            }}
-            setPaidTotal={setPaidTotal}
-          />
-
-          <button
-            onClick={() => setShowRefund(true)}
-            className="bg-red-500 text-white w-40 h-20 rounded-2xl hover:bg-red-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
-          >
-            환불
-          </button>
-
-          <button
-            onClick={() => setShowQuery(true)}
-            className="bg-gray-900 text-white w-40 h-20 rounded-2xl hover:bg-gray-800 text-xl font-bold shadow-lg transition-transform active:scale-95"
-          >
-            영수증
-          </button>
-
-          <div className="relative z-[9999]">
-            <HoldButton
-              onHold={handleHold}
-              onHoldList={handleGetHoldList}
-              onResume={handleResume}
-              holdList={holdList}
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              if (!currentOrder) return alert("⛔ 주문이 아직 생성되지 않았습니다.");
-              setShowSearch(true);
-            }}
-            className="bg-teal-500 text-white w-40 h-20 rounded-2xl hover:bg-teal-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
-          >
-            상품검색
-          </button>
-
-          <button className="bg-purple-500 text-white w-40 h-20 rounded-2xl hover:bg-purple-600 text-xl font-bold shadow-lg transition-transform active:scale-95">
-            재고조정
-          </button>
-        </div>
-      </div>
-
-      <SummarySection
-        totalAmount={totalAmount}
-        receivedAmount={paidTotal}
-        changeAmount={changeAmount}
-        remainingAmount={Math.max(totalAmount - paidTotal, 0)}
-      />
-
-      {showSearch && (
-        <ProductSearchModal
-          onClose={() => setShowSearch(false)}
-          onSelect={handleItemAdded}
-          orderId={currentOrder?.orderId}
-        />
-      )}
-      {showQuery && <ReceiptQueryModal onClose={() => setShowQuery(false)} />}
-      {showRefund && (
-        <RefundModal
-          onClose={() => setShowRefund(false)}
-          onRefundComplete={() => {
-            setShowRefund(false);
-            alert("✅ 환불 완료되었습니다.");
-          }}
-        />
       )}
     </div>
-  );
+
+    {/* 메인 컨텐츠 */}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 max-w-[1440px] mx-auto">
+      {/* 좌측: 판매 테이블 */}
+      <div className="relative">
+        <SalesTable
+          onTotalChange={setTotalAmount}
+          onAddItem={(fn) => (window.addItemToSales = fn)}
+          onItemsChange={setSalesItems}
+        />
+        <BarcodeListener onBarcodeScan={handleBarcodeScan} />
+      </div>
+
+      {/* 💳 우측 패널 */}
+<div className="flex flex-col items-center space-y-8">
+  {/* 🧭 기능 버튼 2×3 고정 */}
+  <div
+    className="grid grid-cols-2 gap-5"
+    style={{
+      width: "340px",
+      justifyItems: "center",
+      alignItems: "center",
+    }}
+  >
+    {/* ✅ 결제하기 = PaymentSection 컴포넌트 */}
+    <div className="w-[160px] h-[78px]">
+      <PaymentSection
+        totalAmount={totalAmount}
+        currentOrder={currentOrder}
+        onSuccess={handlePaymentSuccess}
+        onPaymentComplete={(received, change) => {
+          setReceivedAmount(received);
+          setChangeAmount(change);
+          setPaidTotal(received);
+        }}
+        setPaidTotal={setPaidTotal}
+      />
+    </div>
+
+    {/* 나머지 버튼들은 동일한 크기 */}
+    <button
+      onClick={() => setShowRefund(true)}
+      className="w-[160px] h-[80px] flex justify-center items-center bg-red-500 text-white rounded-2xl hover:bg-red-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
+    >
+      환불
+    </button>
+
+    <button
+      onClick={() => setShowQuery(true)}
+      className="w-[160px] h-[80px] flex justify-center items-center bg-gray-900 text-white rounded-2xl hover:bg-gray-800 text-xl font-bold shadow-lg transition-transform active:scale-95"
+    >
+      영수증
+    </button>
+
+    <HoldButton
+      onHold={handleHold}
+      onHoldList={handleGetHoldList}
+      onResume={handleResume}
+      holdList={holdList}
+      className="w-[160px] h-[78px] flex justify-center items-center bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
+    >
+      보류
+    </HoldButton>
+
+    <button
+      onClick={() => {
+        if (!currentOrder)
+          return alert("⛔ 주문이 아직 생성되지 않았습니다.");
+        setShowSearch(true);
+      }}
+      className="w-[160px] h-[80px] flex justify-center items-center bg-teal-500 text-white rounded-2xl hover:bg-teal-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
+    >
+      상품검색
+    </button>
+
+    <button
+      className="w-[160px] h-[80px] flex justify-center items-center bg-purple-500 text-white rounded-2xl hover:bg-purple-600 text-xl font-bold shadow-lg transition-transform active:scale-95"
+    >
+      재고조정
+    </button>
+  </div>
+</div>
+
+</div>
+
+    {/* 하단 요약 섹션 */}
+    <SummarySection
+      totalAmount={totalAmount}
+      receivedAmount={paidTotal}
+      changeAmount={changeAmount}
+      remainingAmount={Math.max(totalAmount - paidTotal, 0)}
+    />
+
+    {/* 모달 */}
+    {showSearch && (
+      <ProductSearchModal
+        onClose={() => setShowSearch(false)}
+        onSelect={handleItemAdded}
+        orderId={currentOrder?.orderId}
+      />
+    )}
+    {showQuery && <ReceiptQueryModal onClose={() => setShowQuery(false)} />}
+    {showRefund && (
+      <RefundModal
+        onClose={() => setShowRefund(false)}
+        onRefundComplete={() => {
+          setShowRefund(false);
+          alert("✅ 환불 완료되었습니다.");
+        }}
+      />
+    )}
+  </div>
+);
+
 }
 
 export default SalesRegister;
