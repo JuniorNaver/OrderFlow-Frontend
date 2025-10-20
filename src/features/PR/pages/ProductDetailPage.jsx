@@ -4,14 +4,19 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getProduct, getRelated } from "../api/product";
 import { fetchAvailable, reserve } from "../api/browse";
-
 export default function ProductDetailPage() {
   const { gtin = "" } = useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState("info"); // info | stock | history
+  const [qty, setQty] = useState(1);
 
-  // 1) 단건 상세
+  // 숫자 보정 유틸 (1 이상, 재고 한도 내)
+const clampQty = (v) => {
+  const n = Number.isFinite(Number(v)) ? Math.floor(Number(v)) : 1;
+  const max = qInv.data?.available ?? Infinity; // 가용 없으면 상한 없음
+  return Math.max(1, Math.min(n, max));
+};
   const q = useQuery({
     queryKey: ["product", gtin],
     queryFn: () => getProduct(gtin),
@@ -34,20 +39,26 @@ export default function ProductDetailPage() {
   });
 
   // 3) 재고(가용) — 탭에서 쓰려고 별도 쿼리
-  const qInv = useQuery({
-    queryKey: ["available", gtin],
-    queryFn: () => fetchAvailable(gtin), // { available, onHand, reserved } 가정
-    enabled: !!gtin && tab === "stock",
-    staleTime: 10_000,
-    gcTime: 60_000,
-    retry: 0,
-  });
+ const qInv = useQuery({
+  queryKey: ["available", gtin],
+  queryFn: () => fetchAvailable(gtin),
+  enabled: !!gtin,        // ← tab 조건 삭제
+  staleTime: 10_000,
+  gcTime: 60_000,
+  retry: 0,
+});
 
-  // 4) 발주/예약(예시: 재고 예약) — optimistic update
-  const mReserve = useMutation({
+const mReserve = useMutation({
     mutationFn: ({ qty }) => reserve(gtin, qty),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["available", gtin] }),
   });
+
+const unitPrice = Number(product?.price ?? 0);
+const totalText = useMemo(() => {
+  const total = unitPrice * qty;
+  return Number.isFinite(total) ? `${total.toLocaleString()}원` : "-";
+}, [unitPrice, qty]);
+
 
   const priceText = useMemo(() => {
     if (!product?.price && product?.price !== 0) return "-";
@@ -72,11 +83,11 @@ export default function ProductDetailPage() {
       items: [
         {
          productCode: product.gtin,   // 또는 gtin
-        qty: 1,
-        price: Number(product.price ?? 0),
-        productName: product.productName,
-        imageUrl: product.imageUrl,
-        id: product.id,              // 있으면 더 좋아
+         qty,
+         price: unitPrice,
+         productName: product.productName,
+         imageUrl: product.imageUrl,
+         id: product.id,
         },
       ],
     },
@@ -97,26 +108,57 @@ export default function ProductDetailPage() {
 
       {/* 헤더 */}
       <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{product.productName}</h1>
-          <p className="text-gray-500 mt-1">GTIN: {product.gtin}</p>
-          {product.orderable === false && (
-            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-gray-200">발주중지</span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={goPO}
-            disabled={product.orderable === false}
-            className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            발주 담기
-          </button>
-          <Link to={`/admin/products/${product.gtin}/edit`} className="px-4 py-2 rounded-2xl border hover:bg-gray-50">
-            수정
-          </Link>
-        </div>
-      </header>
+  <div>
+    <h1 className="text-2xl font-semibold">{product.productName}</h1>
+    <p className="text-gray-500 mt-1">GTIN: {product.gtin}</p>
+    {product.orderable === false && (
+      <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-gray-200">발주중지</span>
+    )}
+    {qInv.data?.available != null && (
+      <p className="text-xs text-gray-500 mt-1">가용 {qInv.data.available}개</p>
+    )}
+  </div>
+
+  <div className="flex items-center gap-3">
+    {/* 수량 선택 */}
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setQty((q) => clampQty(q - 1))}
+        className="w-9 h-9 rounded-lg border hover:bg-gray-50"
+        aria-label="decrement"
+      >−</button>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={qInv.data?.available ?? undefined}
+        value={qty}
+        onChange={(e) => setQty(clampQty(e.target.value))}
+        className="w-16 h-9 text-center border rounded-lg"
+      />
+      <button
+        onClick={() => setQty((q) => clampQty(q + 1))}
+        className="w-9 h-9 rounded-lg border hover:bg-gray-50"
+        aria-label="increment"
+      >+</button>
+    </div>
+
+    {/* 합계 */}
+    <div className="text-right">
+      <div className="text-xs text-gray-500">합계</div>
+      <div className="font-semibold">{totalText}</div>
+    </div>
+
+    {/* 담기 */}
+    <button
+      onClick={goPO}
+      disabled={product.orderable === false || qty < 1 || (qInv.data?.available ?? 1) < 1}
+      className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+    >
+      발주 담기
+    </button>
+  </div>
+</header>
 
       {/* 본문 */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
