@@ -133,3 +133,33 @@ export const executeDisposal = async (requestDTO) => {
         throw error; // 오류를 다시 던져서 컴포넌트에서 처리하도록 합니다.
     }
 };
+
+/**
+ * 8. 재고 수량 조정 필요 목록을 조회합니다.
+ */
+export const fetchAdjustmentList = async () => {
+    try {
+        const response = await axios.get(`${BASE_URL}/list/adjustment`);
+        return response.data;
+    } catch (error) {
+        console.error("API 호출 실패: /list/adjustment", error);
+        // Mock 데이터 반환 (Lot ID 101, 102가 수량이 0 이하인 재고라고 가정)
+        return ([
+             { lotId: 'LOT101', productName: 'FIFO 위반 재고A', location: 'X-01', expiryDate: '2025-10-01', quantity: 0, adjustQuantity: 50 },
+             { lotId: 'LOT102', productName: '음수 재고B', location: 'Y-02', expiryDate: '2025-11-20', quantity: -10, adjustQuantity: 0 },
+        ]);
+    }
+};
+
+/**
+ * 9. 재고 수량을 최종 조정합니다.
+ */
+export const executeStockAdjustment = async (requestDTO) => {
+    try {
+        const response = await axios.post(`${BASE_URL}/adjustment/execute`, requestDTO);
+        return response.data;
+    } catch (error) {
+        console.error("API 호출 실패: /adjustment/execute", error);
+        throw error;
+    }
+};
