@@ -1,8 +1,8 @@
 // src/features/STK/components/DisposalView.jsx
 
-import React, { useState, useCallback } from 'react'; 
+import React, { useState, useCallback, useEffect } from 'react'; // ⭐️ useEffect 추가
 import BarcodeListener from '../../SD/components/BarcodeListener';
-import { fetchStockByGtin, executeDisposal } from '../api/stockApi'; // executeDisposal 추가 임포트
+import { fetchStockByGtin, executeDisposal, fetchDisposalList } from '../api/stockApi'; // ⭐️ fetchDisposalList 임포트
 
 
 /**
@@ -12,9 +12,34 @@ const DisposalView = () => {
     const [scannedGtin, setScannedGtin] = useState('');
     const [disposalLots, setDisposalLots] = useState([]); 
 
-    // ⭐️ 핸들러: 폐기 수량 변경 
+    // ------------------------------------------------------------------
+    // ⭐️ 1. 초기 목록 로드: 컴포넌트 마운트 시 유통기한 만료 재고를 불러옴
+    // ------------------------------------------------------------------
+    useEffect(() => {
+        const loadInitialDisposalList = async () => {
+            try {
+                // /api/stk/list/expired API 호출 (유통기한 만료된 활성 재고 조회)
+                const expiredItems = await fetchDisposalList(); 
+                
+                // 불러온 만료 목록을 Lot ID를 기준으로 목록에 설정
+                setDisposalLots(expiredItems.map(item => ({
+                    ...item,
+                    disposalQuantity: 0, // 초기 폐기 수량 0 설정
+                })));
+            } catch (error) {
+                console.error("초기 폐기 목록을 불러오는 데 실패했습니다:", error);
+                // 오류 발생 시 사용자에게 알림 또는 빈 리스트 유지
+            }
+        };
+
+        loadInitialDisposalList();
+    }, []); // 컴포넌트 마운트 시 한 번만 실행
+
+
+    // ------------------------------------------------------------------
+    // 2. 수량 및 바코드 핸들러
+    // ------------------------------------------------------------------
     const handleQuantityChange = (lotId, value, maxQuantity) => {
-        // 최대 수량(maxQuantity)을 초과하지 않도록 보장
         const newQuantity = Math.max(0, Math.min(parseInt(value) || 0, maxQuantity));
         
         setDisposalLots(prev => 
@@ -24,13 +49,11 @@ const DisposalView = () => {
         );
     };
 
-    // ⭐️ 핸들러: 바코드 스캔 및 재고 조회 (DisposalEntryView의 핵심 로직)
     const processBarcodeScan = useCallback(async (gtinToScan) => {
         if (!gtinToScan) return;
         setScannedGtin(''); 
 
         try {
-            // GTIN으로 해당 재고의 모든 랏(Lot)을 조회
             const stockDetails = await fetchStockByGtin(gtinToScan); 
             
             if (stockDetails.length === 0) {
@@ -58,14 +81,14 @@ const DisposalView = () => {
         }
     }, []); 
 
-    // ⭐️ 핸들러: 수동 입력 필드에서 버튼 클릭 시 처리
     const handleManualEntry = () => {
         processBarcodeScan(scannedGtin.trim());
     };
     
-    // ⭐️ 최종 폐기 요청 핸들러 (수정된 로직)
+    // ------------------------------------------------------------------
+    // 3. 폐기 실행 로직
+    // ------------------------------------------------------------------
     const handleSubmitDisposal = async () => { 
-        // 1. 폐기 수량이 1개 이상인 항목만 필터링
         const itemsToDispose = disposalLots.filter(item => item.disposalQuantity > 0);
         
         if (itemsToDispose.length === 0) {
@@ -73,7 +96,6 @@ const DisposalView = () => {
             return;
         }
 
-        // 2. 요청 DTO 생성 (DisposalRequest.java 구조에 맞춤)
         const requestDTO = {
             items: itemsToDispose.map(item => ({
                 lotId: item.lotId,
@@ -83,13 +105,10 @@ const DisposalView = () => {
         };
 
         try {
-            // 3. API 호출
             const updatedStocks = await executeDisposal(requestDTO);
             
-            // 4. API 호출 성공 후, 목록에서 폐기된(수량이 0이 된) 항목을 제거합니다.
-            // (백엔드에서 폐기 처리된 랏의 ID 리스트를 반환한다고 가정)
             const disposedLotIds = new Set(updatedStocks
-                .filter(s => s.quantity === 0) // 수량이 0인 랏만 필터
+                .filter(s => s.quantity === 0) // 수량이 0이 되어 DISPOSED 처리된 랏만 목록에서 제거
                 .map(s => s.lotId)); 
             
             // 목록 업데이트: 폐기된 항목 제거 및 잔여 수량 반영
@@ -110,31 +129,33 @@ const DisposalView = () => {
             
         } catch (error) {
             console.error("폐기 처리 중 API 오류 발생:", error);
-            // 4xx, 5xx 에러 처리
             alert(`폐기 처리 중 오류가 발생했습니다. 상세: ${error.message}`);
         }
     };
 
     const totalDisposalCount = disposalLots.reduce((sum, item) => sum + item.disposalQuantity, 0);
 
+    // ------------------------------------------------------------------
+    // 4. 렌더링
+    // ------------------------------------------------------------------
     return (
         <div style={containerStyle}>
-            {/* ⭐️ BarcodeListener 통합: 전역 바코드 스캔을 processBarcodeScan 함수에 연결 */}
+            {/* BarcodeListener: 전역 바코드 스캔을 processBarcodeScan 함수에 연결 */}
             <BarcodeListener onBarcodeScan={processBarcodeScan} /> 
             
-            <h2>🗑️ 폐기 등록 및 처리 (바코드 스캔)</h2>
+            <h2>🗑️ 폐기 등록 및 처리</h2>
 
-            {/* 바코드 입력 필드 */}
+            {/* 바코드 입력 필드 (유통기한 만료 외의 재고를 추가할 때 사용) */}
             <div style={styles.inputContainer}>
                 <input
                     type="text"
-                    placeholder="제품 바코드를 스캔/수동 입력하세요 (GTIN)"
+                    placeholder="폐기할 제품 바코드를 스캔/수동 입력하세요 (GTIN)"
                     value={scannedGtin}
                     onChange={(e) => setScannedGtin(e.target.value)}
                     style={styles.input}
                 />
                 <button onClick={handleManualEntry} style={styles.button}>
-                    수동 추가
+                    추가
                 </button>
             </div>
             
@@ -153,7 +174,7 @@ const DisposalView = () => {
                 </div>
 
                 {disposalLots.length === 0 ? (
-                    <div style={styles.emptyMessage}>바코드를 스캔하여 폐기할 제품을 추가해주세요.</div>
+                    <div style={styles.emptyMessage}>폐기할 항목이 없습니다. (유통기한 만료 또는 수동 스캔)</div>
                 ) : (
                     disposalLots.map((item) => (
                         <div key={item.lotId} style={styles.dataRow}>
@@ -193,7 +214,7 @@ const DisposalView = () => {
 };
 
 // ------------------------------------------------------------------
-// ⭐️ 스타일 정의
+// ⭐️ 스타일 정의 (이전과 동일)
 // ------------------------------------------------------------------
 
 const containerStyle = { padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' };
