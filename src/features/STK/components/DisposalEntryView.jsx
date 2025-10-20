@@ -1,19 +1,13 @@
-// src/features/STK/components/DisposalView.jsx
-
 import React, { useState, useCallback } from 'react'; 
+import { fetchStockByGtin } from '../api/stockApi'; 
 import BarcodeListener from '../../SD/components/BarcodeListener';
-import { fetchStockByGtin } from '../api/stockApi';
 
-
-/**
- * ⭐️ 바코드 스캔 기반의 폐기 등록/처리 뷰 컴포넌트입니다.
- * - App.jsx의 경로 ('/stk/disposal')에 맞추어 DisposalView로 이름을 사용합니다.
- */
-const DisposalView = () => {
+const DisposalEntryView = () => {
     const [scannedGtin, setScannedGtin] = useState('');
     const [disposalLots, setDisposalLots] = useState([]); 
+    // const navigate = useNavigate(); // 👈 ⭐️ 제거됨: useNavigate 선언
 
-    // ⭐️ 핸들러: 폐기 수량 변경 
+    // ⭐️ 핸들러: 폐기 수량 변경 (불변성 유지)
     const handleQuantityChange = (lotId, value, maxQuantity) => {
         const newQuantity = Math.max(0, Math.min(parseInt(value) || 0, maxQuantity));
         
@@ -24,14 +18,13 @@ const DisposalView = () => {
         );
     };
 
-    // ⭐️ 핸들러: 바코드 스캔 및 재고 조회 (DisposalEntryView의 핵심 로직)
+    // ⭐️ 핸들러: 바코드 스캔 및 재고 조회 (useCallback 유지)
     const processBarcodeScan = useCallback(async (gtinToScan) => {
         if (!gtinToScan) return;
         setScannedGtin(''); 
 
         try {
             // GTIN으로 해당 재고의 모든 랏(Lot)을 조회
-            // 이 API는 stockApi.js에 정의되어 있어야 합니다.
             const stockDetails = await fetchStockByGtin(gtinToScan); 
             
             if (stockDetails.length === 0) {
@@ -76,20 +69,22 @@ const DisposalView = () => {
         console.log("최종 폐기 요청 목록:", itemsToDispose);
         
         // 🚨 여기에 실제 폐기 처리 API (POST /stk/disposal/execute) 호출 로직이 들어갑니다.
-        alert(`총 ${itemsToDispose.length}개 랏, ${totalDisposalCount}개의 제품 폐기를 요청합니다.`);
-        // setDisposalLots([]); // 성공 시 목록 초기화
+        alert(`총 ${itemsToDispose.length}개 랏, ${itemsToDispose.reduce((sum, item) => sum + item.disposalQuantity, 0)}개의 제품 폐기를 요청합니다.`);
+        // 성공 시 목록 초기화: setDisposalLots([]);
+        
+        // 페이지 이동 로직이 없으므로, navigate 사용 경고가 발생하지 않습니다.
     };
 
     const totalDisposalCount = disposalLots.reduce((sum, item) => sum + item.disposalQuantity, 0);
 
     return (
         <div style={containerStyle}>
-            {/* ⭐️ BarcodeListener 통합: 전역 바코드 스캔을 processBarcodeScan 함수에 연결 */}
+            {/* BarcodeListener 통합 */}
             <BarcodeListener onBarcodeScan={processBarcodeScan} /> 
             
-            <h2>🗑️ 폐기 등록 및 처리 (바코드 스캔)</h2>
+            <h2>🗑️ 폐기 등록 및 처리</h2>
 
-            {/* 바코드 입력 필드 */}
+            {/* 수동 입력 필드 */}
             <div style={styles.inputContainer}>
                 <input
                     type="text"
@@ -164,7 +159,7 @@ const containerStyle = { padding: '20px', backgroundColor: '#f9f9f9', borderRadi
 const styles = {
     inputContainer: { display: 'flex', gap: '10px', marginBottom: '20px' },
     input: { padding: '10px', border: '1px solid #ced4da', borderRadius: '5px', flexGrow: 1, fontSize: '1rem' },
-    button: { padding: '10px 15px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    button: { padding: '10px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     listTitle: { fontSize: '1.2rem', fontWeight: '600', borderBottom: '2px solid #343a40', paddingBottom: '10px', margin: '15px 0' },
     
     table: { border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' },
@@ -181,4 +176,4 @@ const styles = {
     disabledButton: { padding: '10px 20px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'not-allowed', fontWeight: 'bold' },
 };
 
-export default DisposalView;
+export default DisposalEntryView;
