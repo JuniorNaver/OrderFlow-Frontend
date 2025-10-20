@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProgressStatusVisualization from './ProgressStatusVisualization'; 
-import { fetchCapacityStatus, fetchExpiryStatus } from '../api/stockApi'; // 👈 API import
+import DisposalList from './DisposalList'; // 👈 ⭐️ DisposalList 컴포넌트 import
+import { fetchCapacityStatus, fetchExpiryStatus } from '../api/stockApi'; 
 
 
 /**
@@ -14,9 +15,10 @@ const ExpiryDashboard = () => {
     useEffect(() => {
         const loadData = async () => {
             try {
+                // 적재 용량 (BI 연동 예정) 및 유통기한 현황 데이터 동시 로드
                 const [capData, expData] = await Promise.all([
-                    fetchCapacityStatus(), // 적재 용량
-                    fetchExpiryStatus(90)  // 유통기한 현황 (90일 기준)
+                    fetchCapacityStatus(), 
+                    fetchExpiryStatus(90) // 90일 기준
                 ]);
                 setCapacityData(capData);
                 setExpiryData(expData);
@@ -33,7 +35,7 @@ const ExpiryDashboard = () => {
         return <div style={{ padding: '20px' }}>대시보드 데이터 로딩 중...</div>;
     }
     
-    // 데이터가 없으면 로딩 실패 메시지 표시
+    // 데이터가 없으면 로딩 실패 메시지 표시 (Mock이 아닌 실제 API 사용 시)
     if (!capacityData || !expiryData) {
         return <div style={{ padding: '20px' }}>필수 데이터를 불러오지 못했습니다.</div>;
     }
@@ -48,39 +50,39 @@ const ExpiryDashboard = () => {
             {/* ⭐️ 대시보드 레이아웃 (Grid) 적용 */}
             <div style={dashboardLayout}> 
                 
-                {/* 👈 좌측 컨테이너 (1fr, Grid Rows) */}
+                {/* 👈 좌측 컨테이너 (창고 용량 & 발주) */}
                 <div style={containerLayout}>
                     
                     {/* 1. 적재 용량 시각화 */}
                     <div className="card shadow-sm" style={cardStyle}>
                         <ProgressStatusVisualization 
                             title="창고 적재 용량 현황" 
-                            data={capacityData} // 👈 상태 데이터 사용
+                            data={capacityData} 
                             fillColor="#007bff" 
                         />
                     </div>
 
-                    {/* 2. 발주 필요 재고 (임시 텍스트) */}
+                    {/* 2. 발주 필요 재고 (BI 연동 예정) */}
                     <div className="card shadow-sm" style={cardStyle}>
-                        <div style={contentStyle}>발주 필요 재고 (PurchaseRequired) 영역</div>
+                        <div style={contentStyle}>발주 필요 재고 (PurchaseRequired) 영역 (BI 연동 예정)</div>
                     </div>
                 </div>
 
-                {/* 👉 우측 컨테이너 (1fr, Grid Rows) */}
+                {/* 👉 우측 컨테이너 (유통기한 임박 & 폐기 예정) */}
                 <div style={containerLayout}>
                     
                     {/* 3. 유통기한 임박 재고 */}
                     <div className="card shadow-sm" style={cardStyle}>
                         <ProgressStatusVisualization 
                             title="유통기한 임박 재고 현황 (90일 이내)" 
-                            data={expiryData} // 👈 상태 데이터 사용
+                            data={expiryData} 
                             fillColor="#dc3545" 
                         />
                     </div>
 
-                    {/* 4. 폐기 예정 재고 (임시 텍스트) */}
+                    {/* 4. ⭐️ 폐기 예정 재고 (DisposalList 컴포넌트 통합) */}
                     <div className="card shadow-sm" style={cardStyle}>
-                        <div style={contentStyle}>폐기 예정 재고 (DisposalScheduled) 영역</div>
+                        <DisposalList /> {/* 👈 구현된 폐기 목록 컴포넌트 삽입 */}
                     </div>
                 </div>
             </div>
@@ -89,7 +91,7 @@ const ExpiryDashboard = () => {
 };
 
 // ------------------------------------------------------------------
-// ⭐️ 스타일 정의 (레이아웃 스타일 추가)
+// ⭐️ 스타일 정의 (레이아웃 스타일)
 // ------------------------------------------------------------------
 
 const dashboardLayout = {
@@ -110,8 +112,10 @@ const cardStyle = {
     borderRadius: '8px', 
     padding: '16px', 
     backgroundColor: '#ffffff',
-    height: '100%', // 컨테이너 높이에 맞춤
+    height: '100%', 
     boxSizing: 'border-box',
+    // ⭐️ DisposalList는 자체적으로 스타일을 가지므로, overflow hidden으로 레이아웃 안정화
+    overflow: 'hidden' 
 };
 
 const contentStyle = {
