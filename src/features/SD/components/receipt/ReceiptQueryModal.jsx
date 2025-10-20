@@ -30,6 +30,10 @@ function ReceiptQueryModal({ onClose }) {
   };
 
   return (
+    <div className="fixed inset-0 flex justify-center items-center z-[2000]">
+      {/* 🔲 어두운 반투명 + 블러 배경 (카드 결제와 동일) */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
     <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex justify-center items-center z-50">
       {/* 외부 클릭 시 닫기 */}
       <div className="absolute inset-0" onClick={onClose}></div>
@@ -139,6 +143,7 @@ function ReceiptQueryModal({ onClose }) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
