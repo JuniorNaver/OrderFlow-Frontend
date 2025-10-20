@@ -2,12 +2,11 @@
 
 import React, { useState, useCallback } from 'react'; 
 import BarcodeListener from '../../SD/components/BarcodeListener';
-import { fetchStockByGtin } from '../api/stockApi';
+import { fetchStockByGtin, executeDisposal } from '../api/stockApi'; // executeDisposal 추가 임포트
 
 
 /**
  * ⭐️ 바코드 스캔 기반의 폐기 등록/처리 뷰 컴포넌트입니다.
- * - App.jsx의 경로 ('/stk/disposal')에 맞추어 DisposalView로 이름을 사용합니다.
  */
 const DisposalView = () => {
     const [scannedGtin, setScannedGtin] = useState('');
@@ -15,6 +14,7 @@ const DisposalView = () => {
 
     // ⭐️ 핸들러: 폐기 수량 변경 
     const handleQuantityChange = (lotId, value, maxQuantity) => {
+        // 최대 수량(maxQuantity)을 초과하지 않도록 보장
         const newQuantity = Math.max(0, Math.min(parseInt(value) || 0, maxQuantity));
         
         setDisposalLots(prev => 
@@ -31,7 +31,6 @@ const DisposalView = () => {
 
         try {
             // GTIN으로 해당 재고의 모든 랏(Lot)을 조회
-            // 이 API는 stockApi.js에 정의되어 있어야 합니다.
             const stockDetails = await fetchStockByGtin(gtinToScan); 
             
             if (stockDetails.length === 0) {
@@ -64,8 +63,9 @@ const DisposalView = () => {
         processBarcodeScan(scannedGtin.trim());
     };
     
-    // ⭐️ 최종 폐기 요청 핸들러
-    const handleSubmitDisposal = () => {
+    // ⭐️ 최종 폐기 요청 핸들러 (수정된 로직)
+    const handleSubmitDisposal = async () => { 
+        // 1. 폐기 수량이 1개 이상인 항목만 필터링
         const itemsToDispose = disposalLots.filter(item => item.disposalQuantity > 0);
         
         if (itemsToDispose.length === 0) {
@@ -73,11 +73,46 @@ const DisposalView = () => {
             return;
         }
 
-        console.log("최종 폐기 요청 목록:", itemsToDispose);
-        
-        // 🚨 여기에 실제 폐기 처리 API (POST /stk/disposal/execute) 호출 로직이 들어갑니다.
-        alert(`총 ${itemsToDispose.length}개 랏, ${totalDisposalCount}개의 제품 폐기를 요청합니다.`);
-        // setDisposalLots([]); // 성공 시 목록 초기화
+        // 2. 요청 DTO 생성 (DisposalRequest.java 구조에 맞춤)
+        const requestDTO = {
+            items: itemsToDispose.map(item => ({
+                lotId: item.lotId,
+                productGtin: item.productGtin, 
+                quantity: item.disposalQuantity
+            }))
+        };
+
+        try {
+            // 3. API 호출
+            const updatedStocks = await executeDisposal(requestDTO);
+            
+            // 4. API 호출 성공 후, 목록에서 폐기된(수량이 0이 된) 항목을 제거합니다.
+            // (백엔드에서 폐기 처리된 랏의 ID 리스트를 반환한다고 가정)
+            const disposedLotIds = new Set(updatedStocks
+                .filter(s => s.quantity === 0) // 수량이 0인 랏만 필터
+                .map(s => s.lotId)); 
+            
+            // 목록 업데이트: 폐기된 항목 제거 및 잔여 수량 반영
+            setDisposalLots(prev => 
+                prev.filter(item => !disposedLotIds.has(item.lotId))
+                    .map(item => {
+                        const updatedItem = updatedStocks.find(s => s.lotId === item.lotId);
+                        if (updatedItem) {
+                            return { ...item, quantity: updatedItem.quantity, disposalQuantity: 0 };
+                        }
+                        return item;
+                    })
+            );
+
+            const totalDisposed = itemsToDispose.reduce((sum, item) => sum + item.disposalQuantity, 0);
+
+            alert(`✅ 폐기 요청이 성공적으로 처리되었습니다. (총 ${totalDisposed}개 폐기)`);
+            
+        } catch (error) {
+            console.error("폐기 처리 중 API 오류 발생:", error);
+            // 4xx, 5xx 에러 처리
+            alert(`폐기 처리 중 오류가 발생했습니다. 상세: ${error.message}`);
+        }
     };
 
     const totalDisposalCount = disposalLots.reduce((sum, item) => sum + item.disposalQuantity, 0);
@@ -108,6 +143,7 @@ const DisposalView = () => {
             {/* 폐기 목록 테이블 */}
             <div style={styles.table}>
                 <div style={styles.headerRow}>
+                    {/* ⭐️ 헤더: Lot ID, 제품명, 보관 위치, 유통기한, 총 재고, 폐기 수량 */}
                     <span style={{...styles.col, flex: 1.5}}>Lot ID</span>
                     <span style={{...styles.col, flex: 3}}>제품명</span>
                     <span style={{...styles.col, flex: 2}}>보관 위치</span>
@@ -121,6 +157,7 @@ const DisposalView = () => {
                 ) : (
                     disposalLots.map((item) => (
                         <div key={item.lotId} style={styles.dataRow}>
+                            {/* ⭐️ 데이터 열 */}
                             <span style={{...styles.col, flex: 1.5, fontWeight: 'bold'}}>{item.lotId}</span>
                             <span style={{...styles.col, flex: 3}}>{item.productName}</span>
                             <span style={{...styles.col, flex: 2}}>{item.location}</span>
