@@ -12,14 +12,22 @@ api.interceptors.request.use((config) => {
 
 // 주문 생성
 export const createOrder = async () => {
-  const res = await api.post("/create");
+  const storeId = localStorage.getItem("storeId") || "S001"; // 기본값 S001
+  const res = await api.post(`/create?storeId=${storeId}`);
   return res.data;
 };
 
+
 // 상품 추가
-export const addItemToOrder = async (orderId, itemData) => {
-  const res = await api.post(`/${orderId}/add-item`, itemData);
-  return res.data;
+export const addItemToOrder = async (orderId, product) => {
+  const payload = {
+    gtin: product.gtin,
+    quantity: 1,
+    price: product.price,
+  };
+
+   const res = await api.post(`/${orderId}/add-item`, payload);
+  return res.data; // SalesItemDTO 반환됨
 };
 
 // 결제 완료

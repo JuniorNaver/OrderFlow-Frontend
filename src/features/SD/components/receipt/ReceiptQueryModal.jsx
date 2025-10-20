@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getReceiptsByDate, reissueReceipt } from "../../api/receiptApi";
+import ReceiptView from "./ReceiptView";
 
 function ReceiptQueryModal({ onClose }) {
   const [date, setDate] = useState("");
@@ -31,16 +32,11 @@ function ReceiptQueryModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 flex justify-center items-center z-[2000]">
-      {/* 🔲 어두운 반투명 + 블러 배경 (카드 결제와 동일) */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      {/* 🔲 어두운 반투명 + 블러 배경 */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex justify-center items-center z-50">
-      {/* 외부 클릭 시 닫기 */}
-      <div className="absolute inset-0" onClick={onClose}></div>
-
-      {/* 메인 모달 */}
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-[850px] h-[600px] flex flex-col overflow-hidden border border-gray-200"
+        className="relative bg-white rounded-2xl shadow-2xl w-[850px] h-[600px] flex flex-col overflow-hidden border border-gray-200 z-50"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -104,36 +100,29 @@ function ReceiptQueryModal({ onClose }) {
           <div className="w-1/2 p-6 overflow-y-auto bg-white">
             {selected ? (
               <>
-                <p className="text-xl font-bold mb-1 text-gray-800">
-                  {selected.storeName}
-                </p>
-                <p className="text-sm text-gray-500 mb-3">
-                  {selected.storeAddress}
-                </p>
-                <div className="border-t border-gray-200 pt-3 space-y-2">
-                  {selected.items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between text-sm text-gray-700"
-                    >
-                      <span>{item.productName}</span>
-                      <span>
-                        ₩{item.sdPrice.toLocaleString()} ×{" "}
-                        {item.salesQuantity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {/* 실제 영수증 렌더링 */}
+                <ReceiptView receipt={selected} />
+
+                {/* 총합 및 버튼 */}
                 <p className="text-right text-lg font-bold mt-3 text-blue-600">
                   총합: ₩{selected.totalAmount.toLocaleString()}
                 </p>
 
-                <button
-                  onClick={() => handleReissue(selected.receiptNo)}
-                  className="mt-5 bg-gray-100 hover:bg-blue-100 text-blue-700 border border-blue-300 px-5 py-2 rounded-lg font-semibold transition-all"
-                >
-                  재발행 요청
-                </button>
+                <div className="flex justify-end mt-4 gap-3">
+                  <button
+                    onClick={() => handleReissue(selected.receiptNo)}
+                    className="bg-gray-100 hover:bg-blue-100 text-blue-700 border border-blue-300 px-5 py-2 rounded-lg font-semibold transition-all"
+                  >
+                    재발행 요청
+                  </button>
+
+                  <button
+                    onClick={() => window.print()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold transition-all"
+                  >
+                    인쇄하기
+                  </button>
+                </div>
               </>
             ) : (
               <p className="text-gray-500 text-center mt-20">
@@ -143,7 +132,6 @@ function ReceiptQueryModal({ onClose }) {
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

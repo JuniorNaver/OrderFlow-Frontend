@@ -2,7 +2,7 @@ export default function SummarySection({
   totalAmount,
   receivedAmount,
   changeAmount,
-  remainingAmount, // ✅ 추가
+  remainingAmount,
 }) {
   return (
     <div className="mt-10 bg-white shadow-xl rounded-2xl p-6 grid grid-cols-2 gap-8 text-lg">
