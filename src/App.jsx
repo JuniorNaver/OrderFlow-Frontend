@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "./common/authorities/component/AuthProvider"; 
 import "./styles/App.css";
+
+
 
 // 공용 페이지
 import Home from "./common/Home";
@@ -9,6 +12,7 @@ import Login from "./common/authorities/pages/Login";
 import MyPage from "./common/authorities/pages/MyPage";
 import AccountManage from "./common/authorities/pages/AccountManage";
 import RoleManage from "./common/authorities/pages/RoleManage";
+import ProtectedRoute from "./common/authorities/component/ProtectedRoute";
 import NotFound from "./components/error/NotFound";
 
 // ERP 도메인
@@ -94,67 +98,77 @@ function App() {
   const menus = isPOS ? posMenus : stockMenus;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Header menus={menus} isPOS={isPOS} togglePOS={togglePOS} />
+        <QueryClientProvider client={queryClient}>
+            {/* AuthProvider로 전체를 감싸서 어디서든 useAuth를 사용할 수 있도록 합니다. */}
+            <AuthProvider>
+                <Header menus={menus} isPOS={isPOS} togglePOS={togglePOS} />
 
-      <main className="pt-16 px-4">
-        <Routes>
-          {/* 공용 */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/account-manage" element={<AccountManage />} />
-          <Route path="/role-manage" element={<RoleManage />} />
+                <main className="pt-16 px-4">
+                    <Routes>
+                        
+                        {/* ---------------------------------------------------- */}
+                        {/* 2. 공개 라우트 (인증 없이 접근 가능) */}
+                        {/* ---------------------------------------------------- */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="*" element={<NotFound />} /> {/* 404 페이지는 공개 */}
 
-          {/* ERP 도메인 */}
-          <Route path="/pr" element={<PRBrowse />} />
-          <Route path="/pr/orders" element={<OrderManagementPage />} />
-          <Route path="/pr/recommend" element={<RecommendListPage />} />
-          <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
-          <Route path="/pr/shop" element={<ShopPage />} />
-          <Route path="/po" element={<POPage />} />
-          {/* <Route path="/gr" element={<GRPage />} /> */}
+                        
+                        {/* ---------------------------------------------------- */}
+                        {/* 3. 보호된 라우트 그룹 (로그인 필수) */}
+                        {/* ---------------------------------------------------- */}
+                        {/* 🚨 ProtectedRoute로 모든 업무 페이지를 감싸서 접근을 제어합니다. */}
+                        <Route element={<ProtectedRoute />}> 
+                            
+                            {/* ERP 홈 대시보드 */}
+                            <Route path="/" element={<Home />} />
+                            
+                            {/* 공용 (보호 필요) */}
+                            <Route path="/mypage" element={<MyPage />} />
+                            <Route path="/account-manage" element={<AccountManage />} />
+                            <Route path="/role-manage" element={<RoleManage />} />
+
+                            {/* ERP 도메인 */}
+                            <Route path="/pr" element={<PRBrowse />} />
+                            <Route path="/pr/orders" element={<OrderManagementPage />} />
+                            <Route path="/pr/recommend" element={<RecommendListPage />} />
+                            <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
+                            <Route path="/pr/shop" element={<ShopPage />} />
+                            <Route path="/po" element={<POPage />} />
+                            {/* <Route path="/gr" element={<GRPage />} /> */}
 
 
-          <Route path="/bi" element={<BIPage />} />
-          <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
-          <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
-          <Route path="/bi/profit" element={<div>손익 분석</div>} />
-          <Route path="/bi/order-efficiency" element={<div>발주 효율 분석</div>} />
+                            <Route path="/bi" element={<BIPage />} />
+                            <Route path="/bi/forecast" element={<div>예상 판매량</div>} />
+                            <Route path="/bi/kpi" element={<div>KPI 분석</div>} />
+                            <Route path="/bi/profit" element={<div>손익 분석</div>} />
+                            <Route path="/bi/order-efficiency" element={<div>발주 효율 분석</div>} />
 
 
-          {/* 💡 STK 라우트 블록: index 경로 변경 */}
-          <Route path="/stk" element={<STKPage />}>
+                            {/* STK 라우트 블록 */}
+                            <Route path="/stk" element={<STKPage />}>
+                                <Route index element={<CurrentStockDashboard />} />
+                                <Route path="current-status" element={<CurrentStockDashboard />} />
+                                <Route path="expiry" element={<ExpiryDashboard />} />
+                                <Route path="expiry-manage" element={<ExpiryManagementView />} />
+                                <Route path="adjust" element={<StockAdjustmentView />} />
+                                <Route path="disposal" element={<DisposalView />} />
+                                <Route path="*" element={<NotFound />} />
+                            </Route>
 
-            {/* 1. 💡 [수정] 인덱스 경로: /stk 접속 시, CurrentStockDashboard를 바로 렌더링 */}
-            <Route index element={<CurrentStockDashboard />} />
+                            {/* POS 도메인 */}
+                            <Route path="/sd" element={<POSDashboard />} />
+                            <Route path="/sd/sales" element={<SalesRegister />} />
 
-            {/* 2. 재고 현황 조회 (기존 경로는 그대로 유지. 이제 인덱스와 동일한 화면) */}
-            <Route path="current-status" element={<CurrentStockDashboard />} />
-
-            {/* 3. 유통기한 현황 */}
-            <Route path="expiry" element={<ExpiryDashboard />} />
-
-            {/* 4. 유통기한 임박 상품 관리 */}
-            <Route path="expiry-manage" element={<ExpiryManagementView />} />
-
-            {/* 5. 재고 수량 조정 */}
-            <Route path="adjust" element={<StockAdjustmentView />} />
-            {/* 5. 폐기 */}
-            <Route path="disposal" element={<DisposalView />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-
-          {/* POS 도메인 */}
-          <Route path="/sd" element={<POSDashboard />} />
-          <Route path="/sd/sales" element={<SalesRegister />} />
-
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </QueryClientProvider>
-  );
+                        </Route>
+                        {/* /ProtectedRoute 종료 */}
+                        
+                        {/* 404 라우트는 ProtectedRoute 밖에 두는 것이 좋습니다. 이미 위에서 처리됨 */}
+                        {/* <Route path="*" element={<NotFound />} /> */}
+                    </Routes>
+                </main>
+            </AuthProvider>
+        </QueryClientProvider>
+    );
 }
 
 export default App;
