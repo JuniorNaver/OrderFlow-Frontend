@@ -38,14 +38,19 @@ function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
 
     onSuccess({
       method: "CASH",
+      amount: totalAmount,
       paidAmount: totalAmount,
       receivedAmount: received,
-      change: received - totalAmount,
+      changeAmount: received - totalAmount,
     });
     onClose();
   };
 
   return (
+    <div className="fixed inset-0 flex justify-center items-center z-[2000]">
+    {/* 🔲 어두운 반투명 + 블러 배경 (카드 결제와 동일) */}
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
       <div className="bg-white p-6 rounded-2xl shadow-xl w-[380px]">
         <h2 className="text-2xl font-bold mb-4 text-green-700">💵 현금 결제</h2>
@@ -95,6 +100,7 @@ function CashPaymentModal({ totalAmount, onClose, onSuccess }) {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

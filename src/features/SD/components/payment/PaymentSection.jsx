@@ -3,7 +3,6 @@ import { createPayment } from "../../api/paymentApi.js";
 import CardPaymentModal from "./CardPaymentModal";
 import CashPaymentModal from "./CashPaymentModal";
 import EasyPaymentModal from "./EasyPaymentModal";
-import BarcodeListener from "../BarcodeListener";
 import { createOrder, completeOrder } from "../../api/sdApi.js";
 
 function PaymentSection({
@@ -93,11 +92,6 @@ function PaymentSection({
   
   return (
     <div className="w-full max-w-[400px]">
-      <BarcodeListener
-        onBarcodeScan={(method, salesId, amount) =>
-          handlePaymentSuccess(method, amount)
-        }
-      />
 
       {/* ✅ 결제 버튼 */}
       <div className="relative">
