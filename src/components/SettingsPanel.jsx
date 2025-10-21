@@ -5,7 +5,7 @@ import StoreAdminTab from "../common/storeconfigs/pages/StoreAdminTab";
 import AccountManage from "../common/authorities/pages/AccountManage";
 
 const SettingsPanel = ({ open, onClose }) => {
-  const user = { role: "ADMIN", storeId: "S0001", name: "홍길동", email: "admin@orderflow.com" };
+  const user = { role: "ADMIN", storeId: "S001", name: "홍길동", email: "admin@orderflow.com" };
 
   const [visible, setVisible] = useState(false);
   const [animate, setAnimate] = useState(false);
