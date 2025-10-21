@@ -1,21 +1,52 @@
 import apiClient from "../../../services/apiClient";
-
+import { getCurrentStoreId } from "./shop";
 /**
- * @typedef {{productCode:string, productName:string, suggestedQty:number, marginRate?:number, reason?:string}} RecommendItem
- * @typedef {{storeId:string, generatedAt:string, items:RecommendItem[]}} RecommendDto
+ * @typedef {{productCode:string, productName:string, suggestedQty:number, marginRate?:number, reason?:string, unitPrice?:number, zone?:string, category?:string}} RecommendItem
+ * @typedef {{storeId?:string, generatedAt?:string, items:RecommendItem[]}} RecommendDto
  * @typedef {{productCode:string, qty:number, unitPrice?:number}} PurchaseRequestLine
  * @typedef {{storeId:string, lines:PurchaseRequestLine[], note?:string}} PurchaseRequestCreateDto
  * @typedef {{id:string, storeId:string, lines:PurchaseRequestLine[], createdAt:string, status:"CREATED"|"APPROVED"|"REJECTED"}} PurchaseRequestDto
  */
 
-/** @param {string} storeId @returns {Promise<RecommendDto>} */
-export const getRecommend = (storeId) =>
-  apiClient.get(`/api/pr/stores/${storeId}/recommend`).then(r => r.data);
+/** 응답 정규화: items | content | list | array → 항상 { items, storeId?, generatedAt? } */
+function normalizeRecommend(data) {
+  const items = Array.isArray(data)
+    ? data
+    : (data?.items ?? data?.content ?? data?.list ?? []);
+  return {
+    items,
+    storeId: data?.storeId,
+    generatedAt: data?.generatedAt,
+  };
+}
 
-/** @param {string} storeId @param {PurchaseRequestCreateDto} dto @returns {Promise<PurchaseRequestDto>} */
+/** 
+ *  @param {string=} storeId
+ *  @param {{categories?:string[]; zone?: "room"|"chilled"|"frozen"|"other"; limitPerCategory?:number}} [params]
+ *  @returns {Promise<RecommendDto>}
+ */
+export const getRecommend = async (storeId, params = {}) => {
+  const sid = storeId ?? getCurrentStoreId();
+  if (!sid) throw new Error("storeId가 필요합니다.");
+
+  const qp = {...params };
+  if (Array.isArray(qp.categories)) {
+    qp.categories = qp.categories.join(","); // "음료,스낵,즉석식품"
+  }
+
+  const { data } = await apiClient.get(
+    `/api/pr/stores/${encodeURIComponent(sid)}/recommendations`,
+    { params: qp } // ← 추후 Top3 서버필터용 파라미터 지원
+  );
+  return normalizeRecommend(data);
+};
+
 export const createPurchaseRequest = (storeId, dto) =>
-  apiClient.post(`/api/pr/stores/${storeId}/orders`, dto).then(r => r.data);
+  apiClient
+    .post(`/api/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
+    .then(r => r.data);
 
-/** @param {string} storeId @param {{page?:number, size?:number}} [params] @returns {Promise<{content:PurchaseRequestDto[], total:number}>} */
 export const listPurchaseRequests = (storeId, params) =>
-  apiClient.get(`/api/pr/stores/${storeId}/orders`, { params }).then(r => r.data);
+  apiClient
+    .get(`/api/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
+    .then(r => r.data);

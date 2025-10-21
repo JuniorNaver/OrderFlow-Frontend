@@ -1,5 +1,5 @@
-import SkeletonGrid from "../../../common/components/common/Skeleton";
-import ErrorBlock from "../../../common/components/common/ErrorBlock";
+import SkeletonGrid from "../common/Skeleton";
+import ErrorBlock from "../common/ErrorBlock";
 
 export default function KanGrid({ items=[], onClick, loading, error }) {
   if (loading) return <SkeletonGrid count={9} />;

@@ -9,7 +9,14 @@ export const listCategories = () =>
 /** @param {{ q?:string, categoryId?:string, page?:number, size?:number }} params */
 export const listProducts = (params={}) =>
   apiClient.get("/api/products", { params }).then(r => r.data);
-/*
-  기대 응답 예:
-  { content: [{ productCode, name, imageUrl, unitPrice }], total: 123 }
-*/
+
+// 아주 단순한 모듈 전역 상태 (임시용)
+let currentStoreId = null;
+
+export function setCurrentStoreId(id) {
+  currentStoreId = id || null;
+}
+
+export function getCurrentStoreId() {
+  return currentStoreId;
+}

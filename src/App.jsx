@@ -17,9 +17,10 @@ import NotFound from "./components/error/NotFound";
 
 // ERP 도메인
 import BIPage from "./features/BI/pages/BIPage";
-import PRPage from "./features/PR/pages/PRPage";
+import PRBrowse from "./features/PR/pages/PrBrowse";
 import OrderManagementPage from "./features/PR/pages/OrderManagementPage";
-import RecommendListPage from "./features/PR/pages/RecommendListPage";
+import RecommendPage from "./features/PR/pages/RecommendPage";
+import ProductDetailPage from "./features/PR/pages/ProductDetailPage";
 import ProductSearchPage from "./features/PR/pages/ProductSearchPage";
 import ShopPage from "./features/PR/pages/ShopPage";
 import POPage from "./features/PO/pages/POPage";
@@ -43,8 +44,6 @@ import Header from "./components/Header";
 // 메뉴 데이터
 import posMenus from "./components/menus/posMenus";
 import stockMenus from "./components/menus/stockMenus";
-import PRBrowse from "./features/PR/pages/PrBrowse";
-import ProductDetailPage from "./features/PR/pages/ProductDetailPage";
 
 
 // React Query Client (전역)
@@ -130,7 +129,7 @@ function App() {
                             {/* ERP 도메인 */}
                             <Route path="/pr" element={<PRBrowse />} />
                             <Route path="/pr/orders" element={<OrderManagementPage />} />
-                            <Route path="/pr/recommend" element={<RecommendListPage />} />
+                            <Route path="/pr/stores/:storeId/recommend" element={<RecommendPage />} />
                             <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
                             <Route path="/pr/shop" element={<ShopPage />} />
                             <Route path="/po" element={<POPage />} />
