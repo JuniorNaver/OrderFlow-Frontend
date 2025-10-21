@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import storeApi from "../../../api/storeApi";
-import Toast from "../../../../components/Toast";
+import storeApi from "../api/storeApi.js";
+import { useToast } from "/src/components/providers/ToastProvider";
 
-const StoreFinanceTab = ({ storeId, mode }) => {
+const FinanceManageTab = ({ storeId, mode }) => {
   const queryClient = useQueryClient();
-  const [toast, setToast] = useState(null);
+  const { showToast } = useToast();
   const [form, setForm] = useState({
     monthlyBudget: "",
     rentCost: "",
@@ -42,10 +42,10 @@ const StoreFinanceTab = ({ storeId, mode }) => {
     mutationFn: (data) => storeApi.updateFinance(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["storeFinance", storeId]);
-      setToast({ type: "success", message: "예산 및 고정비 정보가 저장되었습니다." });
+      showToast("예산 및 고정비 정보가 저장되었습니다.", "success");
     },
     onError: () => {
-      setToast({ type: "error", message: "저장 중 오류가 발생했습니다." });
+      showToast("저장 중 오류가 발생했습니다.", "error");
     },
   });
 
@@ -99,4 +99,4 @@ const StoreFinanceTab = ({ storeId, mode }) => {
   );
 };
 
-export default StoreFinanceTab;
+export default FinanceManageTab;

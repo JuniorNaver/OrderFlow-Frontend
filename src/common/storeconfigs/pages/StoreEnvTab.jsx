@@ -90,7 +90,6 @@ const StoreEnvTab = ({ user }) => {
           점포 운영환경 설정
         </h3>
 
-        {/* ✅ 공통 StatusBadge 적용 */}
         <StatusBadge
           active={store.active}
           isLoading={updateStore.isPending}

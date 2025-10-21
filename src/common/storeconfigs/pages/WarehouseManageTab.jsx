@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import storeApi from "../../../api/storeApi";
-import Toast from "../../../../components/Toast";
+import storeApi from "../api/storeApi.js";
+import { useToast } from "/src/components/providers/ToastProvider";
 
-const StoreCapacityTab = ({ storeId, mode }) => {
+const WarehouseManageTab = ({ storeId, mode }) => {
   const queryClient = useQueryClient();
-  const [toast, setToast] = useState(null);
+  const { showToast } = useToast();
   const [form, setForm] = useState({
     ambientCapacity: "",
     chilledCapacity: "",
@@ -40,10 +40,10 @@ const StoreCapacityTab = ({ storeId, mode }) => {
     mutationFn: (data) => storeApi.updateCapacity(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["storeCapacity", storeId]);
-      setToast({ type: "success", message: "창고 용량이 저장되었습니다." });
+      showToast("창고 용량이 저장되었습니다.", "success");
     },
     onError: () => {
-      setToast({ type: "error", message: "저장 중 오류가 발생했습니다." });
+      showToast("저장 중 오류가 발생했습니다.", "error");
     },
   });
 
@@ -94,4 +94,4 @@ const StoreCapacityTab = ({ storeId, mode }) => {
   );
 };
 
-export default StoreCapacityTab;
+export default WarehouseManageTab;
