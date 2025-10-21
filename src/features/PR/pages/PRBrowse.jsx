@@ -2,6 +2,7 @@ import React, {useEffect, useState, useRef, useCallback} from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 import { Link } from "react-router-dom";
+import {createPO} from "../../PO/api/poApi"
 
 const ZONES = [
   { key: "room",    label: "실온", icon: <Sun className="h-5 w-5" /> },
@@ -138,27 +139,7 @@ function setQty(gtin, val) {
   });
 }
 
-  // 상품 담기
-  async function addMany(gtin, qty) {
-    if (adding[gtin]) return;
-    const avail = availableByGtin[gtin] ?? 0;
-    if (avail <= 0 || qty <= 0) return;
-
-    setAdding(a => ({ ...a, [gtin]: true }));
-
-    // 낙관적 감소
-    setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - qty) }));
-    try {
-      await reserve(gtin, qty); // POST /inventory/reserve
-      showToast("담겼어요.");
-      setQtyByGtin(m => ({ ...m, [gtin]: 1 }));
-    } catch (e) {
-      setAvailableByGtin(m => ({ ...m, [gtin]: (m[gtin] ?? 0) + qty }));
-      showToast(e.message || "담기에 실패했어요.");
-    } finally {
-      setAdding(a => ({ ...a, [gtin]: false }));
-    }
-  }
+  
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -335,7 +316,12 @@ function setQty(gtin, val) {
 
       {/* 담기 버튼 */}
       <button
-        onClick={() => addMany(p.gtin, qty)}
+        onClick={() => createPO(p.gtin, {
+          itemNo: null,
+          orderQty: p.qty ?? 1,   // 사용자가 선택한 수량
+          unitPrice: p.price ?? 3000, // 상품의 단가
+          gtin: p.gtin
+        })}
         className={`mt-3 w-full rounded-xl text-sm py-2 ${
           canAdd ? "bg-gray-900 text-white hover:opacity-90"
                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
