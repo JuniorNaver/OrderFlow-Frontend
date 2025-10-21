@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from './useAuth'; // useAuth.jsx에서 정의된 Context
-import { loginUser, getUserDetails, logoutUser } from '../api/AuthService'; // API 함수
-import ApiClient from '../api/ApiClient'; // 401 처리를 위해 사용
+import { AuthContext } from '../../authorities/component/useAuth'; // useAuth.jsx에서 정의된 Context
+import { loginUser, getUserDetails, logoutUser } from '../../authorities/api/AuthService'; // API 함수
+import ApiClient from '../../authorities/api/ApiClient'; // 401 처리를 위해 사용
 
 /**
  * 전역 인증 상태와 인증 관련 기능을 제공하는 Provider 컴포넌트입니다.
