@@ -8,22 +8,20 @@ export default api;
 
 
 
-
-//'담기' 버튼 클릭시 POHeader, POItem 추가 
-export const createPO = async (gtin, poItemRequestDTO) => {
+export const createPO = async (gtin, poItemRequestDTO, poId = null) => {
   try {
-    // 1️⃣ POHeader 생성
-    const headerRes = await api.post("/po");
-    const poId = headerRes.data.poId;
+    // ✅ poId가 없으면 새로 생성
+    const currentPoId = poId
+      ? poId : (await api.post("/po")).data.poId;
 
-    // 2️⃣ 생성된 POHeader에 POItem 추가
-    const itemRes = await api.post(`/po/${poId}/items`, poItemRequestDTO, {
+    // ✅ 기존 또는 새 헤더에 상품 추가
+    const itemRes = await api.post(`/po/${currentPoId}/items`, poItemRequestDTO, {
       params: { gtin },
     });
 
-    
+    // ✅ poId도 함께 반환해서 다음 호출 때 재사용 가능
+    return { ...itemRes.data, poId: currentPoId };
 
-    return itemRes.data; // 최종 결과 (POItemResponseDTO)
   } catch (err) {
     console.error("PO 생성 실패:", err);
     throw err;
