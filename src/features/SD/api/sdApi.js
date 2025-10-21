@@ -30,7 +30,18 @@ export const addItemToOrder = async (orderId, product) => {
   return res.data; // SalesItemDTO 반환됨
 };
 
+export const updateItemQuantity = async (itemId, quantity) => {
+  const res = await api.patch(`/items/${itemId}/quantity`, { quantity });
+  return res.data;
+};
+
 // 결제 완료
 export const completeOrder = async (orderId) => {
   await api.post(`/${orderId}/complete`);
+};
+
+// 삭제 완료
+export const deleteItem = async (id) => {
+  const res = await api.delete(`/items/${id}`);
+  return res;
 };
