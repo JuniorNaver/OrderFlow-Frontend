@@ -1,267 +1,303 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Save, X, Settings, RefreshCcw, Loader2 } from 'lucide-react'; 
-import '../styles/RoleManage.css';
+import axios from 'axios';
+import { RefreshCcw, Save, X } from 'lucide-react'; 
+// ✅ 경로 수정: RoleManage.jsx (pages)에서 constants.jsx (component)로 이동
+import { PERMISSIONS, ROLES } from '../component/constants'; 
+// 🔑 인증 토큰을 가져오기 위해 useAuth 훅 import
+import { useAuth } from '../component/useAuth'; // (프로젝트 구조에 맞게 수정 필요)
 
-// API 기본 URL (실제 백엔드 주소로 변경 필요)
-const API_BASE_URL = 'http://localhost:8080/api/admin/roles/permissions';
+// 백엔드 AdminRoleController와 일치하는 경로
+const API_URL = '/api/admin/roles/permissions';
 
-// 권한 목록 정의 (백엔드의 Authority/Permission 키와 매칭되어야 함)
-const PERMISSIONS = [
-    { key: 'PO', name: '발주 (PO)' },   // Purchase Order
-    { key: 'PR', name: '조달 (PR)' },   // Purchase Request
-    { key: 'STK', name: '재고관리 (STK)' }, // Stock Management
-    { key: 'SD', name: '영업 (SD)' },   // Sales & Distribution
-    { key: 'BI', name: 'BI (분석)' },   // Business Intelligence
+// UI에 표시될 권한 필드 이름 매핑
+const PERMISSION_KEYS = [
+    { key: 'po', label: '발주 (PO)' },
+    { key: 'stk', label: '재고관리 (STK)' },
+    { key: 'sd', label: '영업 (SD)' },
+    { key: 'bi', label: 'BI/분석' },
 ];
 
-// 초기 더미 데이터 (로딩 실패 시 임시 사용)
-const FALLBACK_ROLES = [
-    { roleId: 'ROLE_ADMIN', position: '최고 관리자', permissions: { PO: true, PR: true, STK: true, SD: true, BI: true } },
-    { roleId: 'ROLE_MANAGER', position: '점장', permissions: { PO: true, PR: true, STK: true, SD: true, BI: false } },
-    { roleId: 'ROLE_CLERK', position: '점원', permissions: { PO: false, PR: false, STK: true, SD: true, BI: false } },
-];
+/**
+ * 역할별 권한 관리 페이지 컴포넌트
+ */
+const RoleManage = () => {
+    const [originalPermissions, setOriginalPermissions] = useState([]);
+    const [currentPermissions, setCurrentPermissions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [status, setStatus] = useState({ message: '', type: '' });
+    
+    // 🔑 useAuth 훅에서 JWT 토큰을 가져옵니다.
+    const { token } = useAuth(); 
 
-
-const RoleManager = () => {
-    const [roles, setRoles] = useState([]);
-    const [originalRoles, setOriginalRoles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [message, setMessage] = useState('');
-
-    // 1. 데이터 조회 (GET) - 컴포넌트 마운트 시
-    const fetchRoles = useCallback(async () => {
-        setLoading(true);
-        setMessage('');
-        try {
-            // 실제 API 호출 (GET /api/admin/roles/permissions)
-            const response = await fetch(API_BASE_URL, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            if (!response.ok) {
-                // HTTP 오류 시 (4xx, 5xx)
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!Array.isArray(data) || data.length === 0) {
-                 setRoles(FALLBACK_ROLES);
-                 setOriginalRoles(FALLBACK_ROLES);
-                 setMessage('⚠️ 백엔드에서 데이터를 가져오지 못하여 더미 데이터를 사용합니다.');
-                 return;
-            }
-
-            // 성공적으로 데이터를 가져온 경우
-            setRoles(data);
-            setOriginalRoles(data);
-
-        } catch (error) {
-            console.error("Failed to fetch roles:", error);
-            // 오류 발생 시 더미 데이터 사용
-            setRoles(FALLBACK_ROLES);
-            setOriginalRoles(FALLBACK_ROLES);
-            setMessage('❌ 데이터 로딩 중 오류 발생. 더미 데이터를 사용합니다.');
-        } finally {
-            setLoading(false);
+    // 권한 목록 조회
+    const fetchPermissions = useCallback(async () => {
+        // 토큰이 없으면 API 요청을 시도하지 않고 에러 상태 설정
+        if (!token) {
+            setStatus({ message: '오류: 사용자 인증 토큰이 없습니다. 로그인 상태를 확인하세요.', type: 'error' });
+            setIsLoading(false);
+            return;
         }
-    }, []);
+
+        setIsLoading(true);
+        setStatus({ message: '', type: '' });
+        try {
+            // 🔑 인증 헤더 설정
+            const config = {
+                headers: {
+                    'Authorization': `Bearer ${token}` 
+                }
+            };
+            
+            // 🔑 토큰을 포함하여 API 호출
+            const response = await axios.get(API_URL, config);
+            
+            // ✅ 데이터 구조 오류 수정: 백엔드가 배열을 직접 반환하므로 response.data 사용
+            const permissionArray = response.data;
+            
+            if (!Array.isArray(permissionArray)) {
+                // 이 에러는 이제 서버가 HTML이 아닌 유효한 JSON을 반환할 때만 나타나야 합니다.
+                console.error("API 응답 구조 오류: 예상된 배열이 아닙니다.", response.data);
+                setStatus({ message: '데이터 로드 실패: 서버 응답이 유효한 목록 형태가 아닙니다.', type: 'error' });
+                setIsLoading(false);
+                return;
+            }
+
+            // ROLE_ADMIN 정보 (상수에서 가져온 최고 관리자)
+            const adminRole = { 
+                roleId: ROLES.ADMIN.id, 
+                roleName: ROLES.ADMIN.name, 
+                ...PERMISSIONS.ADMIN 
+            };
+            
+            // 응답 데이터를 UI에 필요한 형태로 가공
+            const fetchedData = permissionArray.map(item => ({
+                ...item,
+                roleName: ROLES[item.roleId.replace('ROLE_', '')]?.name || item.roleId
+            }));
+
+            // 최종 목록 (ADMIN을 목록의 맨 앞에 고정)
+            const finalPermissions = [adminRole, ...fetchedData.filter(item => item.roleId !== ROLES.ADMIN.id)];
+
+            setOriginalPermissions(finalPermissions);
+            setCurrentPermissions(finalPermissions);
+            setStatus({ message: '최신 권한 데이터 로드 완료', type: 'success' });
+        } catch (error) {
+            console.error('권한 조회 실패:', error.response || error);
+            
+            // 🔑 인증 및 권한 실패 시 오류 메시지
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                setStatus({ message: '인증/권한 오류: 관리자 권한이 없거나 로그인이 만료되었습니다. (403/401)', type: 'error' });
+            } else {
+                setStatus({ message: '오류: 데이터 로드 실패, 서버 연결 또는 알 수 없는 문제.', type: 'error' });
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, [token]); // token이 변경될 때마다 함수가 재생성되어야 합니다.
 
     useEffect(() => {
-        // 컴포넌트 마운트 시 데이터 로드
-        fetchRoles();
-    }, [fetchRoles]);
+        // 토큰이 있을 때만 fetchPermissions 실행
+        if (token) {
+            fetchPermissions();
+        } else if (isLoading) {
+            // 토큰이 없어서 fetchPermissions가 실행되지 않았다면 로딩 상태 해제
+            setIsLoading(false);
+        }
+    }, [fetchPermissions, token, isLoading]); // token을 dependency에 추가
 
-    // 2. 역할(권한) 토글 함수
-    const handleToggleRole = useCallback((roleId, permissionKey) => {
-        setRoles(prevRoles =>
-            prevRoles.map(role =>
-                role.roleId === roleId
-                    ? {
-                        ...role,
-                        permissions: {
-                            ...role.permissions,
-                            [permissionKey]: !role.permissions[permissionKey] // 값 반전
-                        }
-                    }
-                    : role
-            )
-        );
-    }, []);
+    // 토글 스위치 변경 핸들러 (생략되지 않음)
+    const handleToggle = (roleId, permissionKey) => {
+        // ROLE_ADMIN의 권한은 변경할 수 없음
+        if (roleId === ROLES.ADMIN.id) return;
 
-    // 변경사항이 있는지 확인하는 함수
-    const hasChanges = roles.some((role, index) => {
-        const originalPermissions = originalRoles[index]?.permissions;
-        // 깊은 복사를 위해 JSON.stringify를 사용해 두 객체의 속성값을 비교
-        return originalPermissions && JSON.stringify(role.permissions) !== JSON.stringify(originalPermissions);
-    });
+        setCurrentPermissions(prev => prev.map(role => 
+            role.roleId === roleId 
+                ? { ...role, [permissionKey]: !role[permissionKey] } 
+                : role
+        ));
+    };
 
-
-    // 3. 저장 함수 (PUT) - 일괄 업데이트 API 호출
+    // 변경 사항 저장 핸들러 (PUT /api/admin/roles/permissions)
     const handleSave = async () => {
-        if (isSaving || !hasChanges) return;
+        if (!token) {
+            setStatus({ message: '오류: 사용자 인증 토큰이 없습니다. 로그인 상태를 확인하세요.', type: 'error' });
+            return;
+        }
 
-        setIsSaving(true);
-        setMessage('백엔드 서버로 권한 변경 내용을 전송 중...');
+        setIsLoading(true);
+        setStatus({ message: '변경 사항 저장 중...', type: 'info' });
+
+        const updateDtos = currentPermissions
+            .filter(role => role.roleId !== ROLES.ADMIN.id) 
+            .map(role => ({
+                roleId: role.roleId,
+                permissions: PERMISSION_KEYS.reduce((acc, p) => {
+                    acc[p.key] = role[p.key];
+                    return acc;
+                }, {})
+            }));
         
-        // 백엔드가 요구하는 페이로드 형태에 맞게 데이터 가공
-        const updatePayload = roles.map(role => ({
-            roleId: role.roleId,
-            permissions: role.permissions
-        }));
+        // 🔑 인증 헤더 설정 (저장 시에도 필요)
+        const config = {
+            headers: {
+                'Authorization': `Bearer ${token}` 
+            }
+        };
 
         try {
-            const response = await fetch(API_BASE_URL, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatePayload),
-            });
-
-            if (!response.ok) {
-                 throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            // PUT 요청 시, List<RolePermissionUpdateDto> 배열을 전송
+            await axios.put(API_URL, updateDtos, config); 
             
-            // 저장 성공 시, 현재 변경된 상태를 원본 상태로 업데이트 (깊은 복사)
-            setOriginalRoles(roles.map(role => ({ ...role, permissions: { ...role.permissions } }))); 
-            setMessage('✅ 권한 설정이 성공적으로 저장되었습니다.');
+            // 성공 시 원본 데이터 업데이트 및 재조회
+            await fetchPermissions();
+            setStatus({ message: '권한 변경 사항이 성공적으로 저장되었습니다.', type: 'success' });
 
         } catch (error) {
-            console.error("Error saving roles:", error);
-            setMessage('❌ 권한 저장 중 오류가 발생했습니다. 자세한 내용은 콘솔을 확인하세요.');
-        } finally {
-            setIsSaving(false);
-            // 메시지를 5초 후 제거
-            setTimeout(() => setMessage(''), 5000); 
+            console.error('권한 저장 실패:', error.response || error);
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                 setStatus({ message: '저장 실패: 관리자 권한이 없거나 로그인이 만료되었습니다.', type: 'error' });
+            } else {
+                 setStatus({ message: '권한 저장에 실패했습니다. (서버 오류)', type: 'error' });
+            }
+            setIsLoading(false);
         }
     };
 
-    // 4. 취소 함수
+    // 변경 사항 취소 핸들러 (생략되지 않음)
     const handleCancel = () => {
-        if (isSaving) return;
-        // 원본 상태로 되돌림 (깊은 복사)
-        setRoles(originalRoles.map(role => ({ ...role, permissions: { ...role.permissions } })));
-        setMessage('변경 사항이 취소되었습니다.');
-        setTimeout(() => setMessage(''), 3000);
+        setCurrentPermissions(originalPermissions);
+        setStatus({ message: '변경 사항이 취소되고 원본 데이터로 복원되었습니다.', type: 'info' });
     };
 
-    // 로딩 화면
-    if (loading) {
-          return (
-              <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                  <p className="ml-3 text-lg font-medium text-gray-700">권한 데이터를 로딩 중입니다...</p>
-              </div>
-          );
-    }
-    
-    // 메인 화면 (Tailwind CSS 기반)
-    return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
-            <div className="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10">
-                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
-                    <h1 className="text-3xl font-extrabold text-gray-900 flex items-center mb-4 sm:mb-0">
-                        <Settings className="w-7 h-7 mr-3 text-indigo-600" />
-                        역할별 권한 관리
-                    </h1>
-                    <div className="flex space-x-3">
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving || !hasChanges}
-                            className={`flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 shadow-md ${
-                                isSaving || !hasChanges 
-                                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white transform hover:scale-[1.02]'
-                            }`}
-                        >
-                            {isSaving ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
-                            ) : (
-                                <Save className="w-4 h-4 mr-2" />
-                            )}
-                            {isSaving ? '전송 중...' : '변경 사항 저장'}
-                        </button>
-                        <button
-                            onClick={handleCancel}
-                            disabled={isSaving || !hasChanges}
-                            className={`flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 shadow-md border ${
-                                isSaving || !hasChanges 
-                                ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 transform hover:scale-[1.02]'
-                            }`}
-                        >
-                            <X className="w-4 h-4 mr-2" />
-                            취소
-                        </button>
-                        <button
-                            onClick={fetchRoles}
-                            className="flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 shadow-md bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-indigo-400 transform hover:scale-[1.02]"
-                        >
-                            <RefreshCcw className="w-4 h-4 mr-2" />
-                            새로고침
-                        </button>
-                    </div>
-                </header>
-                
-                {/* 메시지 영역 */}
-                {message && (
-                    <div className={`p-3 mb-4 rounded-lg text-sm font-medium ${
-                        message.includes('성공') ? 'bg-green-100 text-green-700 border border-green-300' : 
-                        message.includes('오류') ? 'bg-red-100 text-red-700 border border-red-300' :
-                        'bg-blue-100 text-blue-700 border border-blue-300'
-                    }`}>
-                        {message}
-                    </div>
-                )}
+    // 변경 여부 확인 (ADMIN 제외한 데이터 비교)
+    const isDirty = JSON.stringify(originalPermissions.filter(r => r.roleId !== ROLES.ADMIN.id)) !== 
+                    JSON.stringify(currentPermissions.filter(r => r.roleId !== ROLES.ADMIN.id));
 
-                {/* 권한 테이블 */}
-                <div className="overflow-x-auto shadow-lg rounded-xl border border-gray-200">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">역할명</th>
-                                {PERMISSIONS.map(p => (
-                                    <th key={p.key} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                        {p.name}
-                                    </th>
-                                ))}
+    // 상태 메시지 UI 렌더링 (생략되지 않음)
+    const StatusMessage = ({ message, type }) => {
+        if (!message) return null;
+        const base = "p-3 rounded-lg text-sm mb-4 flex items-center";
+        const style = {
+            success: "bg-green-100 text-green-700 border border-green-300",
+            error: "bg-red-100 text-red-700 border border-red-300",
+            info: "bg-blue-100 text-blue-700 border border-blue-300",
+        };
+        return (
+            <div className={`${base} ${style[type]}`}>
+                {type === 'error' && <span className="font-bold mr-2">❌ 오류:</span>}
+                {type === 'info' && <span className="font-bold mr-2">ℹ️ 알림:</span>}
+                {message}
+            </div>
+        );
+    };
+
+    return (
+        <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-6 border-b pb-3">
+                <span className="mr-3 text-indigo-600"><RefreshCcw size={28} /></span>
+                역할별 권한 관리
+            </h1>
+            
+            <StatusMessage message={status.message} type={status.type} />
+            
+            {/* 액션 버튼 그룹 */}
+            <div className="flex justify-end space-x-3 mb-6">
+                <button
+                    onClick={handleSave}
+                    disabled={!isDirty || isLoading || !token}
+                    className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition duration-150 ${
+                        isDirty && !isLoading && token
+                            ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                    <Save size={18} />
+                    <span>변경 사항 저장</span>
+                </button>
+                <button
+                    onClick={handleCancel}
+                    disabled={!isDirty || isLoading}
+                    className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition duration-150 ${
+                        isDirty && !isLoading
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                    <X size={18} />
+                    <span>취소</span>
+                </button>
+                <button
+                    onClick={fetchPermissions}
+                    disabled={isLoading || !token}
+                    className="flex items-center space-x-2 px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150"
+                >
+                    <RefreshCcw size={18} />
+                    <span>새로고침</span>
+                </button>
+            </div>
+            
+            {/* 권한 테이블 */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+                                ROLE ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+                                역할명
+                            </th>
+                            {PERMISSION_KEYS.map(p => (
+                                <th key={p.key} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    {p.label}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {isLoading && token ? (
+                             <tr>
+                                <td colSpan={2 + PERMISSION_KEYS.length} className="text-center py-8 text-indigo-600 font-medium">
+                                    데이터 로딩 중...
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {roles.map(role => (
-                                <tr key={role.roleId} className="hover:bg-indigo-50/50 transition-colors">
+                        ) : (
+                            currentPermissions.map((role) => (
+                                <tr key={role.roleId} className={role.roleId === ROLES.ADMIN.id ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base font-semibold text-gray-800">{role.position}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{role.roleName}</td>
                                     
-                                    {PERMISSIONS.map(p => (
-                                        <td key={p.key} className="px-6 py-4 whitespace-nowrap text-center">
-                                            {/* 커스텀 토글 스위치 (RoleManage.css 사용) */}
-                                            <label className="switch">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!role.permissions[p.key]}
-                                                    onChange={() => handleToggleRole(role.roleId, p.key)}
-                                                    // 최고 관리자(ROLE_ADMIN)의 권한은 변경 불가
-                                                    disabled={role.roleId === 'ROLE_ADMIN'} 
+                                    {PERMISSION_KEYS.map(p => (
+                                        <td key={p.key} className="px-6 py-4 whitespace-nowrap text-sm">
+                                            {/* 토글 스위치 (Admin 권한은 disabled) */}
+                                            <label className={`relative inline-flex items-center cursor-pointer ${role.roleId === ROLES.ADMIN.id ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={role[p.key]}
+                                                    onChange={() => handleToggle(role.roleId, p.key)}
+                                                    disabled={role.roleId === ROLES.ADMIN.id}
+                                                    className="sr-only peer"
                                                 />
-                                                <span className="slider"></span>
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600"></div>
                                             </label>
                                         </td>
                                     ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <p className="mt-4 text-sm text-gray-500 flex items-center">
-                    <RefreshCcw className="w-3 h-3 inline mr-1 text-gray-400" />
-                    데이터 로딩 및 저장은 백엔드 <code className="font-mono text-xs bg-gray-200 px-1 rounded">/api/admin/roles/permissions</code> 엔드포인트를 사용하며, **ROLE_ADMIN의 권한은 변경할 수 없습니다.**
-                </p>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="mt-8 text-sm text-gray-500 p-4 border-t border-gray-200">
+                **참고:**
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>데이터 조회 및 저장은 백엔드 엔드포인트 `/api/admin/roles/permissions`를 사용합니다.</li>
+                    <li>**{ROLES.ADMIN.name}** 권한은 정책상 변경할 수 없으며, 모든 권한이 **활성화**됩니다.</li>
+                </ul>
             </div>
         </div>
     );
 };
 
-export default RoleManager;
+export default RoleManage;
