@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import storeApi from "../api/storeApi";
 import { Building2, Power, PowerOff, Edit, Save, X, Trash2 } from "lucide-react";
 import { useToast } from "/src/components/providers/ToastProvider";
+import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
 
 const StoreAdminTab = () => {
   const queryClient = useQueryClient();
@@ -68,7 +69,7 @@ const StoreAdminTab = () => {
     },
   });
 
-  // ✅ 운영 상태 토글
+  // ✅ 운영 상태 토글(운영환경 수정)
   const handleToggleActive = () => {
     const updated = { ...store, active: !store.active };
     updateStore.mutate({ storeId: store.storeId, data: updated });
@@ -140,11 +141,10 @@ const StoreAdminTab = () => {
           <button
             onClick={() => createStore.mutate(form)}
             disabled={createStore.isPending}
-            className={`w-full py-2 rounded-md text-sm font-medium text-white ${
-              createStore.isPending
+            className={`w-full py-2 rounded-md text-sm font-medium text-white ${createStore.isPending
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700"
-            }`}
+              }`}
           >
             {createStore.isPending ? "등록 중..." : "등록하기"}
           </button>
@@ -164,7 +164,11 @@ const StoreAdminTab = () => {
           <Building2 className="text-blue-600 w-5 h-5" />
           {store.storeName}
         </h3>
-        <StatusBadge active={store.active} onToggle={handleToggleActive} />
+        <StatusBadge
+          active={store.active}
+          isLoading={updateStore.isPending}
+          onToggle={handleToggleActive}
+        />
       </div>
 
       {/* ✅ 보기 모드 */}
@@ -259,21 +263,6 @@ const StoreAdminTab = () => {
     </div>
   );
 };
-
-// 🔸 상태 뱃지
-const StatusBadge = ({ active, onToggle }) => (
-  <div
-    onClick={onToggle}
-    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition ${
-      active
-        ? "bg-green-600 text-white shadow-[0_0_8px_rgba(34,197,94,0.7)] animate-pulse"
-        : "bg-gray-400 text-gray-100"
-    }`}
-  >
-    {active ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-    {active ? "운영중" : "비활성"}
-  </div>
-);
 
 // 🔸 버튼 컴포넌트
 const Button = ({ color, icon, children, ...props }) => {
