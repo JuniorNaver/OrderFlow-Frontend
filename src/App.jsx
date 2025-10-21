@@ -25,8 +25,9 @@ import Home from "./common/Home";
 import BIPage from "./features/BI/pages/BIPage";
 import PRBrowse from "./features/PR/pages/PrBrowse";
 import OrderManagementPage from "./features/PR/pages/OrderManagementPage";
-import RecommendListPage from "./features/PR/pages/RecommendListPage";
+import RecommendPage from "./features/PR/pages/RecommendPage";
 import ProductDetailPage from "./features/PR/pages/ProductDetailPage";
+import ProductSearchPage from "./features/PR/pages/ProductSearchPage";
 import ShopPage from "./features/PR/pages/ShopPage";
 import POPage from "./features/PO/pages/POPage";
 // import GRPage from "./features/GR/pages/GRPage";
@@ -42,6 +43,17 @@ import DisposalView from "./features/STK/components/DisposalView";
 // POS 도메인
 import POSDashboard from "./features/SD/pages/POSDashboard";
 import SalesRegister from "./features/SD/pages/SalesRegister";
+
+// 전역 UI
+import Header from "./components/Header";
+
+// 메뉴 데이터
+import posMenus from "./components/menus/posMenus";
+import stockMenus from "./components/menus/stockMenus";
+
+
+// React Query Client (전역)
+const queryClient = new QueryClient();
 
 function App() {
   // ----------------------------------------------------
@@ -121,7 +133,7 @@ function App() {
             {/* ---------------------------------------------------- */}
             <Route path="/pr" element={<PRBrowse />} />
             <Route path="/pr/orders" element={<OrderManagementPage />} />
-            <Route path="/pr/recommend" element={<RecommendListPage />} />
+            <Route path="/pr/stores/:storeId/recommend" element={<RecommendPage />} />
             <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
             <Route path="/pr/shop" element={<ShopPage />} />
 
