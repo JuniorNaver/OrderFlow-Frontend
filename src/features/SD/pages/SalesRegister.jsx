@@ -4,12 +4,12 @@ import ProductSearchModal from "../components/shared/ProductSearchModal";
 import ReceiptQueryModal from "../components/receipt/ReceiptQueryModal";
 import SalesTable from "../components/sales/SalesTable";
 import { getProductByBarcode } from "../api/productApi";
+import { createOrder, completeOrder } from "../api/sdApi";
 import BarcodeListener from "../components/BarcodeListener";
 import SummarySection from "../components/shared/SummarySection";
 import RefundModal from "../components/refund/RefundModal";
 import HoldButton from "../components/hold/HoldButton";
-import { saveHold, getHolds, resumeHold } from "../api/holdMAnager";
-import { createOrder, completeOrder } from "../api/sdApi";
+import LoadingSpinner from "../../../components/loading/LoadingSpinner"
 
 function SalesRegister() {
   const [showQuery, setShowQuery] = useState(false);
@@ -18,11 +18,10 @@ function SalesRegister() {
 
   const [currentOrder, setCurrentOrder] = useState(null);
   const [salesItems, setSalesItems] = useState([]);
-  const [holdList, setHoldList] = useState([]);
-
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidTotal, setPaidTotal] = useState(0);
   const [changeAmount, setChangeAmount] = useState(0);
+  const [showLoading, setShowLoading] = useState(false);
 
   // ✅ 주문 생성
   useEffect(() => {
@@ -46,32 +45,49 @@ function SalesRegister() {
         localStorage.setItem("currentOrder", JSON.stringify(order));
       } catch (err) {
         console.error("❌ 주문 생성 오류:", err);
-        alert("주문 생성 중 오류 발생");
+        setShowLoading(true);
+        setTimeout(() => setShowLoading(false), 1500);
+
+        return;
       }
     };
     initOrder();
   }, []);
 
-  // ✅ 바코드 스캔 (DB 선저장 + 테이블 즉시 반영)
+  // ✅ 공통 상품 추가 로직 (검색 + 바코드)
+  const handleAddProduct = async (product) => {
+  if (!currentOrder?.orderId) {
+    alert("⛔ 주문이 아직 생성되지 않았습니다.");
+    return;
+  }
+
+  try {
+     if (window.addItemToSales) {
+     window.addItemToSales(product); // SalesTable에서 DB insert + UI 처리
+   } else {
+     console.warn("⚠️ addItemToSales 미등록 상태입니다.");
+   }
+    } catch (err) {
+      console.error("❌ 상품 추가 실패:", err);
+      alert("상품을 추가하지 못했습니다.");
+    }
+  };
+
+  // ✅ 바코드 스캔
   const handleBarcodeScan = async (code) => {
     console.log("📡 스캔 감지:", code);
     if (!currentOrder) return alert("⛔ 주문이 아직 생성되지 않았습니다.");
     try {
       const product = await getProductByBarcode(code);
       if (!product) return alert("상품을 찾을 수 없습니다.");
-
-      if (window.addItemToSales) {
-        await window.addItemToSales(product);
-      } else {
-        console.error("🚨 addItemToSales 미등록");
-      }
+      await handleAddProduct(product);
     } catch (e) {
       console.error("바코드 처리 오류:", e);
       alert("바코드 처리 중 오류 발생");
     }
   };
 
-  // ✅ 결제 완료 후 처리
+  // ✅ 결제 완료 후 초기화
   const handlePaymentSuccess = async () => {
     if (!currentOrder) return alert("주문이 없습니다.");
     try {
@@ -120,6 +136,10 @@ function SalesRegister() {
             currentOrder={currentOrder}
             onTotalChange={setTotalAmount}
             onItemsChange={setSalesItems}
+            onAddItem={(fn) => {
+              console.log("✅ addItemToSales 등록됨");
+              window.addItemToSales = fn;
+            }}
           />
           <BarcodeListener onBarcodeScan={handleBarcodeScan} />
         </div>
@@ -138,26 +158,28 @@ function SalesRegister() {
                 }}
               />
             </div>
+
             <button
               onClick={() => setShowRefund(true)}
               className="w-[160px] h-[80px] bg-red-500 text-white rounded-2xl hover:bg-red-600 text-xl font-bold"
             >
               환불
             </button>
+
             <button
               onClick={() => setShowQuery(true)}
               className="w-[160px] h-[80px] bg-gray-900 text-white rounded-2xl hover:bg-gray-800 text-xl font-bold"
             >
               영수증
             </button>
+
             <HoldButton
               onHold={async () => alert("보류 기능 구현 중")}
-              onHoldList={() => {}}
-              onResume={() => {}}
               className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
             >
               보류
             </HoldButton>
+
             <button
               onClick={() => setShowSearch(true)}
               className="w-[160px] h-[80px] bg-teal-500 text-white rounded-2xl hover:bg-teal-600 text-xl font-bold"
@@ -166,9 +188,9 @@ function SalesRegister() {
             </button>
 
             <button
-              className="w-[160px] h-[80px] bg-teal-500 text-white rounded-2xl hover:bg-teal-600 text-xl font-bold"
+              className="w-[160px] h-[80px] bg-gray-400 text-white rounded-2xl hover:bg-gray-500 text-xl font-bold"
             >
-             폐기
+              폐기
             </button>
           </div>
         </div>
@@ -185,7 +207,7 @@ function SalesRegister() {
       {showSearch && (
         <ProductSearchModal
           onClose={() => setShowSearch(false)}
-          onSelect={(p) => window.addItemToSales?.(p)}
+          onSelect={(p) => handleAddProduct(p)} // ✅ DB 선저장 포함
         />
       )}
       {showQuery && <ReceiptQueryModal onClose={() => setShowQuery(false)} />}

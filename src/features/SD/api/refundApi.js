@@ -19,3 +19,9 @@ export const verifyRefundInfo = async (data) => {
   const res = await axios.post(`${API_BASE}/verify`, data);
   return res.data;
 };
+
+// ✅ 추가: 간편결제 PG 검증 함수
+export const verifyEasyPayRefund = async (impUid) => {
+  const res = await axios.get(`http://localhost:8080/api/refunds/verify/${impUid}`);
+  return res.data;
+};

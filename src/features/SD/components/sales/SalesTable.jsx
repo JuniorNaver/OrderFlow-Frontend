@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { addItemToOrder } from "../../api/sdApi.js";
+import { updateItemQuantity } from "../../api/sdApi.js";
+import { deleteItem } from "../../api/sdApi.js";
 
 export default function SalesTable({
   currentOrder,
@@ -8,77 +10,119 @@ export default function SalesTable({
   onItemsChange,
 }) {
   const [items, setItems] = useState([]);
+  const [showLoading, setShowLoading] = useState(false);
 
   // ✅ 상품 추가 (DB 저장 + 화면 반영)
-  const handleAddItem = async (product) => {
-    const productId = product.id || product.gtin;
-    if (!productId || !currentOrder?.orderId) return;
+const handleAddItem = async (product) => {
+  if (!currentOrder?.orderId) {
+      setShowLoading(true);
+      setTimeout(() => setShowLoading(false), 1500);
 
-    try {
-      // ✅ DB에 SalesItem insert (선반영)
-      const savedItem = await addItemToOrder(currentOrder.orderId, {
-        gtin: product.gtin || product.id,
-        quantity: 1,
-        price: product.price || 0,
-      });
-
-      console.log("✅ DB 저장 완료:", savedItem);
-
-      // ✅ UI 반영
-      setItems((prev) => {
-        const existing = prev.find((it) => it.gtin === productId || it.id === productId);
-        if (existing) {
-          return prev.map((it) =>
-            it.gtin === productId || it.id === productId
-              ? { ...it, qty: it.qty + 1, stock: Math.max(0, it.stock - 1) }
-              : it
-          );
-        }
-
-        const safeProduct = {
-          id: savedItem.id || productId,
-          gtin: product.gtin || productId,
-          name: product.name || product.productName || "상품명 미등록",
-          qty: product.qty ?? 1,
-          price: Number(product.price) || Number(savedItem.sdPrice) || 0,
-          stock: savedItem.stockQuantity ?? product.stock ?? 0,
-          originalStock: savedItem.stockQuantity ?? product.stock ?? 0,
-        };
-        return [...prev, safeProduct];
-      });
-    } catch (err) {
-      console.error("❌ 상품 추가 실패:", err);
-      alert("상품을 추가하지 못했습니다.");
+      return;
     }
-  };
+
+  try {
+    // ✅ 백엔드에 요청 (이미 수량 합쳐짐)
+    const savedItem = await addItemToOrder(currentOrder.orderId, {
+      gtin: product.gtin || product.id,
+      quantity: 1,
+      price: product.price || 0,
+    });
+
+    console.log("✅ DB 응답:", savedItem);
+
+    setItems((prev) => {
+      // ✅ 기존 항목 찾기: GTIN 기준으로 비교 (SalesItem.id는 매번 바뀔 수 있음)
+      const existing = prev.find((it) => it.gtin === savedItem.gtin);
+
+      if (existing) {
+        // 🟢 기존 상품 업데이트
+        return prev.map((it) =>
+          it.gtin === savedItem.gtin
+            ? {
+                ...it,
+                qty: savedItem.salesQuantity, // 서버 최신 수량 반영
+                stock: savedItem.stockQuantity ?? it.stock,
+                price: savedItem.sdPrice ?? it.price,
+              }
+            : it
+        );
+      } else {
+        // 🔵 신규 상품 추가
+        return [
+          ...prev,
+          {
+            id: savedItem.id,
+            gtin: savedItem.gtin,
+            name: savedItem.productName || product.productName || "상품명 미등록",
+            qty: savedItem.salesQuantity ?? 1,
+            price: Number(savedItem.sdPrice) || product.price || 0,
+            stock: savedItem.stockQuantity ?? product.stock ?? 0,
+            originalStock: savedItem.stockQuantity ?? product.stock ?? 0,
+          },
+        ];
+      }
+    });
+  } catch (err) {
+    console.error("❌ 상품 추가 실패:", err);
+    alert("상품을 추가하지 못했습니다.");
+  }
+};
+
+
 
   // ✅ 수량 변경
-  const handleQuantityChange = (id, delta) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
+ const handleQuantityChange = async (id, delta) => {
+  console.log("⚡ handleQuantityChange 호출됨:", id, delta);
 
-        let newQty = item.qty + delta;
-        let newStock = item.stock - delta;
+  setItems((prev) =>
+    prev.map((item) => {
+      if (item.id !== id) return item;
 
-        if (newQty < 1) return item;
-        if (newStock < 0) {
-          alert("재고 수량이 부족합니다!");
-          return item;
+      let newQty = item.qty + delta;
+      if (newQty < 1) return item;
+
+      let newStock = item.stock - delta;
+      if (newStock < 0) {
+        alert("재고 수량이 부족합니다!");
+        return item;
+      }
+
+      // ✅ axios PATCH로 변경
+      (async () => {
+        try {
+          console.log("📦 PATCH 요청 시도:", id, newQty);
+          const res = await updateItemQuantity(id, newQty);
+          console.log("📬 PATCH 응답 성공:", res);
+        } catch (err) {
+          console.error("❌ PATCH 요청 실패:", err);
         }
-        if (newStock > item.originalStock) newStock = item.originalStock;
+      })();
 
-        return { ...item, qty: newQty, stock: newStock };
-      })
-    );
-  };
+      return { ...item, qty: newQty, stock: newStock };
+    })
+  );
+};
+
+
 
   // ✅ 상품 삭제
-  const handleDeleteItem = (id) => {
-    if (window.confirm("이 상품을 삭제하시겠습니까?")) {
+  const handleDeleteItem = async (id) => {
+  if (!window.confirm("이 상품을 삭제하시겠습니까?")) return;
+
+  try {
+    const res = await deleteItem(id);
+    if (res.status === 204 || res.status === 200) {
       setItems((prev) => prev.filter((item) => item.id !== id));
+      alert("✅ 상품이 삭제되었습니다.");
+    } else {
+      alert("❌ 삭제 실패: " + res.status);
     }
-  };
+  } catch (err) {
+    console.error("❌ 삭제 실패:", err);
+    alert("서버 요청 중 오류가 발생했습니다.");
+  }
+};
 
   // ✅ 총액 계산 → 부모로 전달
   useEffect(() => {
@@ -90,23 +134,33 @@ export default function SalesTable({
   }, [items, onTotalChange]);
 
   // ✅ 전역 함수 등록 (바코드/검색 등에서 접근)
-  useEffect(() => {
-    window.addItemToSales = handleAddItem;
+  // ✅ currentOrder가 생길 때마다 최신 addItemToSales 등록
+      useEffect(() => {
+        // 🛑 주문이 아직 생성되지 않았으면 등록하지 않음
+        if (!currentOrder?.orderId) return;
 
-    if (!window.clearSalesItems) {
-      window.clearSalesItems = () => {
-        console.log("🧹 결제 완료 후 상품 목록 초기화");
-        setItems([]);
-        if (onTotalChange) onTotalChange(0);
-      };
-    }
+        console.log("🪄 addItemToSales 등록됨 (orderId:", currentOrder.orderId, ")");
 
-    if (onAddItem) onAddItem(handleAddItem);
+        // ✅ 전역 함수 등록
+        window.addItemToSales = handleAddItem;
+        window.clearSalesItems = () => {
+          console.log("🧹 결제 완료 후 상품 목록 초기화");
+          setItems([]);
+          onTotalChange?.(0);
+        };
 
-    return () => {
-      delete window.addItemToSales;
-    };
-  }, [onAddItem, onTotalChange, currentOrder]);
+        // ✅ 부모에게 콜백 전달
+        onAddItem?.(handleAddItem);
+
+        // ✅ 언마운트 시 정리
+        return () => {
+          delete window.addItemToSales;
+          delete window.clearSalesItems;
+        };
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [currentOrder]);
+
 
   return (
     <div className="bg-white shadow-xl rounded-2xl p-6">
