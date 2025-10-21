@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import storeApi from "../api/storeApi";
 import { Building2, Power, PowerOff, Edit, Save, X, Trash2 } from "lucide-react";
-import Toast from "../../../components/Toast";
+import { useToast } from "/src/components/providers/ToastProvider";
+import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
 
 const StoreAdminTab = () => {
   const queryClient = useQueryClient();
+  const { showToast } = useToast(); // ✅ 전역 토스트 호출용
+
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState(null);
-  const [toast, setToast] = useState(null);
 
   // ✅ 지점 목록 조회
   const { data: stores, isLoading } = useQuery({
@@ -30,12 +32,6 @@ const StoreAdminTab = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ 공통 알림 함수
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
   // ✅ 등록
   const createStore = useMutation({
     mutationFn: storeApi.create,
@@ -43,7 +39,7 @@ const StoreAdminTab = () => {
       queryClient.invalidateQueries(["stores"]);
       showToast("지점이 등록되었습니다 ✅", "success");
     },
-    onError: (error) => {
+    onError: () => {
       showToast("지점 등록 중 오류가 발생했습니다 ❌", "error");
     },
   });
@@ -56,7 +52,7 @@ const StoreAdminTab = () => {
       showToast("저장되었습니다 ✅", "success");
       setEditMode(false);
     },
-    onError: (error) => {
+    onError: () => {
       showToast("저장 중 오류가 발생했습니다 ❌", "error");
     },
   });
@@ -68,13 +64,12 @@ const StoreAdminTab = () => {
       queryClient.invalidateQueries(["stores"]);
       showToast("삭제되었습니다 🗑️", "success");
     },
-    onError: (error) => {
-      showToast( "삭제 중 오류가 발생했습니다 ❌", "error");
+    onError: () => {
+      showToast("삭제 중 오류가 발생했습니다 ❌", "error");
     },
   });
 
-
-  // ✅ 운영 상태 토글
+  // ✅ 운영 상태 토글(운영환경 수정)
   const handleToggleActive = () => {
     const updated = { ...store, active: !store.active };
     updateStore.mutate({ storeId: store.storeId, data: updated });
@@ -147,15 +142,13 @@ const StoreAdminTab = () => {
             onClick={() => createStore.mutate(form)}
             disabled={createStore.isPending}
             className={`w-full py-2 rounded-md text-sm font-medium text-white ${createStore.isPending
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
               }`}
           >
             {createStore.isPending ? "등록 중..." : "등록하기"}
           </button>
         </div>
-
-        {toast && <Toast message={toast.message} type={toast.type} />}
       </div>
     );
   }
@@ -171,9 +164,14 @@ const StoreAdminTab = () => {
           <Building2 className="text-blue-600 w-5 h-5" />
           {store.storeName}
         </h3>
-        <StatusBadge active={store.active} onToggle={handleToggleActive} />
+        <StatusBadge
+          active={store.active}
+          isLoading={updateStore.isPending}
+          onToggle={handleToggleActive}
+        />
       </div>
 
+      {/* ✅ 보기 모드 */}
       {!editMode ? (
         <div className="text-sm text-gray-700 space-y-2">
           {[
@@ -214,6 +212,7 @@ const StoreAdminTab = () => {
           </div>
         </div>
       ) : (
+        // ✅ 수정 모드
         <div className="space-y-2">
           {[
             { name: "storeName", label: "지점명" },
@@ -261,27 +260,11 @@ const StoreAdminTab = () => {
           </div>
         </div>
       )}
-
-      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 };
 
-// 🔸 상태 뱃지
-const StatusBadge = ({ active, onToggle }) => (
-  <div
-    onClick={onToggle}
-    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition ${active
-      ? "bg-green-600 text-white shadow-[0_0_8px_rgba(34,197,94,0.7)] animate-pulse"
-      : "bg-gray-400 text-gray-100"
-      }`}
-  >
-    {active ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-    {active ? "운영중" : "비활성"}
-  </div>
-);
-
-// 🔸 버튼
+// 🔸 버튼 컴포넌트
 const Button = ({ color, icon, children, ...props }) => {
   const colors = {
     blue: "bg-blue-600 hover:bg-blue-700 text-white",
@@ -299,6 +282,5 @@ const Button = ({ color, icon, children, ...props }) => {
     </button>
   );
 };
-
 
 export default StoreAdminTab;

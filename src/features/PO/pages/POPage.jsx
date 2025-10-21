@@ -1,5 +1,5 @@
 
-import api, { createPOHeader, deleteSavedCart } from "../api/poApi";
+import api, { createPO, deleteSavedCart } from "../api/poApi";
 import React, { useEffect, useState } from "react";
 import { confirmOrder, deleteCartItems, getSavedCartList, saveCart, updateQuantity } from "../api/poApi";
 import BudgetBar from "../components/BudgetBar";
@@ -39,41 +39,41 @@ export default function POPage() {
   const navigate = useNavigate();
 
 
-  /** '장바구니 추가' 버튼 클릭시  */
-  const handleAddToCart = async (product) => {
-    try {
-      // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
-      let currentPoId = poId;
-      if (!currentPoId) {
-        currentPoId = await createPOHeader(); // 💡 여기서 헤더 생성
-        setPoId(currentPoId);                 // 저장
-      }
+  // /** '장바구니 추가' 버튼 클릭시  */
+  // const handleAddToCart = async (product) => {
+  //   try {
+  //     // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
+  //     let currentPoId = poId;
+  //     if (!currentPoId) {
+  //       currentPoId = await createPO(); // 💡 여기서 헤더 생성
+  //       setPoId(currentPoId);                 // 저장
+  //     }
 
-      const res = await api.post(`/api/po/${currentPoId}/items`, {
-      productId: product.id, // 또는 gtin 사용시 백엔드 스펙에 맞춰 바꾸기
-      qty: 1,
-    });
+  //     const res = await api.post(`/api/po/${currentPoId}/items`, {
+  //     productId: product.id, // 또는 gtin 사용시 백엔드 스펙에 맞춰 바꾸기
+  //     qty: 1,
+  //   });
 
-    // 서버가 itemNo를 돌려준다고 가정
-    const serverItem = res.data; // { itemNo, price, ... }
-    setItems((prev) => [
-      ...prev,
-      {
-        itemNo: serverItem.itemNo,
-        gtin: product.gtin ?? product.productCode,
-        productName: product.productName,
-        imageUrl: product.imageUrl,
-        price: serverItem.price ?? product.price ?? 0,
-        qty: 1,
-        totalPrice: (serverItem.price ?? product.price ?? 0) * 1,
-        selected: false,
-      },
-    ]);
-  } catch (err) {
-    console.error("상품 추가 실패:", err);
-    alert("장바구니 추가 중 오류가 발생했습니다.");
-  }
-};
+  //     // 서버가 itemNo를 돌려준다고 가정
+  //     const serverItem = res.data; // { itemNo, price, ... }
+  //     setItems((prev) => [
+  //       ...prev,
+  //       {
+  //         itemNo: serverItem.itemNo,
+  //         gtin: product.gtin ?? product.productCode,
+  //         productName: product.productName,
+  //         imageUrl: product.imageUrl,
+  //         price: serverItem.price ?? product.price ?? 0,
+  //         qty: 1,
+  //         totalPrice: (serverItem.price ?? product.price ?? 0) * 1,
+  //         selected: false,
+  //       },
+  //     ]);
+  //   } catch (err) {
+  //     console.error("상품 추가 실패:", err);
+  //     alert("장바구니 추가 중 오류가 발생했습니다.");
+  //   }
+  // };
 
   
   // 2) 상세에서 넘어온 품목을 장바구니에 합치기
@@ -86,7 +86,7 @@ export default function POPage() {
       // 1) 헤더 보장
       let currentPoId = poId;
       if (!currentPoId) {
-        currentPoId = await createPOHeader();
+        currentPoId = await createPO();
         setPoId(currentPoId);
       }
 
@@ -134,9 +134,8 @@ export default function POPage() {
     } catch (e) {
       console.error(e);
       // 필요시 토스트
-    }
-  })();
-}, [location.state, navigate, poId]);
+    }})();
+  }, [location.state, navigate, poId]);
 
   
 
