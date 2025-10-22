@@ -12,6 +12,7 @@ import Empty from "../components/Empty";
 import InsertNameModal from "../components/InsertNameModal";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getProduct } from "../../PR/api/product";
+import { getCartItems } from "../api/poApi"; 
 
 // ✅ 여기(컴포넌트 밖)에 헬퍼 정의
 async function resolveProductIdOrGtin(raw) {
@@ -139,7 +140,19 @@ export default function POPage() {
 
   
 
-
+// 🧩 장바구니 페이지 로드시, 서버에서 아이템 불러오기
+useEffect(() => {
+  if (!poId) return; // poId가 설정된 경우에만 실행
+  (async () => {
+    try {
+      const itemsFromServer = await getCartItems(poId);
+      console.log("불러온 장바구니:", itemsFromServer);
+      setItems(itemsFromServer);
+    } catch (err) {
+      console.error("장바구니 불러오기 실패:", err);
+    }
+  })();
+}, [poId]);
 
 
 
