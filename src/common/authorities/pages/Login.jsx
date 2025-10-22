@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-// 💡 useNavigate는 더 이상 필요 없으므로 import를 완전히 제거합니다.
 import '../styles/Login.css';
 
 // 💡 useAuth 훅 임포트
