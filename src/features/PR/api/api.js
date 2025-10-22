@@ -35,7 +35,7 @@ export const getRecommend = async (storeId, params = {}) => {
   }
 
   const { data } = await apiClient.get(
-    `/api/pr/stores/${encodeURIComponent(sid)}/recommendations`,
+    `/api/v1/pr/stores/${encodeURIComponent(sid)}/recommendations`,
     { params: qp } // ← 추후 Top3 서버필터용 파라미터 지원
   );
   return normalizeRecommend(data);
@@ -43,10 +43,10 @@ export const getRecommend = async (storeId, params = {}) => {
 
 export const createPurchaseRequest = (storeId, dto) =>
   apiClient
-    .post(`/api/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
+    .post(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
     .then(r => r.data);
 
 export const listPurchaseRequests = (storeId, params) =>
   apiClient
-    .get(`/api/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
+    .get(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
     .then(r => r.data);

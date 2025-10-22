@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { getRecommend } from "../api/api";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchCategories } from "../api/browse";
 import { fetchCategorySales } from "../../BI/api/biApi";
 
@@ -54,26 +54,29 @@ export default function RecommendPage() {
 const catsReady = topCats.length > 0;
 
 
-const reqParams = useMemo(() => ({
-  zones: [zone],
+// 공통 파라미터 (카테고리/limit만)
+const baseParams = useMemo(() => ({
   limitPerCategory: 3,
-  categories: catsReady ? topCats : undefined, // 준비되기 전이면 아예 안 보냄
-}), [zone, catsReady, topCats]);
+  categories: catsReady ? topCats : undefined,
+}), [catsReady, topCats]);
 
-
-  // ✅ zone / topCats를 서버로 넘겨서 필터링 맡기기
- const q = useQuery({
-   queryKey: ["recommend", storeId, zone, catsReady ? topCats.join("|") : "no-cats"], // 파라미터가 바뀌면 자동 리패치
-   queryFn: () => getRecommend(storeId, reqParams),
-    enabled: !!storeId,               // 필요하면 catSales까지 기다리려면 && !catLoading
+// zones별 병렬 쿼리
+const zoneQueries = useQueries({
+  queries: ZONES.map(({ key }) => ({
+    queryKey: ["recommend", storeId, key, catsReady ? topCats.join("|") : "no-cats"],
+    queryFn: () => getRecommend(storeId, { ...baseParams, zones: [key] }),
+    enabled: !!storeId,              // 필요하면 && catsReady 로 더 지연 가능
+    keepPreviousData: true,
     retry: 0,
-    keepPreviousData: true,           // 깜빡임/리셋 방지
+  })),
 });
-// console.log("req params:", reqParams);
-// console.log("raw items from server:", q.data?.items?.length, q.data?.items);
+
+// 활성 탭 데이터만 리스트로 사용
+const activeIdx = ZONES.findIndex(z => z.key === zone);
+const activeData = zoneQueries[activeIdx]?.data;
 
 // ✅ 서버 storageMethod를 프론트 zone으로 보정
- const items = (q.data?.items ?? []).map(it => ({
+ const items = (activeData?.items ?? []).map(it => ({
    ...it,
    zone: mapStorageMethodToZone(it.storageMethod) // (이제 it.zone 없으면 여기서 보정)
  }));
@@ -89,10 +92,14 @@ const reqParams = useMemo(() => ({
 
   const handlePick = useCallback((item, qty) => {
     setPicked((prev) => {
-      const next = new Map(prev);
       const safeQty = Math.max(1, Math.floor(Number(qty || item.suggestedQty || 1)));
-      next.set(item.productCode, { ...item, qty: safeQty });
-      return next;
+   const prevRow = prev.get(item.productCode);
+   if (prevRow && prevRow.qty === safeQty) {
+     return prev; // 변화 없음 → 리렌더 스킵
+   }
+   const next = new Map(prev);
+   next.set(item.productCode, { ...item, qty: safeQty });
+   return next;
     });
   }, []);
 
@@ -120,32 +127,39 @@ const reqParams = useMemo(() => ({
   }, [picked]);
 
   const zoneCounts = useMemo(() => {
-    const base = !topCats.length ? items : items.filter(it => topCats.includes(it.category));
-   const m = { room:0, chilled:0, frozen:0, other:0 };
-   for (const it of base) m[it.zone] = (m[it.zone] ?? 0) + 1;
-   return m;
-}, [items, topCats]);
-
-  const goToPO = useCallback(() => {
-    // 배열로 변환해서 내보내기
-    const items = Array.from(picked.values()).map(({ productCode, qty }) => ({
-      productCode,
-      qty,
+  const m = { room:0, chilled:0, frozen:0, other:0 };
+  ZONES.forEach((z, i) => {
+    const data = zoneQueries[i]?.data;
+    const list = (data?.items ?? []).map(it => ({
+      ...it,
+      zone: mapStorageMethodToZone(it.storageMethod),
     }));
-    nav("/po", { state: { from: "recommend", storeId, items } });
-  }, [picked, nav, storeId]);
+    const base = topCats.length ? list.filter(it => topCats.includes(it.category)) : list;
+    m[z.key] = base.length;
+  });
+  return m;
+}, [zoneQueries, topCats]);
 
-  if (q.isLoading) return <div className="p-6">불러오는 중…</div>;
-  if (q.isError) return <div className="p-6 text-red-600">추천 데이터를 불러올 수 없습니다.</div>;
-  if (!items.length) {
-    return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold mb-2">추천 발주</h1>
-        <p className="text-gray-600">추천 결과가 없습니다. 최근 발주 내역으로 채워볼까요?</p>
-        {/* 필요 시: 최근 발주 불러오기 버튼 */}
-      </div>
-    );
-  }
+  // const goToPO = useCallback(() => {
+  //   // 배열로 변환해서 내보내기
+  //   const items = Array.from(picked.values()).map(({ productCode, qty }) => ({
+  //     productCode,
+  //     qty,
+  //   }));
+  //   nav("/po", { state: { from: "recommend", storeId, items } });
+  // }, [picked, nav, storeId]);
+
+  // if (q.isLoading) return <div className="p-6">불러오는 중…</div>;
+  // if (q.isError) return <div className="p-6 text-red-600">추천 데이터를 불러올 수 없습니다.</div>;
+  // if (!items.length) {
+  //   return (
+  //     <div className="p-6">
+  //       <h1 className="text-xl font-semibold mb-2">추천 발주</h1>
+  //       <p className="text-gray-600">추천 결과가 없습니다. 최근 발주 내역으로 채워볼까요?</p>
+  //       {/* 필요 시: 최근 발주 불러오기 버튼 */}
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="relative z-0 p-4 space-y-4"
@@ -188,7 +202,7 @@ const reqParams = useMemo(() => ({
       <Footer
         count={summary.count}
         amount={summary.amount}
-        onConfirm={goToPO}
+        // onConfirm={goToPO}
         disabled={summary.count === 0}
         onPickAll={() => {
           const next = new Map();
@@ -203,13 +217,18 @@ const reqParams = useMemo(() => ({
   );
 }
 
-function RecommendCard({ item, defaultQty, selected, onPick, onUnpick }) {
+const RecommendCard = React.memo(function RecommendCard({ item, defaultQty, selected, onPick, onUnpick }) {
   const [qty, setQty] = useState(defaultQty);
-  useEffect(() => { setQty(defaultQty); }, [defaultQty]);  // 동기화
+  useEffect(() => { 
+    setQty(prev => (prev === defaultQty ? prev : defaultQty));
+ }, [defaultQty]);
+
 
   useEffect(() => {
-    if (selected) onPick(item, qty);
-  }, [selected, qty, item, onPick]);
+   if (!selected) return;
+   onPick(item, qty);
+   // item 전체가 아니라 제품 키만 의존
+ }, [selected, qty, item.productCode]);
   const inc = () => setQty((v) => Math.max(1, (v || 1) + 1));
   const dec = () => setQty((v) => Math.max(1, (v || 1) - 1));
 
@@ -256,7 +275,7 @@ function RecommendCard({ item, defaultQty, selected, onPick, onUnpick }) {
       </div>
     </div>
   );
-}
+});
 
 function Footer({ count, amount, onConfirm, disabled, onPickAll, onClear }) {
   return (
