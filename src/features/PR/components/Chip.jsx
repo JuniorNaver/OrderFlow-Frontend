@@ -11,4 +11,4 @@ export default Chip({ active, onclick, Children}) {
       {Children}
       </button>
     );
-}
+};

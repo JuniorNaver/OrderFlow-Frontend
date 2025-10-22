@@ -26,8 +26,8 @@ function normalizeRecommend(data) {
  *  @returns {Promise<RecommendDto>}
  */
 export const getRecommend = async (storeId, params = {}) => {
-  const sid = storeId ?? getCurrentStoreId();
-  if (!sid) throw new Error("storeId가 필요합니다.");
+  // 없으면 기본 점포 ID 사용 (임시용)
+  const sid = storeId ?? getCurrentStoreId() ?? "S001"; 
 
   const qp = {...params };
   if (Array.isArray(qp.categories)) {
