@@ -5,17 +5,23 @@ import ReceiptQueryModal from "../components/receipt/ReceiptQueryModal";
 import SalesTable from "../components/sales/SalesTable";
 import { getProductByBarcode } from "../api/productApi";
 import { createOrder, completeOrder } from "../api/sdApi";
+import { saveHold, getHolds, resumeHold } from "../api/holdMAnager";
 import BarcodeListener from "../components/BarcodeListener";
 import SummarySection from "../components/shared/SummarySection";
 import RefundModal from "../components/refund/RefundModal";
 import HoldButton from "../components/hold/HoldButton";
-import LoadingSpinner from "../../../components/loading/LoadingSpinner"
+import HoldModal from "../components/hold/HoldModal";
 
 function SalesRegister() {
   const [showQuery, setShowQuery] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
+  // ✅ 보류 관련 상태
+  const [holdList, setHoldList] = useState([]);
+  const [showHoldModal, setShowHoldModal] = useState(false);
+
+  // ✅ 주문 관련 상태
   const [currentOrder, setCurrentOrder] = useState(null);
   const [salesItems, setSalesItems] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -47,8 +53,6 @@ function SalesRegister() {
         console.error("❌ 주문 생성 오류:", err);
         setShowLoading(true);
         setTimeout(() => setShowLoading(false), 1500);
-
-        return;
       }
     };
     initOrder();
@@ -56,17 +60,17 @@ function SalesRegister() {
 
   // ✅ 공통 상품 추가 로직 (검색 + 바코드)
   const handleAddProduct = async (product) => {
-  if (!currentOrder?.orderId) {
-    alert("⛔ 주문이 아직 생성되지 않았습니다.");
-    return;
-  }
+    if (!currentOrder?.orderId) {
+      alert("⛔ 주문이 아직 생성되지 않았습니다.");
+      return;
+    }
 
-  try {
-     if (window.addItemToSales) {
-     window.addItemToSales(product); // SalesTable에서 DB insert + UI 처리
-   } else {
-     console.warn("⚠️ addItemToSales 미등록 상태입니다.");
-   }
+    try {
+      if (window.addItemToSales) {
+        window.addItemToSales(product);
+      } else {
+        console.warn("⚠️ addItemToSales 미등록 상태입니다.");
+      }
     } catch (err) {
       console.error("❌ 상품 추가 실패:", err);
       alert("상품을 추가하지 못했습니다.");
@@ -109,6 +113,68 @@ function SalesRegister() {
       alert("결제 완료 중 오류 발생");
     }
   };
+
+  // ✅ 보류 저장
+  const handleHold = async () => {
+  if (!currentOrder) return alert("⛔ 현재 주문이 없습니다.");
+
+  try {
+    await saveHold(currentOrder.orderId); // salesItems 안 보내도 됨 (백엔드가 DB에 이미 저장)
+    alert("💾 보류 저장 완료!");
+
+    // ✅ 1. 현재 주문 초기화
+    localStorage.removeItem("currentOrder");
+
+    // ✅ 2. 새 주문 생성
+    const next = await createOrder();
+    setCurrentOrder(next);
+    localStorage.setItem("currentOrder", JSON.stringify(next));
+
+    // ✅ 3. 테이블 비우기
+    if (window.clearSalesItems) window.clearSalesItems();
+    setSalesItems([]);
+
+    // ✅ 4. 금액 초기화
+    setTotalAmount(0);
+    setPaidTotal(0);
+    setChangeAmount(0);
+
+  } catch (err) {
+    console.error("보류 저장 오류:", err);
+    alert("보류 저장 중 오류 발생");
+  }
+};
+
+  // ✅ 보류 목록 조회
+  const handleHoldList = async () => {
+    try {
+      const holds = await getHolds();
+      console.log("📋 보류 목록:", holds);
+      setHoldList(Array.isArray(holds) ? holds : []);
+    } catch (err) {
+      console.error("보류 목록 조회 실패:", err);
+    }
+  };
+
+  // ✅ 보류 주문 재개
+  // ✅ 보류 주문 재개
+const handleResume = async (orderId) => {
+   try {
+    const resumed = await resumeHold(orderId);
+    setCurrentOrder(resumed);
+
+    const items = resumed.items || resumed.salesItems || [];
+    setSalesItems(items);
+    if (window.loadSalesItems) window.loadSalesItems(items);
+
+    alert("보류된 주문을 불러왔습니다.");
+    setShowHoldModal(false);
+  } catch (err) {
+    console.error("보류 재개 실패:", err);
+    alert("보류 재개 실패");
+  }
+};
+
 
   return (
     <div className="p-10 bg-gray-50 min-h-screen text-[18px] relative overflow-visible">
@@ -174,11 +240,11 @@ function SalesRegister() {
             </button>
 
             <HoldButton
-              onHold={async () => alert("보류 기능 구현 중")}
-              className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
-            >
-              보류
-            </HoldButton>
+              onHold={handleHold}
+              onHoldList={handleHoldList}
+              onResume={handleResume}
+              holdList={holdList}
+            />
 
             <button
               onClick={() => setShowSearch(true)}
@@ -207,7 +273,7 @@ function SalesRegister() {
       {showSearch && (
         <ProductSearchModal
           onClose={() => setShowSearch(false)}
-          onSelect={(p) => handleAddProduct(p)} // ✅ DB 선저장 포함
+          onSelect={(p) => handleAddProduct(p)}
         />
       )}
       {showQuery && <ReceiptQueryModal onClose={() => setShowQuery(false)} />}
@@ -217,6 +283,15 @@ function SalesRegister() {
           onRefundComplete={() => {
             setShowRefund(false);
             alert("✅ 환불 완료되었습니다.");
+          }}
+        />
+      )}
+      {showHoldModal && (
+        <HoldModal
+          onClose={() => setShowHoldModal(false)}
+          onLoadHold={(hold) => {
+            console.log("선택한 보류 불러오기:", hold);
+            setShowHoldModal(false);
           }}
         />
       )}

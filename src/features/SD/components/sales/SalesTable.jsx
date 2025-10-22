@@ -12,17 +12,44 @@ export default function SalesTable({
   const [items, setItems] = useState([]);
   const [showLoading, setShowLoading] = useState(false);
 
+  useEffect(() => {
+  // ✅ 외부에서 테이블 아이템을 일괄 주입
+  window.loadSalesItems = (raw = []) => {
+    const mapped = raw.map((it, idx) => ({
+      id: it.id || it.productId || it.gtin || idx,
+      gtin: it.gtin || it.productId || idx.toString(),
+      name: it.productName || it.name || "상품",
+      price: Number(it.sdPrice ?? it.price ?? 0),
+      qty: Number(it.salesQuantity ?? it.qty ?? 1),
+      originalStock: Number(it.stockQuantity ?? it.originalStock ?? it.stock ?? 0),
+      stock: Math.max(0, (it.stockQuantity ?? 0) - (it.salesQuantity ?? 0)),
+   subtotal: Number(it.sdPrice ?? it.price ?? 0) * Number(it.salesQuantity ?? it.qty ?? 1),
+    }));
+    setItems(mapped);
+  };
+
+  window.clearSalesItems = () => {
+    setItems([]);
+  };
+}, []);
+
+  useEffect(() => {
+  onItemsChange?.(items);
+  const total = items.reduce((sum, it) => sum + (Number(it.price) * Number(it.qty)), 0);
+  onTotalChange?.(total);
+}, [items, onItemsChange, onTotalChange]);
+
+
   // ✅ 상품 추가 (DB 저장 + 화면 반영)
+// ✅ 상품 추가 (DB 저장 + 화면 반영)
 const handleAddItem = async (product) => {
   if (!currentOrder?.orderId) {
-      setShowLoading(true);
-      setTimeout(() => setShowLoading(false), 1500);
-
-      return;
-    }
+    setShowLoading(true);
+    setTimeout(() => setShowLoading(false), 1500);
+    return;
+  }
 
   try {
-    // ✅ 백엔드에 요청 (이미 수량 합쳐짐)
     const savedItem = await addItemToOrder(currentOrder.orderId, {
       gtin: product.gtin || product.id,
       quantity: 1,
@@ -32,33 +59,35 @@ const handleAddItem = async (product) => {
     console.log("✅ DB 응답:", savedItem);
 
     setItems((prev) => {
-      // ✅ 기존 항목 찾기: GTIN 기준으로 비교 (SalesItem.id는 매번 바뀔 수 있음)
       const existing = prev.find((it) => it.gtin === savedItem.gtin);
 
       if (existing) {
-        // 🟢 기존 상품 업데이트
+        const updatedOriginal = Number(savedItem.stockQuantity ?? existing.originalStock ?? 0);
+        const updatedStock = Math.max(0, updatedOriginal - Number(savedItem.salesQuantity ?? (existing.qty + 1)));
         return prev.map((it) =>
           it.gtin === savedItem.gtin
             ? {
                 ...it,
-                qty: savedItem.salesQuantity, // 서버 최신 수량 반영
-                stock: savedItem.stockQuantity ?? it.stock,
+                qty: Number(savedItem.salesQuantity ?? (existing.qty + 1)),
+                stock: updatedStock, // ✅ 서버 계산된 재고 그대로 반영
                 price: savedItem.sdPrice ?? it.price,
+                originalStock: updatedOriginal, // ✅ 원재고는 stockQuantity
               }
             : it
         );
       } else {
-        // 🔵 신규 상품 추가
+        const qty = Number(savedItem.salesQuantity ?? 1);
+        const baseOriginal = Number(savedItem.stockQuantity ?? product.stock ?? 0);
         return [
           ...prev,
           {
             id: savedItem.id,
             gtin: savedItem.gtin,
             name: savedItem.productName || product.productName || "상품명 미등록",
-            qty: savedItem.salesQuantity ?? 1,
+            qty,
             price: Number(savedItem.sdPrice) || product.price || 0,
-            stock: savedItem.stockQuantity ?? product.stock ?? 0,
-            originalStock: savedItem.stockQuantity ?? product.stock ?? 0,
+            originalStock: baseOriginal,
+            stock: Math.max(0, baseOriginal - qty), // ✅ 서버 값 반영
           },
         ];
       }
@@ -68,6 +97,7 @@ const handleAddItem = async (product) => {
     alert("상품을 추가하지 못했습니다.");
   }
 };
+
 
 
 
@@ -82,8 +112,8 @@ const handleAddItem = async (product) => {
       let newQty = item.qty + delta;
       if (newQty < 1) return item;
 
-      let newStock = item.stock - delta;
-      if (newStock < 0) {
+       const newStock = Math.max(0, Number(item.originalStock ?? 0) - newQty);
+     if (newStock < 0) {
         alert("재고 수량이 부족합니다!");
         return item;
       }
