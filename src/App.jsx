@@ -44,6 +44,12 @@ import DisposalView from "./features/STK/components/DisposalView";
 import POSDashboard from "./features/SD/pages/POSDashboard";
 import SalesRegister from "./features/SD/pages/SalesRegister";
 
+//GR 도메인
+import GRPage from "./features/GR/pages/GRPage";
+
+
+
+
 function App() {
   // ----------------------------------------------------
   // 🧭 라우트 구분용 정규식 (POS / ERP)
@@ -159,6 +165,11 @@ function App() {
             {/* ---------------------------------------------------- */}
             <Route path="/sd" element={<POSDashboard />} />
             <Route path="/sd/sales" element={<SalesRegister />} />
+
+            {/* ---------------------------------------------------- */}
+            {/* GR (입고관리) */}
+            {/* ---------------------------------------------------- */}
+            <Route path="/gr" element={<GRPage />}/>
           </Route>
         </Routes>
       </main>
