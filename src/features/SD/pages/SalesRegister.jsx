@@ -9,7 +9,8 @@ import BarcodeListener from "../components/BarcodeListener";
 import SummarySection from "../components/shared/SummarySection";
 import RefundModal from "../components/refund/RefundModal";
 import HoldButton from "../components/hold/HoldButton";
-import LoadingSpinner from "../../../components/loading/LoadingSpinner"
+import { useLoading } from "/src/components/providers/LoadingProvider"; // ✅ 전역 로딩 훅
+import { useToast } from "/src/components/providers/ToastProvider";   // ✅ 전역 토스트 (선택)
 
 function SalesRegister() {
   const [showQuery, setShowQuery] = useState(false);
@@ -21,12 +22,16 @@ function SalesRegister() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidTotal, setPaidTotal] = useState(0);
   const [changeAmount, setChangeAmount] = useState(0);
-  const [showLoading, setShowLoading] = useState(false);
+
+  const { showLoading, hideLoading } = useLoading(); // ✅ 전역 로딩
+  const { showToast } = useToast(); // ✅ 토스트 (선택)
 
   // ✅ 주문 생성
   useEffect(() => {
     const initOrder = async () => {
       try {
+        showLoading("주문 정보를 불러오는 중입니다...");
+
         const saved = localStorage.getItem("currentOrder");
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -36,19 +41,20 @@ function SalesRegister() {
             if (data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
               setCurrentOrder(data);
               localStorage.setItem("currentOrder", JSON.stringify(data));
+              hideLoading();
               return;
             }
           }
         }
+
         const order = await createOrder();
         setCurrentOrder(order);
         localStorage.setItem("currentOrder", JSON.stringify(order));
       } catch (err) {
         console.error("❌ 주문 생성 오류:", err);
-        setShowLoading(true);
-        setTimeout(() => setShowLoading(false), 1500);
-
-        return;
+        showToast("주문 생성 중 오류가 발생했습니다 ❌", "error");
+      } finally {
+        hideLoading();
       }
     };
     initOrder();
@@ -57,7 +63,7 @@ function SalesRegister() {
   // ✅ 공통 상품 추가 로직 (검색 + 바코드)
   const handleAddProduct = async (product) => {
   if (!currentOrder?.orderId) {
-    alert("⛔ 주문이 아직 생성되지 않았습니다.");
+    showToast("⛔ 주문이 아직 생성되지 않았습니다.", "error");
     return;
   }
 
@@ -69,30 +75,35 @@ function SalesRegister() {
    }
     } catch (err) {
       console.error("❌ 상품 추가 실패:", err);
-      alert("상품을 추가하지 못했습니다.");
+      showToast("상품 추가 중 오류가 발생했습니다 ❌", "error");
     }
   };
 
   // ✅ 바코드 스캔
   const handleBarcodeScan = async (code) => {
     console.log("📡 스캔 감지:", code);
-    if (!currentOrder) return alert("⛔ 주문이 아직 생성되지 않았습니다.");
+    if (!currentOrder) return showToast("⛔ 주문이 아직 생성되지 않았습니다.", "error");
+
     try {
+      showLoading("상품 정보를 불러오는 중입니다...");
       const product = await getProductByBarcode(code);
-      if (!product) return alert("상품을 찾을 수 없습니다.");
+      if (!product) return showToast("상품을 찾을 수 없습니다.", "error");
       await handleAddProduct(product);
     } catch (e) {
       console.error("바코드 처리 오류:", e);
-      alert("바코드 처리 중 오류 발생");
+      showToast("바코드 처리 중 오류 발생 ❌", "error");
+    } finally {
+      hideLoading();
     }
   };
 
   // ✅ 결제 완료 후 초기화
   const handlePaymentSuccess = async () => {
-    if (!currentOrder) return alert("주문이 없습니다.");
+    if (!currentOrder) return showToast("주문이 없습니다.", "error");
     try {
+      showLoading("결제 처리 중입니다...");
       await completeOrder(currentOrder.orderId);
-      alert("💳 결제 완료 및 매출 반영됨!");
+      showToast("💳 결제 완료 및 매출 반영됨!", "success");
 
       localStorage.removeItem("currentOrder");
       const next = await createOrder();
@@ -106,7 +117,9 @@ function SalesRegister() {
       setChangeAmount(0);
     } catch (err) {
       console.error("결제 완료 오류:", err);
-      alert("결제 완료 중 오류 발생");
+      showToast("결제 완료 중 오류 발생 ❌", "error");
+    } finally {
+      hideLoading();
     }
   };
 
@@ -174,7 +187,7 @@ function SalesRegister() {
             </button>
 
             <HoldButton
-              onHold={async () => alert("보류 기능 구현 중")}
+              onHold={async () => showToast("보류 기능은 준비 중입니다.", "info")}
               className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
             >
               보류
@@ -216,7 +229,7 @@ function SalesRegister() {
           onClose={() => setShowRefund(false)}
           onRefundComplete={() => {
             setShowRefund(false);
-            alert("✅ 환불 완료되었습니다.");
+            showToast("✅ 환불 완료되었습니다.", "success");
           }}
         />
       )}
