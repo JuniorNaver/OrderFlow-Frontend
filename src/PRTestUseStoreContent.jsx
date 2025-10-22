@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { StoreCtx } from "./features/PR/common/PRStoreTest/PRTestStoreContext";
+import { StoreCtx } from "./PRTestStoreContext";
 
 export const useStoreContext = () => {
   const ctx = useContext(StoreCtx);

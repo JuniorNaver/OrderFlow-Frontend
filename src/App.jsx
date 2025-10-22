@@ -44,18 +44,6 @@ import DisposalView from "./features/STK/components/DisposalView";
 import POSDashboard from "./features/SD/pages/POSDashboard";
 import SalesRegister from "./features/SD/pages/SalesRegister";
 
-// 전역 UI
-import Header from "./components/Header";
-
-// 메뉴 데이터
-import posMenus from "./components/menus/posMenus";
-import stockMenus from "./components/menus/stockMenus";
-
-import { QueryClient } from "@tanstack/react-query";
-
-
-// React Query Client (전역)
-const queryClient = new QueryClient();
 
 function App() {
   // ----------------------------------------------------
