@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAccounts, createAccount, updateAccount, deleteAccount } from '../api/AdminService'; 
-import AccountCreateModal from '../modals/AccountCreateModal'; 
-import AccountEditModal from '../modals/AccountEditModal';   
-import '../styles/AccountManage.css'; 
-import { Edit, Trash2, UserPlus, Search } from 'lucide-react'; 
+import { fetchAccounts, createAccount, updateAccount, deleteAccount } from '../api/AdminService';
+import AccountCreateModal from '../modals/AccountCreateModal';
+import AccountEditModal from '../modals/AccountEditModal';
+import '../styles/AccountManage.css';
+import { Edit, Trash2, UserPlus, Search } from 'lucide-react';
+import MiniLoader from '../../../components/loading/MiniLoader';
 
 // ⭐️ 백엔드 RoleType Enum의 roleId와 description 매핑
 const ROLE_OPTIONS = [
@@ -58,22 +59,22 @@ const AccountManage = () => {
         loadAccounts(searchTerm);
     };
 
-   // [C] 계정 생성 로직
+    // [C] 계정 생성 로직
     const handleCreate = async (formData) => {
-       try {
+        try {
             const createData = {
-            userId: formData.userId,
-            password: formData.password,
-            name: formData.name,
-            email: formData.email,
-            workspace: formData.workspace,
-            // ⭐️ 백엔드 DTO 필드명인 'roleId'로 전송 (프론트엔드 폼 필드명은 'position' 가정)
-            roleId: formData.position, 
-            storeId: Number(formData.storeId) || null, // ⭐️ null 처리 추가 (storeId가 없을 수 있음)
-            enabled: formData.enabled
-        };
-        
-        const createdUser = await createAccount(createData);
+                userId: formData.userId,
+                password: formData.password,
+                name: formData.name,
+                email: formData.email,
+                workspace: formData.workspace,
+                // ⭐️ 백엔드 DTO 필드명인 'roleId'로 전송 (프론트엔드 폼 필드명은 'position' 가정)
+                roleId: formData.position,
+                storeId: Number(formData.storeId) || null, // ⭐️ null 처리 추가 (storeId가 없을 수 있음)
+                enabled: formData.enabled
+            };
+
+            const createdUser = await createAccount(createData);
             alert(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`);
             setIsCreateModalOpen(false);
             loadAccounts();
@@ -95,7 +96,7 @@ const AccountManage = () => {
         setIsEditModalOpen(true);
     };
 
-    
+
     const handleUpdate = async (userId, updateData) => {
         try {
             const updatedUser = await updateAccount(userId, {
@@ -127,7 +128,7 @@ const AccountManage = () => {
         try {
             await deleteAccount(userId);
             alert(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`);
-            setAccounts(accounts.filter(acc => acc.userId !== userId)); 
+            setAccounts(accounts.filter(acc => acc.userId !== userId));
 
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
@@ -154,16 +155,16 @@ const AccountManage = () => {
                         <Search size={18} /> 검색
                     </button>
                 </form>
-                <button 
-                    onClick={() => { setIsCreateModalOpen(true); setError(null); }} 
+                <button
+                    onClick={() => { setIsCreateModalOpen(true); setError(null); }}
                     className="create-button"
                 >
                     <UserPlus size={18} /> 새 계정 생성
                 </button>
             </div>
 
-            {isLoading && <div className="loading-spinner">데이터를 불러오는 중입니다...</div>}
-            
+            {isLoading && <div className="flex justify-center items-center min-h-[150px]"> <MiniLoader message="지점 정보를 불러오는 중..." /></div>}
+
             {!isLoading && (
                 <div className="table-wrapper">
                     <table className="account-table">
@@ -173,9 +174,9 @@ const AccountManage = () => {
                                 <th>이름</th>
                                 <th>이메일</th>
                                 <th>워크스페이스</th>
-                                <th>직책</th> 
+                                <th>직책</th>
                                 <th>점포 ID</th>
-                                <th>활성화</th> 
+                                <th>활성화</th>
                                 <th>액션</th>
                             </tr>
                         </thead>
@@ -186,20 +187,20 @@ const AccountManage = () => {
                                         <td>{account.userId}</td>
                                         <td>{account.name}</td>
                                         <td>{account.email}</td>
-                                        <td>{account.workspace}</td> 
+                                        <td>{account.workspace}</td>
                                         <td>{getRoleDescription(account.position)}</td> {/* ⭐️ 변환하여 표시 */}
-                                        <td>{account.storeId}</td> 
-                                        <td>{account.enabled ? 'Y' : 'N'}</td> 
+                                        <td>{account.storeId}</td>
+                                        <td>{account.enabled ? 'Y' : 'N'}</td>
                                         <td className="action-buttons">
-                                            <button 
-                                                onClick={() => handleEditClick(account)} 
+                                            <button
+                                                onClick={() => handleEditClick(account)}
                                                 className="edit-button"
                                                 title="수정"
                                             >
                                                 <Edit size={16} />
                                             </button>
-                                            <button 
-                                                onClick={() => handleDelete(account.userId)} 
+                                            <button
+                                                onClick={() => handleDelete(account.userId)}
                                                 className="delete-button"
                                                 title="삭제"
                                             >
@@ -219,10 +220,10 @@ const AccountManage = () => {
             )}
 
             {/* 모달 컴포넌트 */}
-            <AccountCreateModal 
-                isOpen={isCreateModalOpen} 
-                onClose={() => { setIsCreateModalOpen(false); setError(null); }} 
-                onCreate={handleCreate} 
+            <AccountCreateModal
+                isOpen={isCreateModalOpen}
+                onClose={() => { setIsCreateModalOpen(false); setError(null); }}
+                onCreate={handleCreate}
             />
 
             {selectedAccount && (

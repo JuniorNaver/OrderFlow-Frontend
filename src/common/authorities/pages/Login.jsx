@@ -1,12 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import '../styles/Login.css';
+import React, { useState, useCallback } from "react";
+import { useAuth } from "../component/useAuth";
+import { Lock, Mail, User } from "lucide-react";
 
-// 💡 useAuth 훅 임포트
-import { useAuth } from '../component/useAuth';
-
-
-// ⭐️ API 기본 URL 정의 (PasswordResetModal에서 사용)
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = "http://localhost:8080";
 
 // =========================================================================
 // 비밀번호 초기화 팝업 컴포넌트 (API 연결)
@@ -58,43 +54,56 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="modal-backdrop">
-            <div className="modal-content">
-                <h3>비밀번호 초기화 요청</h3>
-                
-                {/* ⭐️ 메시지 표시 */}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+                <h3 className="text-lg font-semibold mb-4 text-center">비밀번호 초기화</h3>
+
                 {message && (
-                    <p className={`status-message ${isSuccess ? 'success' : 'error'}`}>
+                    <div
+                        className={`mb-3 text-sm text-center ${isSuccess ? "text-green-600" : "text-red-500"
+                            }`}
+                    >
                         {message}
-                    </p>
+                    </div>
                 )}
 
-                <form onSubmit={handleResetSubmit}>
-                    <div className="input-group">
-                        <label htmlFor="reset-id">아이디:</label>
-                        <input 
-                            id="reset-id"
-                            type="text" 
-                            value={id} 
-                            onChange={(e) => setId(e.target.value)} 
-                            required 
+                <form onSubmit={handleResetSubmit} className="space-y-3">
+                    <div>
+                        <label className="text-sm text-gray-600">아이디</label>
+                        <input
+                            type="text"
+                            value={id}
+                            onChange={(e) => setId(e.target.value)}
+                            className="w-full border rounded-md p-2 mt-1 text-sm"
+                            required
                         />
                     </div>
-                    
-                    <div className="input-group">
-                        <label htmlFor="reset-email">email:</label>
-                        <input 
-                            id="reset-email"
-                            type="email" 
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            required 
+
+                    <div>
+                        <label className="text-sm text-gray-600">이메일</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full border rounded-md p-2 mt-1 text-sm"
+                            required
                         />
                     </div>
-                    
-                    <div className="button-group">
-                        <button type="submit">요청</button>
-                        <button type="button" onClick={handleClose}>닫기</button>
+
+                    <div className="flex gap-2 justify-end pt-3">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="px-3 py-1.5 rounded-md border text-gray-600 hover:bg-gray-50"
+                        >
+                            닫기
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                            요청
+                        </button>
                     </div>
                 </form>
             </div>
@@ -102,87 +111,100 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
     );
 };
 
-// =========================================================================
-// 메인 로그인 컴포넌트 (useAuth 통합)
-// =========================================================================
+// =====================================================
+// 🧭 로그인 메인 페이지
+// =====================================================
 const LoginPage = () => {
-    // 💡 useAuth 훅을 사용하여 login 함수 가져오기
-    const { login } = useAuth(); 
+    const { login } = useAuth();
 
-    const [userId, setUserId] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [userId, setUserId] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // ⭐️ 로그인 처리 핸들러 (useAuth 연결)
-    const handleLoginSubmit = useCallback(async (e) => {
-        e.preventDefault();
-        setError('');
-
-        try {
-            // login 함수 내부에서 API 호출, 토큰 저장 및 페이지 이동이 모두 처리됩니다.
-            await login(userId, password); 
-
-        } catch (err) {
-            console.error('로그인 오류:', err); 
-            // AuthService에서 던져진 오류 메시지를 표시합니다.
-            const errorMessage = err.response?.data?.message || err.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.';
-            setError(errorMessage);
-        }
-
-    }, [userId, password, login]); // 의존성 배열 유지
+    const handleLoginSubmit = useCallback(
+        async (e) => {
+            e.preventDefault();
+            setError("");
+            try {
+                await login(userId, password);
+            } catch (err) {
+                const errorMessage =
+                    err.response?.data?.message ||
+                    err.message ||
+                    "로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.";
+                setError(errorMessage);
+            }
+        },
+        [userId, password, login]
+    );
 
     return (
-        <div className="login-container">
-            <h1>login</h1>
-            <form onSubmit={handleLoginSubmit} className="login-form">
-                
-                <div className="input-group">
-                    <label htmlFor="user-id">ID:</label>
-                    <input
-                        id="user-id"
-                        type="text"
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                        required
-                    />
+        <>
+            <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
+                <div className="text-center mb-6">
+                    <div className="flex justify-center items-center gap-2">
+                        <Lock size={28} className="text-blue-600" />
+                        <h1 className="text-2xl font-bold text-gray-800">OrderFlow 로그인</h1>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">ERP 통합 관리 시스템</p>
                 </div>
 
-                <div className="input-group">
-                    <label htmlFor="password">PW:</label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                
-                {error && <p className="error-message">{error}</p>}
-                
-                <div className="button-group">
-                    <button type="submit" className="login-button">로그인</button>
-                    
-                    {/* 비밀번호 초기화 팝업 열기 버튼 */}
-                    <button 
-                        type="button" 
-                        onClick={() => setIsModalOpen(true)} 
-                        className="reset-button"
+                {error && (
+                    <div className="bg-red-50 text-red-600 text-sm p-2 rounded-md mb-4 border border-red-200">
+                        ⚠ {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                        <label className="text-sm text-gray-600 flex items-center gap-2">
+                            <User size={14} /> 아이디
+                        </label>
+                        <input
+                            type="text"
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            required
+                            className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            placeholder="아이디를 입력하세요"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-sm text-gray-600 flex items-center gap-2">
+                            <Mail size={14} /> 비밀번호
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            placeholder="비밀번호를 입력하세요"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="w-full bg-blue-600 text-white py-2.5 rounded-md hover:bg-blue-700 font-semibold transition-colors"
                     >
-                        비밀번호
-                        <br /> 
-                        초기화
+                        로그인
+                    </button>
+                </form>
+
+                <div className="text-right mt-3">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="text-sm text-blue-600 hover:underline"
+                    >
+                        비밀번호 초기화
                     </button>
                 </div>
-            </form>
-            
-            {/* 비밀번호 초기화 모달 컴포넌트 */}
-            <PasswordResetModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-            />
-        </div>
+            </div>
+
+            <PasswordResetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        </>
     );
 };
 

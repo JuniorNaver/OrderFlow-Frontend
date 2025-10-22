@@ -3,26 +3,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Save, X } from "lucide-react";
 import storeApi from "../api/storeApi";
 import { useToast } from "/src/components/providers/ToastProvider";
+import MiniLoader from "/src/components/loading/MiniLoader";
 import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
 
 const StoreEnvTab = ({ user }) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState(null);
-
   const storeId = user?.storeId;
 
   // ✅ 점포 운영환경 조회
   const { data: store, isLoading } = useQuery({
     queryKey: ["store-env", storeId],
-    queryFn: () => storeApi.getEnv(storeId),
+    queryFn: async () => await storeApi.getEnv(storeId),
     enabled: !!storeId,
   });
 
   // ✅ 운영환경 수정
   const updateStore = useMutation({
-    mutationFn: (dto) => storeApi.updateEnv(storeId, dto),
+    mutationFn: async (dto) => await storeApi.updateEnv(storeId, dto),
     onSuccess: () => {
       queryClient.invalidateQueries(["store-env", storeId]);
       showToast("운영환경이 저장되었습니다 ✅", "success");
@@ -65,14 +66,20 @@ const StoreEnvTab = ({ user }) => {
     updateStore.mutate(sanitizeForUpdate(updated));
   };
 
-  if (!user)
-    return <p className="text-sm text-gray-500">사용자 정보를 불러오는 중...</p>;
-  if (!storeId)
-    return <p className="text-sm text-gray-500">지점이 연결되지 않았습니다.</p>;
-  if (isLoading)
-    return <p className="text-sm text-gray-500">불러오는 중...</p>;
-  if (!store)
-    return <p className="text-sm text-gray-500">점포 설정 정보가 없습니다.</p>;
+  // ✅ 내부 로딩 처리
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <MiniLoader message="점포 운영환경 정보를 불러오는 중입니다..." />
+      </div>
+    );
+  }
+
+  if (!store) {
+    return (
+      <p className="text-sm text-gray-500">점포 설정 정보가 없습니다.</p>
+    );
+  }
 
   // ✅ 날짜 포맷
   const formatDate = (dateStr) => {
@@ -123,7 +130,6 @@ const StoreEnvTab = ({ user }) => {
           </button>
         </div>
       ) : (
-        // 수정 모드
         <div className="border-t pt-3 space-y-2">
           {[
             { name: "ownerName", label: "점장명" },
@@ -163,7 +169,7 @@ const StoreEnvTab = ({ user }) => {
   );
 };
 
-// 🔹 버튼 컴포넌트 (AdminTab 스타일 재사용)
+// 🔹 버튼 컴포넌트
 const Button = ({ color, icon, children, ...props }) => {
   const colors = {
     green: "bg-green-600 hover:bg-green-700 text-white",

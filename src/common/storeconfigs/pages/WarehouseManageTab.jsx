@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import storeApi from "../api/storeApi.js";
 import { useToast } from "/src/components/providers/ToastProvider";
+import MiniLoader from "/src/components/loading/MiniLoader";
 
 const WarehouseManageTab = ({ storeId, mode }) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
   const [form, setForm] = useState({
     ambientCapacity: "",
     chilledCapacity: "",
@@ -15,7 +17,10 @@ const WarehouseManageTab = ({ storeId, mode }) => {
   // ✅ 기존 데이터 불러오기
   const { data: store, isLoading } = useQuery({
     queryKey: ["storeCapacity", storeId],
-    queryFn: () => storeApi.getById(storeId).then((res) => res.data),
+    queryFn: async () => {
+      const res = await storeApi.getById(storeId);
+      return res.data;
+    },
     enabled: !!storeId,
   });
 
@@ -37,13 +42,13 @@ const WarehouseManageTab = ({ storeId, mode }) => {
 
   // ✅ 저장 처리
   const updateCapacity = useMutation({
-    mutationFn: (data) => storeApi.updateCapacity(storeId, data),
+    mutationFn: async (data) => await storeApi.updateCapacity(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["storeCapacity", storeId]);
-      showToast("창고 용량이 저장되었습니다.", "success");
+      showToast("창고 용량이 저장되었습니다 ✅", "success");
     },
     onError: () => {
-      showToast("저장 중 오류가 발생했습니다.", "error");
+      showToast("저장 중 오류가 발생했습니다 ❌", "error");
     },
   });
 
@@ -52,7 +57,14 @@ const WarehouseManageTab = ({ storeId, mode }) => {
     updateCapacity.mutate(form);
   };
 
-  if (isLoading) return <p>로딩 중...</p>;
+  // ✅ 내부 로딩 표시
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <MiniLoader message="창고 용량 정보를 불러오는 중입니다..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -73,7 +85,9 @@ const WarehouseManageTab = ({ storeId, mode }) => {
               onChange={handleChange}
               readOnly={mode === "user"}
               className={`w-full border rounded-md px-3 py-2 ${
-                mode === "user" ? "bg-gray-100 text-gray-500" : "focus:ring-blue-500 focus:border-blue-500"
+                mode === "user"
+                  ? "bg-gray-100 text-gray-500"
+                  : "focus:ring-blue-500 focus:border-blue-500"
               }`}
             />
           </div>
@@ -82,14 +96,16 @@ const WarehouseManageTab = ({ storeId, mode }) => {
         {mode === "admin" && (
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+            className={`w-full py-2 rounded-md text-sm font-medium text-white ${
+              updateCapacity.isPending
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            저장하기
+            {updateCapacity.isPending ? "저장 중..." : "저장하기"}
           </button>
         )}
       </form>
-
-      {toast && <Toast type={toast.type} message={toast.message} />}
     </div>
   );
 };
