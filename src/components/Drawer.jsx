@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { X, ChevronDown } from "lucide-react";
 import Logo from "./Logo";
+import AccountInfoCard from "../common/authorities/pages/AccountInfoCard";
 
 export default function Drawer({ open, onClose, isPOS, togglePOS, menus }) {
   const [openMenus, setOpenMenus] = useState({});
@@ -113,6 +114,9 @@ export default function Drawer({ open, onClose, isPOS, togglePOS, menus }) {
             </div>
           </div>
         </div>
+
+        {/* ✅ 계정 정보 카드 추가 */}
+        <AccountInfoCard />
 
         {/* 메뉴 */}
         <nav className="flex flex-col gap-2 relative">
