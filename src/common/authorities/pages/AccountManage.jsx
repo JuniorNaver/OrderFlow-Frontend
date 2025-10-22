@@ -1,253 +1,236 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import AccountCreateModal from '../modals/AccountCreateModal';
-import AccountEditModal from '../modals/AccountEditModal';
+import React, { useState, useEffect } from 'react';
+import { fetchAccounts, createAccount, updateAccount, deleteAccount } from '../api/AdminService'; 
+import AccountCreateModal from '../modals/AccountCreateModal'; 
+import AccountEditModal from '../modals/AccountEditModal';   
+import '../styles/AccountManage.css'; 
+import { Edit, Trash2, UserPlus, Search } from 'lucide-react'; 
 
-const API_URL = '/api/admin/users';
+// ⭐️ 백엔드 RoleType Enum의 roleId와 description 매핑
+const ROLE_OPTIONS = [
+    { id: 'ROLE_CLERK', desc: '점원' },
+    { id: 'ROLE_MANAGER', desc: '점장' },
+    { id: 'ROLE_ADMIN', desc: '최고 관리자' },
+];
 
-// 💡 경고/확인 메시지 출력을 위한 임시 함수 (alert/confirm 대체)
-const showMessage = (message, isConfirm = false) => {
-    console.log(`[Message Box] ${message}`);
-    if (isConfirm) {
-        // 실제 환경에서는 사용자 정의 모달을 띄워야 합니다.
-        // 현재는 콘솔 메시지로 대체하며, true를 반환하여 작업을 진행합니다.
-        return true; 
-    }
-    // 실제 환경에서는 사용자 정의 모달을 띄워야 합니다.
+// roleId를 description으로 변환하는 헬퍼 함수
+const getRoleDescription = (roleId) => {
+    const role = ROLE_OPTIONS.find(r => r.id === roleId);
+    return role ? role.desc : roleId;
 };
 
 
 const AccountManage = () => {
-    // ⭐️ 상태 관리
     const [accounts, setAccounts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingAccount, setEditingAccount] = useState(null);
-    const [selectedIds, setSelectedIds] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedAccount, setSelectedAccount] = useState(null);
 
-    // 💡 백엔드에서 계정 목록을 불러오는 함수
-    const fetchAccounts = useCallback(async (currentSearchTerm = '') => {
+    // [R] 사용자 목록 조회 및 검색
+    const loadAccounts = async (search = '') => {
         setIsLoading(true);
+        setError(null);
         try {
-            const params = currentSearchTerm ? { search: currentSearchTerm } : {};
-            const response = await axios.get(API_URL, { params });
-            
-            // API 응답 구조에 맞게 배열을 추출합니다.
-            const accountList = response.data.data || response.data; 
-
-            if (Array.isArray(accountList)) {
-                setAccounts(accountList);
-            } else {
-                // 응답이 객체나 null인 경우 안전하게 빈 배열로 설정합니다.
-                console.error("API 응답 구조 오류: 배열이 아닌 데이터를 받았습니다.", response.data);
-                setAccounts([]); 
-            }
-
-        } catch (error) {
-            console.error('계정 목록 불러오기 실패:', error.response || error);
-            const message = error.response?.data?.message || '계정 목록을 불러오는 데 실패했습니다.';
-            showMessage(`오류: ${message}`);
-            setAccounts([]); // 실패 시에도 안전하게 빈 배열로 설정
+            const data = await fetchAccounts(search);
+            setAccounts(data.map(acc => ({
+                ...acc,
+                userId: acc.userId || acc.accountId,
+                enabled: acc.enabled !== undefined ? acc.enabled : true,
+            })));
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
+            setError(`계정 목록 조회에 실패했습니다: ${errorMessage}`);
+            setAccounts([]);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    useEffect(() => {
+        loadAccounts();
     }, []);
 
-    // 💡 searchTerm이 변경될 때마다 API 호출 (검색 기능)
-    useEffect(() => {
-        // 실제 운영 환경에서는 debounce를 적용하여 API 호출 빈도를 줄이는 것이 좋습니다.
-        fetchAccounts(searchTerm);
-    }, [searchTerm, fetchAccounts]);
+    const handleSearch = (e) => {
+        e.preventDefault();
+        loadAccounts(searchTerm);
+    };
 
-    // ⭐️ 모달 열기/닫기 함수
-    const openCreateModal = () => setIsCreateModalOpen(true);
-    const closeCreateModal = () => setIsCreateModalOpen(false);
+   // [C] 계정 생성 로직
+    const handleCreate = async (formData) => {
+       try {
+            const createData = {
+            userId: formData.userId,
+            password: formData.password,
+            name: formData.name,
+            email: formData.email,
+            workspace: formData.workspace,
+            // ⭐️ 백엔드 DTO 필드명인 'roleId'로 전송 (프론트엔드 폼 필드명은 'position' 가정)
+            roleId: formData.position, 
+            storeId: Number(formData.storeId) || null, // ⭐️ null 처리 추가 (storeId가 없을 수 있음)
+            enabled: formData.enabled
+        };
+        
+        const createdUser = await createAccount(createData);
+            alert(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`);
+            setIsCreateModalOpen(false);
+            loadAccounts();
 
-    const openEditModal = (account) => {
-        setEditingAccount(account);
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
+            setError(`계정 생성 실패: ${errorMessage}`);
+        }
+    };
+
+    // [U] 계정 수정 로직
+    const handleEditClick = (account) => {
+        setSelectedAccount({
+            ...account,
+            userId: account.userId || account.accountId,
+            enabled: account.enabled !== undefined ? account.enabled : true,
+            position: account.position || '', // roleId가 없으면 빈 문자열
+        });
         setIsEditModalOpen(true);
     };
-    const closeEditModal = () => {
-        setEditingAccount(null);
-        setIsEditModalOpen(false);
-    };
 
-    // ⭐️ 계정 생성 처리 함수 (API 연동)
-    const handleCreateAccount = async (newAccountData) => {
+    
+    const handleUpdate = async (userId, updateData) => {
         try {
-            const response = await axios.post(API_URL, newAccountData);
-            showMessage(`계정 '${response.data.accountId}' 생성 완료!`);
-            // 생성 후, 현재 검색어 기준으로 목록을 다시 불러옴
-            fetchAccounts(searchTerm); 
-            closeCreateModal();
-        } catch (error) {
-            console.error('계정 생성 실패:', error);
-            const message = error.response?.data?.message || '계정 생성에 실패했습니다.';
-            showMessage(`오류: ${message}`);
+            const updatedUser = await updateAccount(userId, {
+                name: updateData.name,
+                workspace: updateData.workspace,
+                email: updateData.email,
+                roleId: updateData.position, // ⭐️ 'position' 대신 'roleId'로 전송해야 백엔드 DTO와 일치 (UserUpdateRequestDTO 확인 필요)
+                storeId: updateData.storeId ? Number(updateData.storeId) : null,
+                enabled: updateData.enabled
+            });
+
+            alert(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`);
+            setIsEditModalOpen(false);
+            setSelectedAccount(null);
+            loadAccounts();
+
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
+            setError(`계정 수정 실패: ${errorMessage}`);
         }
     };
 
-    // ⭐️ 계정 수정 처리 함수 (API 연동)
-    const handleEditAccount = async (updatedAccountData) => {
-        const { id, ...dataToSend } = updatedAccountData;
-        try {
-            await axios.put(`${API_URL}/${id}`, dataToSend);
-            
-            // 성공 시, 로컬 상태만 업데이트하여 UX 개선
-            setAccounts(prevAccounts =>
-                prevAccounts.map(account =>
-                    account.id === id ? { ...account, ...dataToSend } : account
-                )
-            );
-            showMessage(`계정 ID ${id} 수정 완료!`);
-            closeEditModal();
-        } catch (error) {
-            console.error('계정 수정 실패:', error);
-            const message = error.response?.data?.message || '계정 수정에 실패했습니다.';
-            showMessage(`오류: ${message}`);
-        }
-    };
-
-    // ⭐️ 계정 삭제 처리 함수 (API 연동)
-    const handleDeleteSelected = async () => {
-        if (selectedIds.length === 0) {
-            showMessage('삭제할 계정을 선택해주세요.');
+    // [D] 단일 계정 삭제 로직
+    const handleDelete = async (userId) => {
+        if (!window.confirm(`정말로 계정 ID: ${userId} 를 삭제하시겠습니까?`)) {
             return;
         }
 
-        // 💡 window.confirm 대신 커스텀 메시지 함수 사용
-        const isConfirmed = showMessage(`${selectedIds.length}개의 계정을 정말 삭제하시겠습니까?`, true); 
+        try {
+            await deleteAccount(userId);
+            alert(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`);
+            setAccounts(accounts.filter(acc => acc.userId !== userId)); 
 
-        if (isConfirmed) {
-            try {
-                // 백엔드 구현에 따라, DELETE 요청의 본문에 ID 목록을 담아 보냅니다.
-                await axios.delete(`${API_URL}/batch`, {
-                    data: { ids: selectedIds }
-                });
-
-                // 성공 시, 로컬 상태 업데이트 및 선택 초기화
-                setAccounts(prevAccounts => prevAccounts.filter(account => !selectedIds.includes(account.id)));
-                setSelectedIds([]);
-                showMessage(`${selectedIds.length}개의 계정이 삭제되었습니다.`);
-            } catch (error) {
-                console.error('계정 삭제 실패:', error);
-                const message = error.response?.data?.message || '계정 삭제에 실패했습니다.';
-                showMessage(`오류: ${message}`);
-            }
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
+            setError(`계정 삭제 실패: ${errorMessage}`);
         }
     };
 
-    // ⭐️ 체크박스 선택 처리
-    const handleSelect = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
-    };
-
-    // ⭐️ 전체 선택/해제
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            // accounts가 배열이 아닐 경우를 대비하여 안전 검사
-            setSelectedIds((Array.isArray(accounts) ? accounts : []).map(account => account.id));
-        } else {
-            setSelectedIds([]);
-        }
-    };
-    
     return (
         <div className="account-manage-container">
-            <h1>계정 관리</h1>
+            <h1 className="page-title">사용자 계정 관리</h1>
 
-            <div className="search-area">
-                <input
-                    type="text"
-                    placeholder="계정 검색 (ID, 이름, 점포 등)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <button onClick={() => fetchAccounts(searchTerm)}>새로고침/검색</button> 
+            {error && <div className="error-message">{error}</div>}
+
+            <div className="control-panel">
+                <form onSubmit={handleSearch} className="search-form">
+                    <input
+                        type="text"
+                        placeholder="이름 또는 ID로 검색"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                    />
+                    <button type="submit" className="search-button" disabled={isLoading}>
+                        <Search size={18} /> 검색
+                    </button>
+                </form>
+                <button 
+                    onClick={() => { setIsCreateModalOpen(true); setError(null); }} 
+                    className="create-button"
+                >
+                    <UserPlus size={18} /> 새 계정 생성
+                </button>
             </div>
 
-            <div className="action-buttons">
-                <button onClick={openCreateModal} className="create-btn">생성</button>
-                <button onClick={handleDeleteSelected} className="delete-btn" disabled={selectedIds.length === 0}>삭제</button>
-            </div>
-
-            <table className="account-table">
-                <thead>
-                    <tr>
-                        <th>
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === accounts.length && accounts.length > 0}
-                                onChange={handleSelectAll}
-                            />
-                        </th>
-                        <th>ID</th>
-                        <th>아이디</th>
-                        <th>이름</th>
-                        <th>직급</th>
-                        <th>점포 ID</th>
-                        <th>이메일</th>
-                        <th>액션</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {isLoading ? (
-                        <tr>
-                            <td colSpan="8" style={{ textAlign: 'center' }}>데이터를 불러오는 중입니다...</td>
-                        </tr>
-                    ) : (accounts && accounts.length === 0) ? (
-                        <tr>
-                            <td colSpan="8" style={{ textAlign: 'center' }}>검색 결과 또는 등록된 계정이 없습니다.</td>
-                        </tr>
-                    ) : (
-                        // 🚨 안전 장치 적용: 배열이 아닐 경우 빈 배열로 대체 (이전 오류 해결)
-                        // 💡 불규칙한 공백 정리 완료
-                        (Array.isArray(accounts) ? accounts : []).map((account) => (
-                            <tr key={account.id}>
-                                <td>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds.includes(account.id)}
-                                        onChange={() => handleSelect(account.id)}
-                                    />
-                                </td>
-                                <td>{account.id}</td>
-                                <td>{account.accountId}</td>
-                                <td>{account.name}</td>
-                                <td>{account.position}</td>
-                                <td>{account.storeId}</td>
-                                <td>{account.email}</td>
-                                <td>
-                                    <button
-                                        className="edit-btn"
-                                        onClick={() => openEditModal(account)}
-                                    >
-                                        수정
-                                    </button>
-                                </td>
+            {isLoading && <div className="loading-spinner">데이터를 불러오는 중입니다...</div>}
+            
+            {!isLoading && (
+                <div className="table-wrapper">
+                    <table className="account-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>이메일</th>
+                                <th>워크스페이스</th>
+                                <th>직책</th> 
+                                <th>점포 ID</th>
+                                <th>활성화</th> 
+                                <th>액션</th>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        </thead>
+                        <tbody>
+                            {accounts.length > 0 ? (
+                                accounts.map((account) => (
+                                    <tr key={account.userId || account.name + account.email}>
+                                        <td>{account.userId}</td>
+                                        <td>{account.name}</td>
+                                        <td>{account.email}</td>
+                                        <td>{account.workspace}</td> 
+                                        <td>{getRoleDescription(account.position)}</td> {/* ⭐️ 변환하여 표시 */}
+                                        <td>{account.storeId}</td> 
+                                        <td>{account.enabled ? 'Y' : 'N'}</td> 
+                                        <td className="action-buttons">
+                                            <button 
+                                                onClick={() => handleEditClick(account)} 
+                                                className="edit-button"
+                                                title="수정"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(account.userId)} 
+                                                className="delete-button"
+                                                title="삭제"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="8" className="no-data">등록된 계정이 없거나 검색 결과가 없습니다.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {/* AccountCreateModal 및 AccountEditModal은 외부에서 정의되었다고 가정하고 렌더링합니다. */}
-            <AccountCreateModal
-                isOpen={isCreateModalOpen}
-                onClose={closeCreateModal}
-                onCreate={handleCreateAccount}
+            {/* 모달 컴포넌트 */}
+            <AccountCreateModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => { setIsCreateModalOpen(false); setError(null); }} 
+                onCreate={handleCreate} 
             />
 
-            {editingAccount && (
+            {selectedAccount && (
                 <AccountEditModal
                     isOpen={isEditModalOpen}
-                    onClose={closeEditModal}
-                    onSave={handleEditAccount}
-                    accountData={editingAccount}
+                    onClose={() => { setIsEditModalOpen(false); setSelectedAccount(null); setError(null); }}
+                    onSave={handleUpdate}
+                    accountData={selectedAccount}
                 />
             )}
         </div>

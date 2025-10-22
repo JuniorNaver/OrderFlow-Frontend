@@ -1,102 +1,95 @@
 import React, { useState } from 'react';
-// 모달 스타일을 적용하기 위해 Modal.css를 사용할 수 있습니다.
+import '../styles/Modal.css';
+
+// ⭐️ 백엔드 RoleType Enum의 roleId와 description 매핑
+const ROLE_OPTIONS = [
+    { id: 'ROLE_CLERK', desc: '점원' },
+    { id: 'ROLE_MANAGER', desc: '점장' },
+    { id: 'ROLE_ADMIN', desc: '최고 관리자' },
+];
 
 const AccountCreateModal = ({ isOpen, onClose, onCreate }) => {
-   const [formData, setFormData] = useState({
-        accountId: '',
+    const [formData, setFormData] = useState({
+        userId: '',      
         password: '',
         name: '',
-        storeId: '',
-        position: '점원',
         email: '',
+        storeId: '',     
+        position: '',    // ⭐️ 초기값은 Role ID (예: ROLE_CLERK)가 저장됨
+        workspace: '',   
+        enabled: true,   
     });
 
-    
-  if (!isOpen) return null;
+    if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData((prev) => ({ 
+            ...prev, 
+            [name]: type === 'checkbox' 
+                ? checked
+                : (name === 'storeId' && value !== '') ? Number(value) : value 
+        }));
+    };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // ⭐️ 유효성 검사 로직 추가 (예: 필수 필드 누락 여부 확인)
-    if (!formData.accountId || !formData.password || !formData.name || !formData.storeId) {
-        alert("필수 항목을 모두 입력해주세요.");
-        return;
-    }
-    
-    onCreate(formData); // 상위 컴포넌트(AccountManage)로 데이터 전달
-    setFormData({ // 폼 초기화
-        accountId: '',
-        password: '',
-        name: '',
-        storeId: '',
-        position: '점장',
-        email: '',
-    });
-  };
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        // 필수 필드 유효성 검사
+        if (!formData.userId || !formData.password || !formData.name || !formData.storeId || !formData.workspace || !formData.position) {
+            alert("필수 항목을 모두 입력해주세요."); 
+            return;
+        }
+        
+        // ⭐️ onCreate로 전송되는 formData.position에는 'ROLE_MANAGER', 'ROLE_CLERK' 등의 roleId가 담겨 있음
+        onCreate(formData); 
+        
+        // 폼 초기화
+        setFormData({ 
+            userId: '',
+            password: '',
+            name: '',
+            email: '',
+            storeId: '',
+            position: '',
+            workspace: '',
+            enabled: true,
+        });
+        onClose();
+    };
 
-  return (
-    <div className="modal-backdrop">
+    return (
+        <div className="modal-backdrop">
             <div className="modal-content">
-                <h2>계정 생성</h2>
+                <h2 className="modal-title">새 계정 생성</h2>
                 <form onSubmit={handleSubmit}>
                     
-                    {/* ⭐️ 아이디: input-group으로 감싸기 */}
                     <div className="input-group"> 
-                        <label>아이디</label>
-                        <input 
-                            type="text" 
-                            name="accountId" 
-                            value={formData.accountId} 
-                            onChange={handleChange} 
-                            placeholder="아이디" 
-                            required 
-                        />
+                        <label>아이디 (User ID)</label>
+                        <input type="text" name="userId" value={formData.userId} onChange={handleChange} placeholder="아이디" required />
                     </div>
                     
-                    {/* ⭐️ 비밀번호: input-group으로 감싸기 */}
-                    <div className="input-group"> 
-                        <label>비밀번호</label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            value={formData.password} 
-                            onChange={handleChange} 
-                            placeholder="비밀번호" 
-                            required 
-                        />
-                    </div>
-
-                    {/* ⭐️ 이름: input-group으로 감싸기 */}
                     <div className="input-group"> 
                         <label>이름</label>
-                        <input 
-                            type="text" 
-                            name="name" 
-                            value={formData.name} 
-                            onChange={handleChange} 
-                            placeholder="이름" 
-                            required 
-                        />
+                        <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="이름" required />
                     </div>
 
-                    {/* ⭐️ 점포 ID: input-group으로 감싸기 */}
+                    <div className="input-group"> 
+                        <label>비밀번호</label>
+                        <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="비밀번호" required />
+                    </div>
+
                     <div className="input-group"> 
                         <label>점포 ID</label>
-                        <input 
-                            type="text" 
-                            name="storeId" 
-                            value={formData.storeId} 
-                            onChange={handleChange} 
-                            placeholder="점포 ID" 
-                            required 
-                        />
+                        <input type="number" name="storeId" value={formData.storeId} onChange={handleChange} placeholder="점포 ID" required />
+                    </div>
+                    
+                    <div className="input-group">
+                        <label>워크스페이스</label>
+                        <input type="text" name="workspace" value={formData.workspace} onChange={handleChange} placeholder="워크스페이스 이름" required />
                     </div>
 
-                    {/* ⭐️ 직급(권한): input-group으로 감싸기 */}
+                    {/* ⭐️ 직급(권한) 드롭다운: value는 roleId, 보여주는 것은 description */}
                     <div className="input-group"> 
                         <label>직급 (권한)</label>
                         <select 
@@ -105,25 +98,33 @@ const AccountCreateModal = ({ isOpen, onClose, onCreate }) => {
                             onChange={handleChange}
                             required
                         >
-                            <option value="점원">점원</option>
-                            <option value="점장">점장</option>
+                            <option value="">-- 직급 선택 --</option> 
+                            {ROLE_OPTIONS.map(role => (
+                                <option key={role.id} value={role.id}> {/* ⭐️ value를 roleId로 설정 */}
+                                    {role.desc}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     
-                    {/* ⭐️ 이메일 (선택): input-group으로 감싸기 */}
                     <div className="input-group"> 
-                        <label>email</label>
+                        <label>이메일</label>
+                        <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="email" />
+                    </div>
+
+                    <div className="input-group checkbox-group"> 
                         <input 
-                            type="email" 
-                            name="email" 
-                            value={formData.email} 
+                            type="checkbox" 
+                            name="enabled" 
+                            checked={formData.enabled} 
                             onChange={handleChange} 
-                            placeholder="email"
+                            id="create-enabled"
                         />
+                        <label htmlFor="create-enabled">활성화 상태</label>
                     </div>
 
                     <div className="modal-actions">
-                        <button type="submit" className="submit-btn">생성</button>
+                        <button type="submit" className="submit-btn">계정 생성</button>
                         <button type="button" onClick={onClose} className="cancel-btn">취소</button>
                     </div>
                 </form>
