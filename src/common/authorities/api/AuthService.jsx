@@ -1,7 +1,7 @@
 import ApiClient from './ApiClient';
 
 // =================================================================
-// 🚀 1. 로그인 관련
+// 🚀 1. 로그인/인증 관련
 // =================================================================
 
 /**
@@ -40,7 +40,7 @@ export const loginUser = async (userId, password) => {
  * 이 함수는 토큰 유효성 검사 및 사용자 정보 로드에 사용됩니다.
  */
 export const getUserDetails = async () => {
-    // UserController.java의 @RequestMapping("/api/auth/users/me")와 일치하도록 경로 수정
+    // 이 경로는 이미 /auth/users/me로 잘 설정되어 있습니다.
     return await ApiClient.get('/auth/users/me'); 
 };
 
@@ -57,8 +57,31 @@ export const logoutUser = async () => {
     // 클라이언트 측에서는 AuthProvider에서 토큰 제거 및 상태 초기화를 수행합니다.
 };
 
+
 // =================================================================
-// 🔑 2. 비밀번호 재설정 관련
+// ⭐️ 2. MyPage (개인 정보 조회 및 수정) 관련: 경로 수정 완료 ⭐️
+// =================================================================
+
+/**
+ * [R] 현재 로그인된 사용자 본인의 상세 정보 (MyPage용)를 조회합니다.
+ */
+export const fetchMyInfo = async () => {
+    
+    const response = await ApiClient.get('/auth/users/me');
+    return response;
+};
+
+/**
+ * [U] 현재 로그인된 사용자 본인의 개인 정보 및 비밀번호를 수정합니다.
+ */
+export const updateMyInfo = async (updateData) => {
+    // ⭐️ 최종 수정: /api 접두사 제거
+    const response = await ApiClient.put('/auth/users/me', updateData);
+    return response;
+};
+
+// =================================================================
+// 🔑 3. 비밀번호 재설정 관련
 // =================================================================
 
 /**

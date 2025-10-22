@@ -114,6 +114,8 @@ export default function Drawer({ open, onClose, isPOS, togglePOS, menus }) {
           </div>
         </div>
 
+        
+
         {/* 메뉴 */}
         <nav className="flex flex-col gap-2 relative">
           {menus.map((menu) => {
