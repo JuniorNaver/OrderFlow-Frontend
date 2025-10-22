@@ -4,12 +4,12 @@ import RootProvider from "./common/RootProvider"; // ✅ 모든 Provider 통합
 import "./styles/App.css";
 
 // 공용 UI
-// import Header from "./components/Header";
+import Header from "./components/Header";
 import NotFound from "./components/error/NotFound";
 
 // 메뉴 데이터
-// import posMenus from "./components/menus/posMenus";
-// import stockMenus from "./components/menus/stockMenus";
+import posMenus from "./components/menus/posMenus";
+import stockMenus from "./components/menus/stockMenus";
 
 // 인증 관련
 import ProtectedRoute from "./common/authorities/component/ProtectedRoute";
@@ -30,7 +30,7 @@ import ProductDetailPage from "./features/PR/pages/ProductDetailPage";
 import ProductSearchPage from "./features/PR/pages/ProductSearchPage";
 import ShopPage from "./features/PR/pages/ShopPage";
 import POPage from "./features/PO/pages/POPage";
-import GRPage from "./features/GR/pages/GRPage";
+// import GRPage from "./features/GR/pages/GRPage";
 
 // STK 도메인
 import STKPage from "./features/STK/pages/STKPage";
@@ -43,6 +43,8 @@ import DisposalView from "./features/STK/components/DisposalView";
 // POS 도메인
 import POSDashboard from "./features/SD/pages/POSDashboard";
 import SalesRegister from "./features/SD/pages/SalesRegister";
+
+
 
 
 function App() {
@@ -160,12 +162,6 @@ function App() {
             {/* ---------------------------------------------------- */}
             <Route path="/sd" element={<POSDashboard />} />
             <Route path="/sd/sales" element={<SalesRegister />} />
-
-            {/* ---------------------------------------------------- */}
-            {/* GR (입고관리) */}
-            {/* ---------------------------------------------------- */}
-             <Route path="/gr" element={<GRPage />} />
-
           </Route>
         </Routes>
       </main>
