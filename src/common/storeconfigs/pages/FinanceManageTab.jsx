@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import storeApi from "../api/storeApi.js";
 import { useToast } from "/src/components/providers/ToastProvider";
+import MiniLoader from "/src/components/loading/MiniLoader";
 
 const FinanceManageTab = ({ storeId, mode }) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
   const [form, setForm] = useState({
     monthlyBudget: "",
     rentCost: "",
@@ -13,10 +15,13 @@ const FinanceManageTab = ({ storeId, mode }) => {
     otherCost: "",
   });
 
-  // ✅ 데이터 로드
+  // ✅ 데이터 로드 (전역 로딩 → 내부 미니 로더로 대체)
   const { data: store, isLoading } = useQuery({
     queryKey: ["storeFinance", storeId],
-    queryFn: () => storeApi.getById(storeId).then((res) => res.data),
+    queryFn: async () => {
+      const res = await storeApi.getById(storeId);
+      return res.data;
+    },
     enabled: !!storeId,
   });
 
@@ -39,13 +44,15 @@ const FinanceManageTab = ({ storeId, mode }) => {
 
   // ✅ 저장 처리
   const updateFinance = useMutation({
-    mutationFn: (data) => storeApi.updateFinance(storeId, data),
+    mutationFn: async (data) => {
+      return await storeApi.updateFinance(storeId, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["storeFinance", storeId]);
-      showToast("예산 및 고정비 정보가 저장되었습니다.", "success");
+      showToast("예산 및 고정비 정보가 저장되었습니다 ✅", "success");
     },
     onError: () => {
-      showToast("저장 중 오류가 발생했습니다.", "error");
+      showToast("저장 중 오류가 발생했습니다 ❌", "error");
     },
   });
 
@@ -54,7 +61,14 @@ const FinanceManageTab = ({ storeId, mode }) => {
     updateFinance.mutate(form);
   };
 
-  if (isLoading) return <p>로딩 중...</p>;
+  // ✅ 내부 로딩 애니메이션
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <MiniLoader message="예산 정보를 불러오는 중입니다..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -78,7 +92,9 @@ const FinanceManageTab = ({ storeId, mode }) => {
               onChange={handleChange}
               readOnly={mode === "user"}
               className={`w-full border rounded-md px-3 py-2 ${
-                mode === "user" ? "bg-gray-100 text-gray-500" : "focus:ring-blue-500 focus:border-blue-500"
+                mode === "user"
+                  ? "bg-gray-100 text-gray-500"
+                  : "focus:ring-blue-500 focus:border-blue-500"
               }`}
             />
           </div>
@@ -89,12 +105,10 @@ const FinanceManageTab = ({ storeId, mode }) => {
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
           >
-            저장하기
+            {updateFinance.isPending ? "저장 중..." : "저장하기"}
           </button>
         )}
       </form>
-
-      {toast && <Toast type={toast.type} message={toast.message} />}
     </div>
   );
 };

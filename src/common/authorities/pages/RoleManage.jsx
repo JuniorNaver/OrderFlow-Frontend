@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { RefreshCcw, Save, X } from 'lucide-react'; 
-// ✅ 경로 수정: RoleManage.jsx (pages)에서 constants.jsx (component)로 이동
 import { PERMISSIONS, ROLES } from '../component/constants'; 
-// 🔑 인증 토큰을 가져오기 위해 useAuth 훅 import
-import { useAuth } from '../component/useAuth'; // (프로젝트 구조에 맞게 수정 필요)
+import { useAuth } from '../component/useAuth';
+
+// ✅ 추가된 전역 훅
+import { useLoading } from '/src/components/providers/LoadingProvider';
+import { useToast } from '/src/components/providers/ToastProvider';
 
 // 백엔드 AdminRoleController와 일치하는 경로
 const API_URL = '/api/admin/roles/permissions';
@@ -26,12 +28,17 @@ const RoleManage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [status, setStatus] = useState({ message: '', type: '' });
     
-    // 🔑 useAuth 훅에서 JWT 토큰을 가져옵니다.
-    const { token } = useAuth(); 
+    // 🔑 인증 훅
+    const { token } = useAuth();
 
-    // 권한 목록 조회
+    // ✅ 전역 로딩/토스트 훅
+    const { showLoading, hideLoading } = useLoading();
+    const { showToast } = useToast();
+
+    // ------------------------------------------------------------------------
+    // ✅ 권한 목록 조회
+    // ------------------------------------------------------------------------
     const fetchPermissions = useCallback(async () => {
-        // 토큰이 없으면 API 요청을 시도하지 않고 에러 상태 설정
         if (!token) {
             setStatus({ message: '오류: 사용자 인증 토큰이 없습니다. 로그인 상태를 확인하세요.', type: 'error' });
             setIsLoading(false);
@@ -40,57 +47,55 @@ const RoleManage = () => {
 
         setIsLoading(true);
         setStatus({ message: '', type: '' });
+        showLoading('권한 정보를 불러오는 중입니다...'); // ✅ 로딩 시작
+
         try {
-            // 🔑 인증 헤더 설정
             const config = {
                 headers: {
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`
                 }
             };
-            
-            // 🔑 토큰을 포함하여 API 호출
+
             const response = await axios.get(API_URL, config);
-            
-            // ✅ 데이터 구조 오류 수정: 백엔드가 배열을 직접 반환하므로 response.data 사용
             const permissionArray = response.data;
-            
+
             if (!Array.isArray(permissionArray)) {
-                // 이 에러는 이제 서버가 HTML이 아닌 유효한 JSON을 반환할 때만 나타나야 합니다.
                 console.error("API 응답 구조 오류: 예상된 배열이 아닙니다.", response.data);
                 setStatus({ message: '데이터 로드 실패: 서버 응답이 유효한 목록 형태가 아닙니다.', type: 'error' });
+                showToast('서버 응답이 유효하지 않습니다 ❌', 'error'); // ✅ 토스트 추가
                 setIsLoading(false);
                 return;
             }
 
-            // ROLE_ADMIN 정보 (상수에서 가져온 최고 관리자)
             const adminRole = { 
                 roleId: ROLES.ADMIN.id, 
                 roleName: ROLES.ADMIN.name, 
                 ...PERMISSIONS.ADMIN 
             };
             
-            // 응답 데이터를 UI에 필요한 형태로 가공
             const fetchedData = permissionArray.map(item => ({
                 ...item,
                 roleName: ROLES[item.roleId.replace('ROLE_', '')]?.name || item.roleId
             }));
 
-            // 최종 목록 (ADMIN을 목록의 맨 앞에 고정)
             const finalPermissions = [adminRole, ...fetchedData.filter(item => item.roleId !== ROLES.ADMIN.id)];
 
             setOriginalPermissions(finalPermissions);
             setCurrentPermissions(finalPermissions);
             setStatus({ message: '최신 권한 데이터 로드 완료', type: 'success' });
+            showToast('✅ 권한 데이터 로드 완료', 'success'); // ✅ 토스트 추가
+
         } catch (error) {
             console.error('권한 조회 실패:', error.response || error);
-            
-            // 🔑 인증 및 권한 실패 시 오류 메시지
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                 setStatus({ message: '인증/권한 오류: 관리자 권한이 없거나 로그인이 만료되었습니다. (403/401)', type: 'error' });
+                showToast('인증 오류: 관리자 권한이 없거나 로그인 만료 ❌', 'error');
             } else {
                 setStatus({ message: '오류: 데이터 로드 실패, 서버 연결 또는 알 수 없는 문제.', type: 'error' });
+                showToast('데이터 로드 실패 (네트워크 오류)', 'error');
             }
         } finally {
+            hideLoading(); // ✅ 로딩 종료
             setIsLoading(false);
         }
     }, [token]); // token이 변경될 때마다 함수가 재생성되어야 합니다.
@@ -105,11 +110,11 @@ const RoleManage = () => {
         }
     }, [fetchPermissions, token, isLoading]); // token을 dependency에 추가
 
-    // 토글 스위치 변경 핸들러 (생략되지 않음)
+    // ------------------------------------------------------------------------
+    // ✅ 토글 스위치 변경 핸들러(생략되지 않음)
+    // ------------------------------------------------------------------------
     const handleToggle = (roleId, permissionKey) => {
-        // ROLE_ADMIN의 권한은 변경할 수 없음
         if (roleId === ROLES.ADMIN.id) return;
-
         setCurrentPermissions(prev => prev.map(role => 
             role.roleId === roleId 
                 ? { ...role, [permissionKey]: !role[permissionKey] } 
@@ -117,15 +122,19 @@ const RoleManage = () => {
         ));
     };
 
-    // 변경 사항 저장 핸들러 (PUT /api/admin/roles/permissions)
+    // ------------------------------------------------------------------------
+    // ✅ 변경 사항 저장 핸들러
+    // ------------------------------------------------------------------------
     const handleSave = async () => {
         if (!token) {
             setStatus({ message: '오류: 사용자 인증 토큰이 없습니다. 로그인 상태를 확인하세요.', type: 'error' });
+            showToast('로그인 상태를 확인하세요 ❌', 'error');
             return;
         }
 
         setIsLoading(true);
         setStatus({ message: '변경 사항 저장 중...', type: 'info' });
+        showLoading('변경 사항을 저장 중입니다...'); // ✅ 로딩 시작
 
         const updateDtos = currentPermissions
             .filter(role => role.roleId !== ROLES.ADMIN.id) 
@@ -136,44 +145,52 @@ const RoleManage = () => {
                     return acc;
                 }, {})
             }));
-        
-        // 🔑 인증 헤더 설정 (저장 시에도 필요)
+
         const config = {
             headers: {
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}`
             }
         };
 
         try {
-            // PUT 요청 시, List<RolePermissionUpdateDto> 배열을 전송
-            await axios.put(API_URL, updateDtos, config); 
-            
-            // 성공 시 원본 데이터 업데이트 및 재조회
+            await axios.put(API_URL, updateDtos, config);
             await fetchPermissions();
             setStatus({ message: '권한 변경 사항이 성공적으로 저장되었습니다.', type: 'success' });
+            showToast('✅ 권한이 성공적으로 저장되었습니다.', 'success'); // ✅ 토스트 추가
 
         } catch (error) {
             console.error('권한 저장 실패:', error.response || error);
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                  setStatus({ message: '저장 실패: 관리자 권한이 없거나 로그인이 만료되었습니다.', type: 'error' });
+                 showToast('저장 실패: 권한 없음 또는 로그인 만료 ❌', 'error');
             } else {
                  setStatus({ message: '권한 저장에 실패했습니다. (서버 오류)', type: 'error' });
+                 showToast('서버 오류로 저장에 실패했습니다 ❌', 'error');
             }
+        } finally {
+            hideLoading(); // ✅ 로딩 종료
             setIsLoading(false);
         }
     };
 
-    // 변경 사항 취소 핸들러 (생략되지 않음)
+    // ------------------------------------------------------------------------
+    // ✅ 변경 사항 취소 핸들러
+    // ------------------------------------------------------------------------
     const handleCancel = () => {
         setCurrentPermissions(originalPermissions);
         setStatus({ message: '변경 사항이 취소되고 원본 데이터로 복원되었습니다.', type: 'info' });
+        showToast('변경 사항이 취소되었습니다 ℹ️', 'info');
     };
 
-    // 변경 여부 확인 (ADMIN 제외한 데이터 비교)
+    // ------------------------------------------------------------------------
+    // ✅ 변경 여부 확인
+    // ------------------------------------------------------------------------
     const isDirty = JSON.stringify(originalPermissions.filter(r => r.roleId !== ROLES.ADMIN.id)) !== 
                     JSON.stringify(currentPermissions.filter(r => r.roleId !== ROLES.ADMIN.id));
 
-    // 상태 메시지 UI 렌더링 (생략되지 않음)
+    // ------------------------------------------------------------------------
+    // ✅ 상태 메시지 UI 컴포넌트
+    // ------------------------------------------------------------------------
     const StatusMessage = ({ message, type }) => {
         if (!message) return null;
         const base = "p-3 rounded-lg text-sm mb-4 flex items-center";
@@ -191,6 +208,9 @@ const RoleManage = () => {
         );
     };
 
+    // ------------------------------------------------------------------------
+    // ✅ UI 렌더링
+    // ------------------------------------------------------------------------
     return (
         <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-6 border-b pb-3">
@@ -198,6 +218,7 @@ const RoleManage = () => {
                 역할별 권한 관리
             </h1>
             
+            {/* 상태 메시지 */}
             <StatusMessage message={status.message} type={status.type} />
             
             {/* 액션 버튼 그룹 */}
@@ -269,7 +290,6 @@ const RoleManage = () => {
                                     
                                     {PERMISSION_KEYS.map(p => (
                                         <td key={p.key} className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {/* 토글 스위치 (Admin 권한은 disabled) */}
                                             <label className={`relative inline-flex items-center cursor-pointer ${role.roleId === ROLES.ADMIN.id ? 'opacity-70 cursor-not-allowed' : ''}`}>
                                                 <input 
                                                     type="checkbox" 

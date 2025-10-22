@@ -389,43 +389,43 @@ export default function PRBrowse() {
 
                     {/* 담기 버튼 */}
                     <button
-  onClick={async () => {
-    try {
-      const res = await createPO(
-        p.gtin,
-        {
-          itemNo: null,
-          orderQty: qtyByGtin[p.gtin] ?? 1, // ✅ 현재 수량 상태
-          unitPrice: p.price ?? 3000,
-          gtin: p.gtin,
-        },
-        poId // ✅ 기존 헤더 ID 전달
-      );
+                      onClick={async () => {
+                        try {
+                          const res = await createPO(
+                            p.gtin,
+                            {
+                              itemNo: null,
+                              orderQty: qtyByGtin[p.gtin] ?? 1, // ✅ 현재 수량 상태
+                              unitPrice: p.price ?? 3000,
+                              gtin: p.gtin,
+                            },
+                            poId // ✅ 기존 헤더 ID 전달
+                          );
 
-      // 새로 생성된 poId가 있다면 저장해둠
-      if (!poId && res.poId) setPoId(res.poId);
+                          // 새로 생성된 poId가 있다면 저장해둠
+                          if (!poId && res.poId) setPoId(res.poId);
 
-      showToast(`${p.name} ${qtyByGtin[p.gtin]}개 담았습니다 ✅`);
-    } catch (err) {
-      console.error("장바구니 담기 실패:", err);
-      showToast("장바구니 추가 중 오류가 발생했습니다 ❌");
-    }
-  }}
-  className={`mt-3 w-full rounded-xl text-sm py-2 ${
-    canAdd
-      ? "bg-gray-900 text-white hover:opacity-90"
-      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-  }`}
-  disabled={!canAdd}
->
-  {adding[p.gtin]
-    ? "담는 중…"
-    : !p.orderable
-    ? "발주불가"
-    : avail <= 0
-    ? "품절"
-    : "장바구니"}
-</button>
+                          showToast(`${p.name} ${qtyByGtin[p.gtin]}개 담았습니다 ✅`);
+                        } catch (err) {
+                          console.error("장바구니 담기 실패:", err);
+                          showToast("장바구니 추가 중 오류가 발생했습니다 ❌");
+                        }
+                      }}
+                      className={`mt-3 w-full rounded-xl text-sm py-2 ${
+                        canAdd
+                          ? "bg-gray-900 text-white hover:opacity-90"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      }`}
+                      disabled={!canAdd}
+                    >
+                      {adding[p.gtin]
+                        ? "담는 중…"
+                        : !p.orderable
+                        ? "발주불가"
+                        : avail <= 0
+                        ? "품절"
+                        : "장바구니"}
+                    </button>
                   </div>
                 );
               })}

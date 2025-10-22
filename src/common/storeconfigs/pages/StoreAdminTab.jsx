@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import storeApi from "../api/storeApi";
-import { Building2, Power, PowerOff, Edit, Save, X, Trash2 } from "lucide-react";
+import { Building2, Edit, Save, X, Trash2 } from "lucide-react";
 import { useToast } from "/src/components/providers/ToastProvider";
+import MiniLoader from "/src/components/loading/MiniLoader";
 import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
 
 const StoreAdminTab = () => {
   const queryClient = useQueryClient();
-  const { showToast } = useToast(); // ✅ 전역 토스트 호출용
-
+  const { showToast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState(null);
 
-  // ✅ 지점 목록 조회
+  // ✅ 지점 목록 조회 (전역 로딩 → 내부 MiniLoader)
   const { data: stores, isLoading } = useQuery({
     queryKey: ["stores"],
-    queryFn: storeApi.getAll,
+    queryFn: async () => await storeApi.getAll(),
   });
 
   const hasStore = stores && stores.length > 0;
@@ -34,7 +34,7 @@ const StoreAdminTab = () => {
 
   // ✅ 등록
   const createStore = useMutation({
-    mutationFn: storeApi.create,
+    mutationFn: (data) => storeApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(["stores"]);
       showToast("지점이 등록되었습니다 ✅", "success");
@@ -69,7 +69,7 @@ const StoreAdminTab = () => {
     },
   });
 
-  // ✅ 운영 상태 토글(운영환경 수정)
+  // ✅ 운영 상태 토글
   const handleToggleActive = () => {
     const updated = { ...store, active: !store.active };
     updateStore.mutate({ storeId: store.storeId, data: updated });
@@ -82,30 +82,14 @@ const StoreAdminTab = () => {
     return isNaN(date) ? "" : date.toLocaleDateString("ko-KR");
   };
 
-  // ✅ 공백 → null 처리
-  const sanitizeForUpdate = (payload) => {
-    const toNull = (v) => (v === "" ? null : v);
-    return {
-      ...payload,
-      openDate: toNull(payload.openDate),
-      managerId: toNull(payload.managerId),
-      addressDetail: toNull(payload.addressDetail),
-      postCode: toNull(payload.postCode),
-      ownerName: toNull(payload.ownerName),
-      bizHours: toNull(payload.bizHours),
-      contactNumber: toNull(payload.contactNumber),
-      storeType:
-        payload.storeType === "DIRECT" || payload.storeType === "FRANCHISE"
-          ? payload.storeType
-          : null,
-    };
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <MiniLoader message="지점 목록을 불러오는 중입니다..." />
+      </div>
+    );
+  }
 
-  if (isLoading) return <p className="text-sm text-gray-500">불러오는 중...</p>;
-
-  // ────────────────────────────────
-  // 🏗 신규 등록 모드
-  // ────────────────────────────────
   if (!hasStore) {
     return (
       <div className="space-y-4 relative">
@@ -153,12 +137,9 @@ const StoreAdminTab = () => {
     );
   }
 
-  // ────────────────────────────────
-  // 🛠 수정 / 상태관리 모드
-  // ────────────────────────────────
+  // ✅ 수정 / 상태관리 모드
   return (
     <div className="space-y-4 relative">
-      {/* 상단 헤더 (지점명 + 상태 뱃지) */}
       <div className="flex items-center justify-between border-b pb-2">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Building2 className="text-blue-600 w-5 h-5" />
@@ -171,7 +152,6 @@ const StoreAdminTab = () => {
         />
       </div>
 
-      {/* ✅ 보기 모드 */}
       {!editMode ? (
         <div className="text-sm text-gray-700 space-y-2">
           {[
@@ -212,7 +192,6 @@ const StoreAdminTab = () => {
           </div>
         </div>
       ) : (
-        // ✅ 수정 모드
         <div className="space-y-2">
           {[
             { name: "storeName", label: "지점명" },
@@ -261,25 +240,6 @@ const StoreAdminTab = () => {
         </div>
       )}
     </div>
-  );
-};
-
-// 🔸 버튼 컴포넌트
-const Button = ({ color, icon, children, ...props }) => {
-  const colors = {
-    blue: "bg-blue-600 hover:bg-blue-700 text-white",
-    green: "bg-green-600 hover:bg-green-700 text-white",
-    red: "bg-red-600 hover:bg-red-700 text-white",
-    gray: "bg-gray-300 hover:bg-gray-400 text-gray-700",
-  };
-  return (
-    <button
-      {...props}
-      className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-md text-sm font-medium transition ${colors[color]}`}
-    >
-      {icon}
-      {children}
-    </button>
   );
 };
 

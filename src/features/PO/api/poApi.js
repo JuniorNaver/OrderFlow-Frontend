@@ -33,8 +33,8 @@ export const createPO = async (gtin, poItemRequestDTO, poId = null) => {
 
 
 //'장바구니로 가기' 눌렀을 때 장바구니 조회 
-export const getCartItems = async (poId, status) => {
-  const res = await api.get(`/po/items`, { params: { poId, status } }); // ✅ 쿼리는 params로
+export const getCartItems = async (poId) => {
+  const res = await api.get(`/po/items`, { params: { poId } }); // ✅ 쿼리는 params로
   return res.data;
 };
 
