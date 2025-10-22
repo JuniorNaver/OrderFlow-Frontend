@@ -49,17 +49,28 @@ export default function RecommendPage() {
   const [picked, setPicked] = useState(() => new Map());
   const [zone, setZone] = useState("room"); // 기본 탭
 
+
+  // 1) catSales가 준비되기 전엔 categories를 보내지 않는다
+const catsReady = topCats.length > 0;
+
+
+const reqParams = useMemo(() => ({
+  zones: [zone],
+  limitPerCategory: 3,
+  categories: catsReady ? topCats : undefined, // 준비되기 전이면 아예 안 보냄
+}), [zone, catsReady, topCats]);
+
+
   // ✅ zone / topCats를 서버로 넘겨서 필터링 맡기기
  const q = useQuery({
-   queryKey: ["recommend", storeId, zone, topCats], // 파라미터가 바뀌면 자동 리패치
-   queryFn: () => getRecommend(storeId, {
-     categories: topCats,       // ["음료","스낵",...]
-     zone,                      // "room"|"chilled"|...
-     limitPerCategory: 3,
-   }),
-   enabled: !!storeId,
-   retry: 0,
- });
+   queryKey: ["recommend", storeId, zone, catsReady ? topCats.join("|") : "no-cats"], // 파라미터가 바뀌면 자동 리패치
+   queryFn: () => getRecommend(storeId, reqParams),
+    enabled: !!storeId,               // 필요하면 catSales까지 기다리려면 && !catLoading
+    retry: 0,
+    keepPreviousData: true,           // 깜빡임/리셋 방지
+});
+// console.log("req params:", reqParams);
+// console.log("raw items from server:", q.data?.items?.length, q.data?.items);
 
 // ✅ 서버 storageMethod를 프론트 zone으로 보정
  const items = (q.data?.items ?? []).map(it => ({
@@ -137,7 +148,9 @@ export default function RecommendPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="relative z-0 p-4 space-y-4"
+      style={{ isolation: 'isolate'}} // 이 페이지 범위만 스택격리
+    >
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">추천 발주</h1>
         <div className="flex gap-2 items-center">
@@ -247,7 +260,10 @@ function RecommendCard({ item, defaultQty, selected, onPick, onUnpick }) {
 
 function Footer({ count, amount, onConfirm, disabled, onPickAll, onClear }) {
   return (
-    <footer className="sticky bottom-0 left-0 right-0 z-0 bg-white/95 backdrop-blur border-t p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] flex items-center justify-between">
+    <footer className="sticky bottom-0 left-0 right-0 z-[0] bg-white/95 backdrop-blur border-t p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+    style={{ pointerEvents: 'none'}}
+    >
+      <div className="flex items-center justify-between gap-2" style={{ pointerEvents: 'auto' }}>
       <div className="text-sm text-gray-700">
         담긴 항목 <b>{count}</b> • 예상 매입액 <b>{fmtWon(amount)}</b>
       </div>
@@ -264,7 +280,8 @@ function Footer({ count, amount, onConfirm, disabled, onPickAll, onClear }) {
           disabled={disabled}
         >
           발주로 이동
-        </button>
+          </button>
+        </div>
       </div>
     </footer>
   );
