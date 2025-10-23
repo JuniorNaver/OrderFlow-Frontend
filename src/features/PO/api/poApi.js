@@ -7,12 +7,12 @@ const api = axios.create({
 export default api;
 
 
-
+// '담기'버튼 눌렀을 때 
 export const createPO = async (gtin, poItemRequestDTO, poId = null) => {
   try {
     // ✅ poId가 없으면 새로 생성
     const currentPoId = poId
-      ? poId : (await api.post("/po")).data.poId;
+      ? poId : (await api.post(`/po`)).data.poId;
 
     // ✅ 기존 또는 새 헤더에 상품 추가
     const itemRes = await api.post(`/po/${currentPoId}/items`, poItemRequestDTO, {
@@ -52,7 +52,7 @@ export const updateQuantity = async (itemNo, orderQty) => {
 //상품삭제
 export const deleteCartItems = async (itemIds) => {
   // axios는 'params'에 배열을 전달하면 자동으로 'itemIds=1&itemIds=2...' 형태로 직렬화하여 전송합니다.
-  const res = await api.delete("/po/delete", { params: { itemIds } });  
+  const res = await api.delete(`/po/delete`, { params: { itemIds } });  
   return res.data;
 };
 
@@ -90,7 +90,7 @@ export const deleteSavedCart = async (poId) => {
 
 //발주확정
 export const confirmOrder = async (poId) => {
-  const res = await api.post(`/confirm/${poId}`);
+  const res = await api.post(`/po/confirm/${poId}`);
   return res.data;
 };
 
