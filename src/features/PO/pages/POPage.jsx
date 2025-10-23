@@ -31,8 +31,9 @@ async function resolveProductIdOrGtin(raw) {
 }
 
 export default function POPage() {
+  const initialPoId = localStorage.getItem('currentPoId') || null; 
   const [items, setItems] = useState([]);
-  const [poId, setPoId] = useState(null);
+  const [poId, setPoId] = useState(initialPoId);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [savedCarts, setSavedCarts] = useState(mockSavedCarts);
 
@@ -78,65 +79,58 @@ export default function POPage() {
 
   
   // 2) 상세에서 넘어온 품목을 장바구니에 합치기
-  useEffect(() => {
-    const s = location.state;
-    if (!s || !Array.isArray(s.items) || s.items.length === 0) return;
+ useEffect(() => {
+  const s = location.state;
+  if (!s || !Array.isArray(s.items) || s.items.length === 0) return;
 
-   (async () => {
+  (async () => {
     try {
-      // 1) 헤더 보장
       let currentPoId = poId;
       if (!currentPoId) {
-        currentPoId = await createPO();
-        setPoId(currentPoId);
-      }
-
-      // 2) 넘어온 품목들 서버 라인 생성 (중복시 수량 합산하는 API가 있으면 그걸 호출)
-      const created = [];
-      for (const raw of s.items) {
-        const idOrGtin = await resolveProductIdOrGtin(raw);
-        const payload = { ...idOrGtin, qty: Number(raw.qty || 1) };
-        const res = await api.post(`/api/po/${currentPoId}/items`, payload);
-        const server = res.data; // { itemNo, price, ... } 가정
-
-        created.push({
-          itemNo: server.itemNo,                   // ✅ 서버 라인 id
-          gtin: raw.gtin || raw.productCode,
-          productName: raw.productName || "",
-          imageUrl: raw.imageUrl || "",
-          price: Number(server.price ?? raw.price ?? 0),
-          qty: Number(raw.qty || 1),
-          totalPrice: Number(server.price ?? raw.price ?? 0) * Number(raw.qty || 1),
-          selected: false,
-        });
-      }
-
-      // 3) 클라 상태 병합(같은 GTIN은 수량 합치기)
-      setItems(prev => {
-        const byGtin = new Map(prev.map(p => [p.gtin, { ...p }]));
-        created.forEach(it => {
-          if (byGtin.has(it.gtin)) {
-            const ex = byGtin.get(it.gtin);
-            const newQty = ex.qty + it.qty;
-            byGtin.set(it.gtin, {
-              ...ex,
-              qty: newQty,
-              totalPrice: newQty * (ex.price || 0),
-            });
-          } else {
-            byGtin.set(it.gtin, it);
+        // ✅ createPO()가 내부적으로 /po 생성 + 아이템 추가까지 처리
+        const firstItem = s.items[0];
+        const idOrGtin = await resolveProductIdOrGtin(firstItem);
+        const first = await createPO(
+          firstItem.gtin ?? idOrGtin.gtin,
+          {
+            itemNo: null,
+            orderQty: Number(firstItem.qty || 1),
+            unitPrice: firstItem.price ?? 0,
+            gtin: firstItem.gtin ?? firstItem.productCode,
           }
-        });
-        return Array.from(byGtin.values());
-      });
+        );
+        currentPoId = first.poId;
+        setPoId(currentPoId);
+        localStorage.setItem("currentPoId", currentPoId);
+      }
 
-      // 4) 중복 추가 방지
+      // ✅ 나머지 품목 추가
+      for (let i = 1; i < s.items.length; i++) {
+        const raw = s.items[i];
+        const idOrGtin = await resolveProductIdOrGtin(raw);
+        await createPO(
+          raw.gtin ?? idOrGtin.gtin,
+          {
+            itemNo: null,
+            orderQty: Number(raw.qty || 1),
+            unitPrice: raw.price ?? 0,
+            gtin: raw.gtin ?? raw.productCode,
+          },
+          currentPoId
+        );
+      }
+
+      // ✅ 서버에서 최신 장바구니 불러오기
+      const itemsFromServer = await getCartItems(currentPoId);
+      setItems(itemsFromServer);
+
+      // 중복 추가 방지
       navigate("/po", { replace: true, state: null });
     } catch (e) {
       console.error(e);
-      // 필요시 토스트
-    }})();
-  }, [location.state, navigate, poId]);
+    }
+  })();
+}, [location.state, navigate, poId]);
 
   
 
@@ -308,19 +302,19 @@ useEffect(() => {
 
   // 불러오기 삭제 버튼 
   const handleDeleteSavedCart = async (e, cart) => {
-    e.stopPropagation();
-    if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
+  e.stopPropagation();
+  if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
 
-    try {
-      await deleteSavedCart(cart.itemNo); // 서버 호출
-    } catch (err) {
-      console.error("장바구니 삭제 실패:", err);
-      // 필요하면 alert 추가
-    } finally {
-      // ✅ 서버 성공/실패와 관계없이 UI는 즉시 갱신
-      setSavedCarts((prev) => prev.filter((c) => String(c.itemNo) !== String(cart.itemNo)));
-    }
-  };
+  try {
+    await deleteSavedCart(cart.poId); // ✅ itemNo → poId
+  } catch (err) {
+    console.error("장바구니 삭제 실패:", err);
+  } finally {
+    setSavedCarts((prev) =>
+      prev.filter((c) => String(c.poId) !== String(cart.poId))
+    );
+  }
+};
 
 
 

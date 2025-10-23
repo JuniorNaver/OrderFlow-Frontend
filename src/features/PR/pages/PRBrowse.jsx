@@ -391,21 +391,25 @@ export default function PRBrowse() {
                     <button
                       onClick={async () => {
                         try {
+                          // ✅ createPO 호출 (기존 poId가 있으면 재사용)
                           const res = await createPO(
                             p.gtin,
                             {
                               itemNo: null,
-                              orderQty: qtyByGtin[p.gtin] ?? 1, // ✅ 현재 수량 상태
+                              orderQty: qtyByGtin[p.gtin] ?? 1, // 현재 입력된 수량
                               unitPrice: p.price ?? 3000,
                               gtin: p.gtin,
                             },
-                            poId // ✅ 기존 헤더 ID 전달
+                            poId // 기존 poId 있으면 그대로 사용
                           );
 
-                          // 새로 생성된 poId가 있다면 저장해둠
-                          if (!poId && res.poId) setPoId(res.poId);
+                          // ✅ 백엔드에서 새 poId 생성된 경우, 상태에 저장
+                          if (!poId && res.poId) {
+                            setPoId(res.poId);
+                          }
 
-                          showToast(`${p.name} ${qtyByGtin[p.gtin]}개 담았습니다 ✅`);
+                          // ✅ 수량 상태 초기화 or 유지
+                          showToast(`${p.name} ${qtyByGtin[p.gtin] ?? 1}개 담았습니다 ✅`);
                         } catch (err) {
                           console.error("장바구니 담기 실패:", err);
                           showToast("장바구니 추가 중 오류가 발생했습니다 ❌");
