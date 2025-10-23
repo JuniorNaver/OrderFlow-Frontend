@@ -6,6 +6,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
+  console.log("📡 JWT 토큰 확인:", token);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -41,7 +42,7 @@ export const completeOrder = async (orderId) => {
 };
 
 // 삭제 완료
-export const deleteItem = async (id) => {
-  const res = await api.delete(`/items/${id}`);
-  return res;
+export const deleteItemFromOrder = async (orderId, itemId) => {
+  const res = await api.delete(`/${orderId}/delete-item/${itemId}`);
+  return res.data; // SalesHeaderDTO 반환됨
 };

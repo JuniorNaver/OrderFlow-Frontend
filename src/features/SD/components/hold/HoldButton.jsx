@@ -26,8 +26,8 @@ function HoldButton({
         <div className="absolute top-[85px] left-0 flex flex-col w-40 bg-white 
                        rounded-xl shadow-lg border z-30 overflow-hidden">
           <button
-            onClick={() => {
-              onHold(); // ✅ 실제 로직은 부모에서 실행
+            onClick={async() => {
+             await onHold(); // ✅ 실제 로직은 부모에서 실행
               setMenuOpen(false);
             }}
             className="text-black hover:bg-yellow-100 py-3 text-sm font-semibold border-b"

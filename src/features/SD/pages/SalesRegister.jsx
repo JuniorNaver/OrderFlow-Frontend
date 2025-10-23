@@ -11,6 +11,7 @@ import SummarySection from "../components/shared/SummarySection";
 import RefundModal from "../components/refund/RefundModal";
 import HoldButton from "../components/hold/HoldButton";
 import HoldModal from "../components/hold/HoldModal";
+import DisposalEntryView from "../../STK/components/DisposalEntryView";
 import { useLoading } from "/src/components/providers/LoadingProvider"; // ✅ 전역 로딩 훅
 import { useToast } from "/src/components/providers/ToastProvider";   // ✅ 전역 토스트 (선택)
 
@@ -18,6 +19,7 @@ function SalesRegister() {
   const [showQuery, setShowQuery] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+   const [showDisposal, setShowDisposal] = useState(false);
 
   // ✅ 보류 관련 상태
   const [holdList, setHoldList] = useState([]);
@@ -137,7 +139,7 @@ function SalesRegister() {
   if (!currentOrder) return alert("⛔ 현재 주문이 없습니다.");
 
   try {
-    await saveHold(currentOrder.orderId); // salesItems 안 보내도 됨 (백엔드가 DB에 이미 저장)
+    await saveHold(currentOrder.orderId);
     alert("💾 보류 저장 완료!");
 
     // ✅ 1. 현재 주문 초기화
@@ -174,7 +176,6 @@ function SalesRegister() {
     }
   };
 
-  // ✅ 보류 주문 재개
   // ✅ 보류 주문 재개
 const handleResume = async (orderId) => {
    try {
@@ -275,6 +276,7 @@ const handleResume = async (orderId) => {
             </button>
 
             <button
+               onClick={() => setShowDisposal(true)}
               className="w-[160px] h-[80px] bg-gray-400 text-white rounded-2xl hover:bg-gray-500 text-xl font-bold"
             >
               폐기
@@ -315,6 +317,19 @@ const handleResume = async (orderId) => {
             setShowHoldModal(false);
           }}
         />
+      )}
+      {showDisposal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl w-[80%] h-[80%] overflow-auto">
+            <button
+              className="absolute top-4 right-4 text-gray-600 hover:text-black"
+              onClick={() => setShowDisposal(false)}
+            >
+              ✖
+            </button>
+            <DisposalEntryView />
+          </div>
+        </div>
       )}
     </div>
   );

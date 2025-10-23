@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { addItemToOrder } from "../../api/sdApi.js";
 import { updateItemQuantity } from "../../api/sdApi.js";
-import { deleteItem } from "../../api/sdApi.js";
+import { deleteItemFromOrder } from "../../api/sdApi.js";
 
 export default function SalesTable({
   currentOrder,
@@ -16,7 +16,7 @@ export default function SalesTable({
   // ✅ 외부에서 테이블 아이템을 일괄 주입
   window.loadSalesItems = (raw = []) => {
     const mapped = raw.map((it, idx) => ({
-      id: it.id || it.productId || it.gtin || idx,
+      id: it.no || it.productId || it.gtin || idx,
       gtin: it.gtin || it.productId || idx.toString(),
       name: it.productName || it.name || "상품",
       price: Number(it.sdPrice ?? it.price ?? 0),
@@ -40,7 +40,6 @@ export default function SalesTable({
 }, [items, onItemsChange, onTotalChange]);
 
 
-  // ✅ 상품 추가 (DB 저장 + 화면 반영)
 // ✅ 상품 추가 (DB 저장 + 화면 반영)
 const handleAddItem = async (product) => {
   if (!currentOrder?.orderId) {
@@ -81,7 +80,7 @@ const handleAddItem = async (product) => {
         return [
           ...prev,
           {
-            id: savedItem.id,
+            id: savedItem.no || savedItem.id,
             gtin: savedItem.gtin,
             name: savedItem.productName || product.productName || "상품명 미등록",
             qty,
@@ -137,20 +136,17 @@ const handleAddItem = async (product) => {
 
 
   // ✅ 상품 삭제
-  const handleDeleteItem = async (id) => {
+  const handleDeleteItem = async (itemId) => {
+  if (!currentOrder?.orderId) return alert("⛔ 주문이 없습니다.");
   if (!window.confirm("이 상품을 삭제하시겠습니까?")) return;
 
   try {
-    const res = await deleteItem(id);
-    if (res.status === 204 || res.status === 200) {
-      setItems((prev) => prev.filter((item) => item.id !== id));
-      alert("✅ 상품이 삭제되었습니다.");
-    } else {
-      alert("❌ 삭제 실패: " + res.status);
-    }
+    const updated = await deleteItemFromOrder(currentOrder.orderId, itemId);
+    setItems(updated.salesItems || []);
+    alert("✅ 상품이 삭제되었습니다.");
   } catch (err) {
     console.error("❌ 삭제 실패:", err);
-    alert("서버 요청 중 오류가 발생했습니다.");
+    alert("삭제 중 오류가 발생했습니다.");
   }
 };
 
