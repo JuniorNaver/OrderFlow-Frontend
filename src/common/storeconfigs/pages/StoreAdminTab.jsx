@@ -5,6 +5,7 @@ import { Building2, Edit, Save, X, Trash2 } from "lucide-react";
 import { useToast } from "/src/components/providers/ToastProvider";
 import MiniLoader from "/src/components/loading/MiniLoader";
 import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
+import Button from "../components/Button";
 
 const StoreAdminTab = () => {
   const queryClient = useQueryClient();
@@ -31,6 +32,19 @@ const StoreAdminTab = () => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  // ✅ 서버 전송 전, 불필요한 값 제거
+  const sanitizeForUpdate = (data) => {
+    const cleaned = { ...data };
+    Object.keys(cleaned).forEach((key) => {
+      const value = cleaned[key];
+      if (value === undefined || value === null || value === "") {
+        delete cleaned[key];
+      }
+    });
+    return cleaned;
+  };
+
 
   // ✅ 등록
   const createStore = useMutation({
@@ -126,8 +140,8 @@ const StoreAdminTab = () => {
             onClick={() => createStore.mutate(form)}
             disabled={createStore.isPending}
             className={`w-full py-2 rounded-md text-sm font-medium text-white ${createStore.isPending
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
               }`}
           >
             {createStore.isPending ? "등록 중..." : "등록하기"}

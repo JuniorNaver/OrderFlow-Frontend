@@ -1,31 +1,31 @@
-// src/api/storeApi.js
-import axios from "axios";
+// ============================================================================
+// 📁 src/common/storeconfigs/api/storeApi.js
+// ============================================================================
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api",
-  withCredentials: true,
-});
+// ✅ 공통 ApiClient (JWT 자동 포함)
+import ApiClient from "/src/common/authorities/api/ApiClient";
 
 const storeApi = {
   /** ✅ 1️⃣ 지점 등록 (관리자 전용) */
-  create: (data) => api.post("/store", data).then((r) => r.data),
+  create: (data) => ApiClient.post("/store", data),
 
   /** ✅ 2️⃣ 지점 전체 조회 */
-  getAll: () => api.get("/store").then((r) => r.data),
+  getAll: () => ApiClient.get("/store"),
 
   /** ✅ 3️⃣ 지점 단일 조회 */
-  getById: (storeId) => api.get(`/store/${storeId}`).then((r) => r.data),
+  getById: (storeId) => ApiClient.get(`/store/${storeId}`),
 
   /** ✅ 4️⃣ 지점 전체 수정 (관리자 전용) */
-  update: (storeId, dto) => api.put(`/store/${storeId}`, dto).then((r) => r.data),
+  update: (storeId, dto) => ApiClient.put(`/store/${storeId}`, dto),
 
   /** ✅ 5️⃣ 지점 삭제 */
-  delete: (storeId) => api.delete(`/store/${storeId}`).then((r) => r.data),
+  delete: (storeId) => ApiClient.delete(`/store/${storeId}`),
 
   /** ✅ 6️⃣ 점포 운영환경 조회 (관리자 or ENVIRONMENT_EDIT) */
-  getEnv: (storeId) => api.get(`/store/${storeId}/env`).then((r) => r.data),
+  getEnv: (storeId) => ApiClient.get(`/store/${storeId}/env`),
 
   /** ✅ 7️⃣ 점포 운영환경 수정 (관리자 or ENVIRONMENT_EDIT) */
-  updateEnv: (storeId, dto) => api.put(`/store/${storeId}/env`, dto).then((r) => r.data),
+  updateEnv: (storeId, dto) => ApiClient.put(`/store/${storeId}/env`, dto),
 };
+
 export default storeApi;
