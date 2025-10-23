@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 // ⭐️ 백엔드 서버의 기본 URL을 설정합니다.
-const API_BASE_URL = 'http://localhost:8080/api'; 
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const ApiClient = axios.create({
     baseURL: API_BASE_URL,
     timeout: 10000, // 10초 타임아웃 설정
     headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
     },
 });
 
@@ -17,7 +17,7 @@ const ApiClient = axios.create({
 ApiClient.interceptors.request.use(
     (config) => {
         // 로컬 스토리지에서 액세스 토큰을 가져옵니다.
-        const accessToken = localStorage.getItem('accessToken'); 
+        const accessToken = localStorage.getItem("accessToken"); 
         
         if (accessToken) {
             // 토큰이 있으면 Authorization 헤더에 Bearer 토큰 형식으로 추가합니다.
@@ -37,26 +37,32 @@ ApiClient.interceptors.request.use(
 //  여기서는 로직을 합쳐서 한 번의 응답 인터셉터로 처리합니다.)
 ApiClient.interceptors.response.use(
     (response) => {
-        // 성공 응답일 경우 데이터만 반환합니다.
-        return response.data; 
+        // ✅ 성공 응답일 경우 data만 반환
+        return response.data;
     },
     (error) => {
         const status = error.response?.status;
         // ⭐️ error.config를 originalRequest 변수에 할당합니다. ⭐️
         const originalRequest = error.config;
-        
-        // 401 Unauthorized 오류가 발생했고, 재시도 요청이 아닌 경우
+
+        // ✅ 401 Unauthorized 처리
         if (status === 401 && originalRequest && !originalRequest._retry) {
-            
-            console.error("인증 만료(401): 토큰 제거 및 강제 로그아웃 유도");
-            
-            // 1. 저장된 모든 인증 정보 제거
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken'); 
-            
-            // 2. AuthProvider가 이 에러를 처리하고 로그인 페이지로 이동하도록 Promise.reject(error)를 반환합니다.
+            originalRequest._retry = true;
+
+            // 🔸 로그아웃 API 요청 중에는 이 로직을 건너뜀 (중복 처리 방지)
+            if (!originalRequest.url.includes("/auth/logout")) {
+                console.warn("🔒 인증 만료: 토큰 제거 및 로그인 페이지로 이동");
+
+                // 1. 토큰 및 세션 정보 제거
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                sessionStorage.clear();
+
+                // 2. 로그인 페이지로 리다이렉트
+                window.location.href = "/login";
+            }
         }
-        
+
         // 모든 오류는 호출한 서비스 레이어로 전달
         return Promise.reject(error);
     }
