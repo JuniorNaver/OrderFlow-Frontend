@@ -18,6 +18,7 @@ import MyPage from "./common/authorities/pages/MyPage";
 import AccountManage from "./common/authorities/pages/AccountManage";
 import RoleManage from "./common/authorities/pages/RoleManage";
 
+import CategoryListDeletePage from "./features/PR/pages/CategoryListDeletePage";
 // ERP 공통 페이지
 import Home from "./common/Home";
 
@@ -130,6 +131,7 @@ function App() {
             <Route path="/pr/orders" element={<OrderManagementPage />} />
             <Route path="/pr/stores/:storeId/recommend" element={<RecommendPage />} />
             <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
+            <Route path="/pr/categoryDelete" element={<CategoryListDeletePage/>} />
             <Route path="/pr/shop" element={<ShopPage />} />
 
             {/* ---------------------------------------------------- */}
