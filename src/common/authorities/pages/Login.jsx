@@ -1,3 +1,6 @@
+// ============================================================================
+// 📁 src/common/authorities/pages/Login.jsx
+// ============================================================================
 import React, { useState, useCallback } from "react";
 import { useAuth } from "../component/useAuth";
 import { Lock, Mail, User } from "lucide-react";
@@ -29,9 +32,9 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
                 setMessage('이메일로 비밀번호 재설정 링크가 발송되었습니다. 확인해 주세요.');
                 setIsSuccess(true);
             } else {
-                const errorText = await response.text();
-                setMessage(errorText || '비밀번호 초기화 요청에 실패했습니다. 정보를 확인해 주세요.');
-                setIsSuccess(false);
+                const errorData = await response.json().catch(() => null);
+                const errorMsg = errorData?.message || '비밀번호 초기화 요청에 실패했습니다. 정보를 확인해 주세요.';
+                setMessage(errorMsg);
             }
 
         } catch (error) {
@@ -50,6 +53,19 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
         setMessage('');
         setIsSuccess(false);
     }
+
+    // ✅ ESC 키 입력 시 닫기 기능 추가
+    React.useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === "Escape") handleClose();
+        };
+        if (isOpen) {
+            window.addEventListener("keydown", handleEsc);
+        }
+        return () => {
+            window.removeEventListener("keydown", handleEsc);
+        };
+    }, [isOpen, handleClose]);
 
     if (!isOpen) return null;
 
@@ -87,6 +103,7 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full border rounded-md p-2 mt-1 text-sm"
                             required
+                            autoComplete="email" // ✅ 추가
                         />
                     </div>
 
@@ -168,6 +185,7 @@ const LoginPage = () => {
                             required
                             className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="아이디를 입력하세요"
+                            autoComplete="username" // ✅ 아이디 자동완성 힌트
                         />
                     </div>
 
@@ -182,6 +200,7 @@ const LoginPage = () => {
                             required
                             className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="비밀번호를 입력하세요"
+                            autoComplete="current-password" // ✅ 비밀번호 자동완성 힌트
                         />
                     </div>
 

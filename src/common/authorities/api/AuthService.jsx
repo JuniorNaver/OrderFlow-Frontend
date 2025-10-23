@@ -1,110 +1,138 @@
-import ApiClient from './ApiClient';
+// ============================================================================
+// 📁 src/common/authorities/api/AuthService.jsx
+// ============================================================================
+// 이 모듈은 인증(Authentication) 및 사용자 계정 관련 API 요청을 담당합니다.
+// - 로그인, 로그아웃, 사용자 정보 조회/수정, 비밀번호 재설정 등
+// - 모든 요청은 ApiClient를 통해 Axios 인스턴스로 전송됩니다.
+// ============================================================================
 
-// =================================================================
-// 🚀 1. 로그인/인증 관련
-// =================================================================
+import ApiClient from "./ApiClient";
+
+// ============================================================================
+// 🚀 1. 로그인 관련
+// ============================================================================
 
 /**
  * 사용자 로그인 요청을 서버에 전송하고, 성공 시 JWT 토큰을 로컬 스토리지에 저장합니다.
  * @param {string} userId 사용자 아이디 (백엔드 DTO에 따라 userId 사용)
  * @param {string} password 사용자 비밀번호
+ * @returns {Promise<Object>} TokenResponseDTO (accessToken, refreshToken)
+ *
+ * 백엔드: AuthController.login()
+ * 엔드포인트: POST /api/auth/login
  */
 export const loginUser = async (userId, password) => {
-    // 서버 응답 데이터를 response로 받음 (ApiClient 인터셉터 덕분)
-    const response = await ApiClient.post('/auth/login', {
-        userId: userId, 
-        password: password,
-    });
-    
-    // 토큰 이름이 'accessToken'인지 확인하고, refreshToken도 함께 저장
-    const accessToken = response.accessToken; // 백엔드 DTO와 일치해야 함
-    const refreshToken = response.refreshToken; // 백엔드 DTO에 refreshToken이 있다면 저장
+  const response = await ApiClient.post("/auth/login", { userId, password });
 
-    if (accessToken) {
-        localStorage.setItem('accessToken', accessToken);
-        // refreshToken이 있다면 저장 (재발급에 사용)
-        if (refreshToken) {
-            localStorage.setItem('refreshToken', refreshToken); 
-        }
-    } else {
-        // 토큰이 없으면 로그인 실패로 간주하고 에러 발생
-        throw new Error("로그인 응답에 유효한 accessToken이 없습니다.");
-    }
+  // 서버 응답 데이터 구조 확인 (TokenResponseDTO)
+  const { accessToken, refreshToken } = response;
 
-    // 성공한 경우 토큰 정보를 포함한 응답을 그대로 반환
-    return response;
-}; 
+  if (accessToken) {
+    localStorage.setItem("accessToken", accessToken);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+  } else {
+    throw new Error("로그인 응답에 유효한 accessToken이 없습니다.");
+  }
+
+  return response;
+};
 
 /**
  * 현재 로그인된 사용자 정보를 서버로부터 가져옵니다.
- * 이 함수는 토큰 유효성 검사 및 사용자 정보 로드에 사용됩니다.
- */
-export const getUserDetails = async () => {
-    // 이 경로는 이미 /auth/users/me로 잘 설정되어 있습니다.
-    return await ApiClient.get('/auth/users/me'); 
-};
-
-/**
- * 로그아웃 요청을 처리합니다.
- */
-export const logoutUser = async () => {
-    try {
-        // 서버 측 로그아웃 엔드포인트 호출 (옵션)
-        await ApiClient.post('/auth/logout'); 
-    } catch (error) {
-        console.warn("서버 측 로그아웃 처리 중 오류 발생:", error);
-    }
-    // 클라이언트 측에서는 AuthProvider에서 토큰 제거 및 상태 초기화를 수행합니다.
-};
-
-
-// =================================================================
-// ⭐️ 2. MyPage (개인 정보 조회 및 수정) 관련: 경로 수정 완료 ⭐️
-// =================================================================
-
-/**
- * [R] 현재 로그인된 사용자 본인의 상세 정보 (MyPage용)를 조회합니다.
+ * - 주로 마이페이지(MyPage.jsx)에서 사용됩니다.
+ * - 토큰이 유효하지 않으면 ApiClient의 인터셉터가 401을 처리합니다.
+ *
+ * 백엔드: UserController.getMyDetails()
+ * 엔드포인트: GET /api/auth/users/me
  */
 export const fetchMyInfo = async () => {
-    
-    const response = await ApiClient.get('/auth/users/me');
-    return response;
+  return await ApiClient.get("/auth/users/me");
 };
 
 /**
- * [U] 현재 로그인된 사용자 본인의 개인 정보 및 비밀번호를 수정합니다.
+ * 사용자 개인정보 및 비밀번호를 수정합니다.
+ * - 현재 비밀번호 입력 필수 (백엔드 검증용)
+ * - 새 비밀번호는 선택 사항 (입력 시만 변경)
+ *
+ * 백엔드: UserController.updateMyDetails()
+ * 엔드포인트: PUT /api/auth/users/me
+ *
+ * @param {Object} updateData
+ * @param {string} updateData.name 사용자 이름
+ * @param {string} updateData.email 이메일
+ * @param {string} updateData.phone 연락처
+ * @param {string} updateData.currentPassword 현재 비밀번호 (필수)
+ * @param {string|null} updateData.newPassword 새 비밀번호 (선택)
  */
 export const updateMyInfo = async (updateData) => {
-    // ⭐️ 최종 수정: /api 접두사 제거
-    const response = await ApiClient.put('/auth/users/me', updateData);
-    return response;
+  return await ApiClient.put("/auth/users/me", updateData);
 };
 
-// =================================================================
+// ============================================================================
+// 🚪 2. 로그아웃 관련
+// ============================================================================
+
+/**
+ * 서버에 로그아웃 요청을 보내고, 클라이언트 측 토큰을 제거합니다.
+ * - 서버에서 refreshToken 무효화 처리 가능
+ * - 토큰이 만료되어 401이 발생해도 정상 로그아웃으로 간주합니다.
+ *
+ * 백엔드: AuthController.logout()
+ * 엔드포인트: POST /api/auth/logout
+ */
+export const logoutUser = async () => {
+  try {
+    await ApiClient.post("/auth/logout");
+  } catch (error) {
+    if (error.response?.status === 401) {
+      console.warn("⚠️ 이미 만료된 세션입니다. (401 Unauthorized)");
+    } else {
+      console.error("🚨 서버 측 로그아웃 처리 중 오류 발생:", error);
+    }
+  } finally {
+    // ✅ 로컬 토큰 및 세션 정보 정리
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    sessionStorage.clear();
+
+    // ✅ 로그인 페이지로 리다이렉트
+    window.location.href = "/login";
+  }
+};
+
+// ============================================================================
 // 🔑 3. 비밀번호 재설정 관련
-// =================================================================
+// ============================================================================
 
 /**
  * 비밀번호 재설정 토큰의 유효성을 서버에 확인합니다.
+ * @param {string} token
+ * @returns {boolean} 유효한 경우 true, 실패 시 false
+ *
+ * 백엔드: AuthController.validatePasswordResetToken()
+ * 엔드포인트: GET /api/auth/password/validate-token
  */
 export const validateResetToken = async (token) => {
-    try {
-        // 백엔드 AuthController의 @GetMapping("/password/validate-token")과 일치
-        await ApiClient.get(`/auth/password/validate-token?token=${token}`);
-        return true; 
-    } catch (error) {
-        console.error("토큰 유효성 검사 실패:", error.response?.data || error.message);
-        return false;
-    }
+  try {
+    await ApiClient.get(`/auth/password/validate-token?token=${token}`);
+    return true;
+  } catch (error) {
+    console.error("토큰 유효성 검사 실패:", error.response?.data || error.message);
+    return false;
+  }
 };
 
 /**
  * 새 비밀번호로 업데이트 요청을 서버에 전송합니다.
+ * @param {string} token 재설정 토큰
+ * @param {string} newPassword 새 비밀번호
+ *
+ * 백엔드: AuthController.resetPassword()
+ * 엔드포인트: POST /api/auth/password/reset
  */
 export const resetPassword = async (token, newPassword) => {
-    // 백엔드 AuthController의 @PostMapping("/password/reset")과 일치
-    return await ApiClient.post('/auth/password/reset', {
-        token: token,
-        newPassword: newPassword
-    });
+  return await ApiClient.post("/auth/password/reset", {
+    token,
+    newPassword,
+  });
 };

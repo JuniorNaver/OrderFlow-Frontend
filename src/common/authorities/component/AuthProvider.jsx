@@ -1,11 +1,16 @@
+// ============================================================================
+// 📁 src/common/authorities/component/AuthProvider.jsx
+// ============================================================================
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './useAuth'; // useAuth.jsx에서 정의된 Context
-import { loginUser, getUserDetails, logoutUser } from '../api/AuthService'; // API 함수
+import { loginUser, fetchMyInfo, logoutUser } from '../api/AuthService'; // ✅ 함수명 일치
 import ApiClient from '../api/ApiClient'; // 401 처리를 위해 사용
 
 /**
  * 전역 인증 상태와 인증 관련 기능을 제공하는 Provider 컴포넌트입니다.
+ * - 로그인 / 로그아웃 / 토큰 검증 / 사용자 정보 로드 관리
+ * - 모든 인증 관련 로직은 여기서 통합 관리
  */
 export const AuthProvider = ({ children }) => {
     // 현재 인증된 사용자 정보 (로그아웃 상태면 null)
@@ -25,7 +30,7 @@ export const AuthProvider = ({ children }) => {
             try {
                 // 토큰이 유효하면 사용자 정보를 가져옵니다.
                 // GET /api/auth/users/me 호출
-                const response = await getUserDetails(); 
+                const response = await fetchMyInfo(); 
                 setUser(response); // 사용자 정보로 user 상태 업데이트
             } catch (error) {
                 // 토큰 만료(401) 또는 유효성 검사 실패 시
@@ -68,6 +73,7 @@ export const AuthProvider = ({ children }) => {
         }
         
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         setUser(null);
         navigate('/login');
     }, [navigate]);
@@ -77,17 +83,26 @@ export const AuthProvider = ({ children }) => {
     // ------------------------------------------------------------------
     useEffect(() => {
         loadUser();
-        
-        // ApiClient의 401 응답 시 호출될 콜백 함수 설정
-        ApiClient.onUnauthorized = () => {
-            console.log("401 발생, 자동 로그아웃 처리 시작");
-            // 로컬 스토리지에서 토큰 제거
-            localStorage.removeItem('accessToken');
-            setUser(null);
-            // 로그인 페이지로 이동 (ProtectedRoute가 처리하지만 명시적으로 호출)
-            navigate('/login', { replace: true }); 
-        };
-        
+
+        // 🔹 ApiClient 인터셉터에서 401을 잡으면 자동 로그아웃 처리
+        // (현재 ApiClient는 onUnauthorized 콜백을 직접 지원하지 않으므로
+        //  인터셉터 내부에서 window.location.href = '/login' 처리됨)
+        const interceptorId = ApiClient.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response?.status === 401) {
+                    console.log("401 발생, 자동 로그아웃 처리 시작");
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    setUser(null);
+                    navigate('/login', { replace: true });
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        // 컴포넌트 언마운트 시 인터셉터 해제
+        return () => ApiClient.interceptors.response.eject(interceptorId);
     }, [loadUser, navigate]);
     
     // 인증 상태 계산
@@ -109,7 +124,11 @@ export const AuthProvider = ({ children }) => {
 
     // 로딩 중일 때는 로딩 스피너를 보여주거나 빈 화면을 보여줍니다.
     if (loading) {
-        return <div className="flex justify-center items-center h-screen text-lg text-gray-700">인증 정보 로딩 중...</div>; 
+        return (
+            <div className="flex justify-center items-center h-screen text-lg text-gray-700">
+                인증 정보 로딩 중...
+            </div>
+        );
     }
 
     return (
