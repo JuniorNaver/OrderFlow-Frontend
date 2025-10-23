@@ -9,7 +9,7 @@ import { useAuth } from "../common/authorities/component/useAuth";
 
 const SettingsPanel = ({ open, onClose }) => {
   const { user, isAuthenticated } = useAuth(); // ✅ 실제 로그인 사용자 정보
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.roleId?.includes("ADMIN");
   const storeId = user?.storeId;
 
   const [visible, setVisible] = useState(false);
@@ -138,7 +138,7 @@ const SettingsPanel = ({ open, onClose }) => {
 
               {/* 내부 콘텐츠 - 권한별 분기 */}
               {activeStoreSubTab === "info" &&
-                (isAdmin ? <StoreAdminTab /> : <StoreEnvTab user={user} />)}
+                (isAdmin ? <StoreAdminTab /> : <StoreEnvTab storeId={storeId} />)}
               {activeStoreSubTab === "capacity" &&
                 (isAdmin ? (
                   <WarehouseManageTab storeId={user.storeId} mode="admin" />

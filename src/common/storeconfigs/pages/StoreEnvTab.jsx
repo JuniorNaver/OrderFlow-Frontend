@@ -5,14 +5,14 @@ import storeApi from "../api/storeApi";
 import { useToast } from "/src/components/providers/ToastProvider";
 import MiniLoader from "/src/components/loading/MiniLoader";
 import StatusBadge from "/src/common/storeconfigs/components/StatusBadge";
+import Button from "../components/Button";
 
-const StoreEnvTab = ({ user }) => {
+const StoreEnvTab = ({ storeId }) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState(null);
-  const storeId = user?.storeId;
 
   // ✅ 점포 운영환경 조회
   const { data: store, isLoading } = useQuery({
@@ -169,21 +169,5 @@ const StoreEnvTab = ({ user }) => {
   );
 };
 
-// 🔹 버튼 컴포넌트
-const Button = ({ color, icon, children, ...props }) => {
-  const colors = {
-    green: "bg-green-600 hover:bg-green-700 text-white",
-    gray: "bg-gray-300 hover:bg-gray-400 text-gray-700",
-  };
-  return (
-    <button
-      {...props}
-      className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-md text-sm font-medium transition ${colors[color]}`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-};
 
 export default StoreEnvTab;

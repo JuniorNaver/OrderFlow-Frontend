@@ -21,8 +21,6 @@ export const fetchAccounts = async (search = '') => {
 export const createAccount = async (userData) => {
     const payload = {
         ...userData,
-        // Long 타입 처리를 위해 Number로 변환하여 전송
-        storeId: Number(userData.storeId), 
     };
     // POST /api/admin/users
     return await ApiClient.post(ADMIN_ENDPOINT, payload);
@@ -37,8 +35,6 @@ export const createAccount = async (userData) => {
 export const updateAccount = async (userId, updateData) => {
     const payload = {
         ...updateData,
-        // Long 타입 처리를 위해 storeId가 있을 경우 Number로 변환
-        storeId: updateData.storeId ? Number(updateData.storeId) : null,
     };
     // PUT /api/admin/users/{userId}
     return await ApiClient.put(`${ADMIN_ENDPOINT}/${userId}`, payload);
