@@ -39,3 +39,8 @@ export const deleteItem = async (id) => {
   const res = await ApiClient.delete(`${SD_BASE}/items/${id}`);
   return res;
 };
+
+export const deleteItemFromOrder = async (orderId, itemId) => {
+  const res = await api.delete(`/${orderId}/delete-item/${itemId}`);
+  return res.data; // SalesHeaderDTO 반환됨
+};
