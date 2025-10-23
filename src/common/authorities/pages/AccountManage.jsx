@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { fetchAccounts, createAccount, updateAccount, deleteAccount } from '../api/AdminService';
 import AccountCreateModal from '../modals/AccountCreateModal';
 import AccountEditModal from '../modals/AccountEditModal';
@@ -30,29 +30,39 @@ const AccountManage = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState(null);
 
+    // 💡 [페이징 State 추가]
+    const [currentPage, setCurrentPage] = useState(1);
+    const [accountsPerPage] = useState(15); // 15행 고정
+
     // [R] 사용자 목록 조회 및 검색
-    const loadAccounts = async (search = '') => {
+    // useCallback을 사용하여 loadAccounts 함수가 불필요하게 재생성되는 것을 방지합니다.
+    const loadAccounts = useCallback(async (search = '') => {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await fetchAccounts(search);
+            // fetchAccounts가 Promise를 반환한다고 가정
+            const data = await fetchAccounts(search); 
             setAccounts(data.map(acc => ({
                 ...acc,
                 userId: acc.userId || acc.accountId,
+                position: acc.position || acc.roleId, // position 또는 roleId 사용
                 enabled: acc.enabled !== undefined ? acc.enabled : true,
             })));
+            // 💡 검색 또는 재조회 시 1페이지로 리셋
+            setCurrentPage(1); 
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
+            console.error(`계정 목록 조회에 실패했습니다: ${errorMessage}`);
             setError(`계정 목록 조회에 실패했습니다: ${errorMessage}`);
             setAccounts([]);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         loadAccounts();
-    }, []);
+    }, [loadAccounts]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -68,14 +78,14 @@ const AccountManage = () => {
                 name: formData.name,
                 email: formData.email,
                 workspace: formData.workspace,
-                // ⭐️ 백엔드 DTO 필드명인 'roleId'로 전송 (프론트엔드 폼 필드명은 'position' 가정)
                 roleId: formData.position,
-                storeId: Number(formData.storeId) || null, // ⭐️ null 처리 추가 (storeId가 없을 수 있음)
+                storeId: Number(formData.storeId) || null,
                 enabled: formData.enabled
             };
 
             const createdUser = await createAccount(createData);
-            alert(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`);
+            // alert(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`); // alert 사용 금지
+            console.log(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`);
             setIsCreateModalOpen(false);
             loadAccounts();
 
@@ -91,7 +101,7 @@ const AccountManage = () => {
             ...account,
             userId: account.userId || account.accountId,
             enabled: account.enabled !== undefined ? account.enabled : true,
-            position: account.position || '', // roleId가 없으면 빈 문자열
+            position: account.position || account.roleId || '',
         });
         setIsEditModalOpen(true);
     };
@@ -103,12 +113,13 @@ const AccountManage = () => {
                 name: updateData.name,
                 workspace: updateData.workspace,
                 email: updateData.email,
-                roleId: updateData.position, // ⭐️ 'position' 대신 'roleId'로 전송해야 백엔드 DTO와 일치 (UserUpdateRequestDTO 확인 필요)
+                roleId: updateData.position, 
                 storeId: updateData.storeId ? Number(updateData.storeId) : null,
                 enabled: updateData.enabled
             });
 
-            alert(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`);
+            // alert(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`); // alert 사용 금지
+            console.log(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`);
             setIsEditModalOpen(false);
             setSelectedAccount(null);
             loadAccounts();
@@ -121,19 +132,88 @@ const AccountManage = () => {
 
     // [D] 단일 계정 삭제 로직
     const handleDelete = async (userId) => {
-        if (!window.confirm(`정말로 계정 ID: ${userId} 를 삭제하시겠습니까?`)) {
+        if (!window.confirm(`정말로 계정 ID: ${userId} 를 삭제하시겠습니까?`)) { // confirm 대신 모달 사용 권장
             return;
         }
 
         try {
             await deleteAccount(userId);
-            alert(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`);
-            setAccounts(accounts.filter(acc => acc.userId !== userId));
+            // alert(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`); // alert 사용 금지
+            console.log(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`);
+            
+            const newAccounts = accounts.filter(acc => acc.userId !== userId);
+            setAccounts(newAccounts);
+
+            // 💡 삭제 후 현재 페이지의 계정 수가 0이 되면 이전 페이지로 이동 (페이징 유지)
+            const currentTotalPages = Math.ceil(newAccounts.length / accountsPerPage);
+            if (currentPage > currentTotalPages) {
+                setCurrentPage(currentTotalPages > 0 ? currentTotalPages : 1);
+            }
 
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || "알 수 없는 에러";
             setError(`계정 삭제 실패: ${errorMessage}`);
         }
+    };
+    
+    // =======================================================
+    // 💡 [페이징 계산 로직]
+    // =======================================================
+    const indexOfLastAccount = currentPage * accountsPerPage;
+    const indexOfFirstAccount = indexOfLastAccount - accountsPerPage;
+    // 현재 페이지에 표시할 계정 목록
+    const currentAccounts = accounts.slice(indexOfFirstAccount, indexOfLastAccount);
+
+    const totalPages = Math.ceil(accounts.length / accountsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+    // 💡 [페이지네이션 컨트롤 컴포넌트] (CSS 사용 금지 요청에 따라 인라인 스타일 사용)
+    const PaginationControls = () => {
+        if (totalPages <= 1) return null;
+
+        // 표시할 페이지 번호 배열 생성
+        const pageNumbers = [];
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px', gap: '5px' }}>
+                <button 
+                    onClick={() => paginate(currentPage - 1)} 
+                    disabled={currentPage === 1}
+                    style={{ padding: '8px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px' }}
+                >
+                    &lt; 이전
+                </button>
+                {pageNumbers.map(number => (
+                    <button 
+                        key={number} 
+                        onClick={() => paginate(number)} 
+                        style={{
+                            padding: '8px 12px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            // 현재 페이지 강조를 위한 최소한의 인라인 스타일
+                            backgroundColor: currentPage === number ? '#007bff' : 'white', 
+                            color: currentPage === number ? 'white' : 'black',
+                            fontWeight: currentPage === number ? 'bold' : 'normal',
+                        }}
+                    >
+                        {number}
+                    </button>
+                ))}
+                <button 
+                    onClick={() => paginate(currentPage + 1)} 
+                    disabled={currentPage === totalPages}
+                    style={{ padding: '8px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px' }}
+                >
+                    다음 &gt;
+                </button>
+            </div>
+        );
     };
 
     return (
@@ -181,8 +261,9 @@ const AccountManage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {accounts.length > 0 ? (
-                                accounts.map((account) => (
+                            {/* 💡 [currentAccounts]로 데이터 변경 */}
+                            {currentAccounts.length > 0 ? (
+                                currentAccounts.map((account) => (
                                     <tr key={account.userId || account.name + account.email}>
                                         <td>{account.userId}</td>
                                         <td>{account.name}</td>
@@ -218,6 +299,10 @@ const AccountManage = () => {
                     </table>
                 </div>
             )}
+            
+            {/* 💡 [페이지네이션 컨트롤 표시] */}
+            {!isLoading && accounts.length > 0 && <PaginationControls />} 
+
 
             {/* 모달 컴포넌트 */}
             <AccountCreateModal
