@@ -2,19 +2,11 @@
 // ⚙️ 기본 설정
 // 📁 /src/features/SD/api/holdManager.js
 // ============================================================================
-import axios from "axios";
+import ApiClient from "/src/common/authorities/api/ApiClient";
 
-const API_BASE = "http://localhost:8080/api/sd";
-
-const api = axios.create({
-  baseURL: API_BASE,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// ✅ baseURL: http://localhost:8080/api/sd
+// ApiClient는 기본적으로 /api 경로를 포함하므로 SD 모듈 전용 prefix 추가 필요 없음
+const SD_BASE = "/sd";
 
 // 온라인 여부 판단
 const isOnline = () => window.navigator.onLine;
@@ -25,27 +17,27 @@ const isOnline = () => window.navigator.onLine;
 
 // ✅ 주문 생성
 export const createOrder = async () => {
-  const res = await api.post("/create");
-  return res.data;
+  const res = await ApiClient.post(`${SD_BASE}/create`);
+  return res;
 };
 
 // ✅ 상품 추가
 export const addItemToOrder = async (orderId, itemData) => {
-  const res = await api.post(`/${orderId}/add-item`, itemData);
-  return res.data;
+  const res = await ApiClient.post(`${SD_BASE}/${orderId}/add-item`, itemData);
+  return res;
 };
 
 // ✅ 주문 완료
 export const completeOrder = async (orderId) => {
-  await api.post(`/${orderId}/complete`);
+  await ApiClient.post(`${SD_BASE}/${orderId}/complete`);
 };
 
 // ✅ 보류 저장 (FIFO 차감은 서버에서 처리)
 export const holdOrder = async (orderId) => {
   try {
     console.log("🟢 온라인 모드: 서버에 보류 저장");
-    const res = await api.post(`/${orderId}/hold`);
-    return { ok: true, mode: "online", data: res.data };
+    const res = await ApiClient.post(`${SD_BASE}/${orderId}/hold`);
+    return { ok: true, mode: "online", data: res };
   } catch (e) {
     throw new Error(`보류 저장 실패: ${e.message}`);
   }
@@ -54,8 +46,8 @@ export const holdOrder = async (orderId) => {
 // ✅ 보류 목록 조회
 export const getHoldOrders = async () => {
   try {
-    const res = await api.get("/holds");
-    return res.data;
+    const res = await ApiClient.get(`${SD_BASE}/holds`);
+    return res;
   } catch (e) {
     console.warn("서버 보류 목록 조회 실패 → 로컬 fallback");
     return JSON.parse(localStorage.getItem("holds") || "[]");
@@ -65,8 +57,8 @@ export const getHoldOrders = async () => {
 // ✅ 보류 재개
 export const resumeOrder = async (orderId) => {
   try {
-    const res = await api.post(`/${orderId}/resume`);
-    return res.data; // { orderId, orderNo, salesItems: [...] }
+    const res = await ApiClient.post(`${SD_BASE}/${orderId}/resume`);
+    return res;
   } catch (e) {
     const holds = JSON.parse(localStorage.getItem("holds") || "[]");
     const found = holds.find((h) => h.orderId === orderId);
@@ -77,7 +69,7 @@ export const resumeOrder = async (orderId) => {
 
 // ✅ 보류 취소
 export const cancelOrder = async (orderId) => {
-  await api.post(`/${orderId}/cancel`);
+  await ApiClient.post(`${SD_BASE}/${orderId}/cancel`);
 };
 
 // =======================
