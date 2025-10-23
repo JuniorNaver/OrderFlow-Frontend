@@ -59,8 +59,8 @@ function SalesRegister() {
         localStorage.setItem("currentOrder", JSON.stringify(order));
       } catch (err) {
         console.error("❌ 주문 생성 오류:", err);
-        setShowLoading(true);
-        setTimeout(() => setShowLoading(false), 1500);
+        showLoading(true);
+        setTimeout(() => hideLoading(false), 1500);
         showToast("주문 생성 중 오류가 발생했습니다 ❌", "error");
       } finally {
         hideLoading();
@@ -258,13 +258,11 @@ const handleResume = async (orderId) => {
             </button>
 
             <HoldButton
-              onHold={handleHold}
+              onHold={async () => showToast("보류 기능은 준비 중입니다.", "info")}
+              className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
               onHoldList={handleHoldList}
               onResume={handleResume}
               holdList={holdList}
-            />
-              onHold={async () => showToast("보류 기능은 준비 중입니다.", "info")}
-              className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
             >
               보류
             </HoldButton>
