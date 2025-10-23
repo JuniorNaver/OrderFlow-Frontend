@@ -22,56 +22,61 @@ const isOnline = () => window.navigator.onLine;
 // 🧾 온라인 (Spring 서버 저장)
 // =======================
 
-// 주문 생성
+// ✅ 주문 생성
 export const createOrder = async () => {
   const res = await api.post("/create");
   return res.data;
 };
 
-// 상품 추가
+// ✅ 상품 추가
 export const addItemToOrder = async (orderId, itemData) => {
   const res = await api.post(`/${orderId}/add-item`, itemData);
   return res.data;
 };
 
-// 주문 완료
+// ✅ 주문 완료
 export const completeOrder = async (orderId) => {
   await api.post(`/${orderId}/complete`);
 };
 
-// ✅ 보류 저장 (업데이트 포함)
-export const holdOrder = async (orderId, items) => {
-    
-    const formattedItems = items.map((item) => ({
-        productName: item.name || item.productName || "상품명 미등록",
-        sdPrice: item.price || item.sdPrice || 0,
-        salesQuantity: item.qty || item.salesQuantity || 1,
-        stockQuantity: item.stock || item.stockQuantity || 0,
-        subtotal:
-        (item.price || item.sdPrice || 0) * (item.qty || item.salesQuantity || 1),
-    }));
+// ✅ 보류 저장 (FIFO 차감은 서버에서 처리)
+export const holdOrder = async (orderId) => {
+  try {
+    console.log("🟢 온라인 모드: 서버에 보류 저장");
+    const res = await api.post(`/${orderId}/hold`);
+    return { ok: true, mode: "online", data: res.data };
+  } catch (e) {
+    throw new Error(`보류 저장 실패: ${e.message}`);
+  }
+};
 
-    console.log("📦 서버로 전송할 보류 데이터:", formattedItems);
-
-    const res = await api.post(`/${orderId}/save`, formattedItems);
-    if (!res.status || res.status >= 400) throw new Error("보류 저장 실패");
-    };
-
-// 보류 목록 조회
+// ✅ 보류 목록 조회
 export const getHoldOrders = async () => {
-  const res = await api.get("/hold");
-  return res.data;
+  try {
+    const res = await api.get("/holds");
+    return res.data;
+  } catch (e) {
+    console.warn("서버 보류 목록 조회 실패 → 로컬 fallback");
+    return JSON.parse(localStorage.getItem("holds") || "[]");
+  }
 };
 
-// 보류 재개
+// ✅ 보류 재개
 export const resumeOrder = async (orderId) => {
-  const res = await api.post(`/${orderId}/resume`);
-  return res.data;
+  try {
+    const res = await api.post(`/${orderId}/resume`);
+    return res.data; // { orderId, orderNo, salesItems: [...] }
+  } catch (e) {
+    const holds = JSON.parse(localStorage.getItem("holds") || "[]");
+    const found = holds.find((h) => h.orderId === orderId);
+    if (!found) throw new Error("로컬 보류 데이터가 없습니다.");
+    return { orderId, orderNo: `LOCAL-${orderId}`, salesItems: found.items };
+  }
 };
 
-// 보류 취소
+// ✅ 보류 취소
 export const cancelOrder = async (orderId) => {
-  await api.delete(`/${orderId}/cancel`);
+  await api.post(`/${orderId}/cancel`);
 };
 
 // =======================
@@ -82,11 +87,14 @@ export const saveHoldOffline = (holdData) => {
   const holds = JSON.parse(localStorage.getItem("holds") || "[]");
   const newHold = {
     id: Date.now(),
+    orderId: holdData?.orderId || Date.now(),
     createdAt: new Date().toISOString(),
-    items: holdData,
+    items: Array.isArray(holdData?.items) ? holdData.items : holdData,
   };
   holds.push(newHold);
   localStorage.setItem("holds", JSON.stringify(holds));
+  console.log("📦 오프라인 보류 저장 완료:", newHold);
+  return newHold;
 };
 
 export const getHoldsOffline = () =>
@@ -112,11 +120,18 @@ export const getHoldByIdOffline = (id) => {
  */
 export const saveHold = async (orderId, items) => {
   if (isOnline()) {
-    console.log("🟢 온라인 모드: 서버에 보류 저장");
-    await holdOrder(orderId, items);
+    try {
+      const result = await holdOrder(orderId);
+      return { ok: true, mode: "online", result };
+    } catch (err) {
+      console.warn("🟡 서버 오류 → 오프라인 모드로 저장");
+      const offlineResult = saveHoldOffline({ orderId, items });
+      return { ok: true, mode: "offline", result: offlineResult };
+    }
   } else {
     console.log("🔴 오프라인 모드: 로컬에 임시 저장");
-    saveHoldOffline(items);
+    const offlineResult = saveHoldOffline({ orderId, items });
+    return { ok: true, mode: "offline", result: offlineResult };
   }
 };
 
@@ -125,10 +140,14 @@ export const saveHold = async (orderId, items) => {
  */
 export const getHolds = async () => {
   if (isOnline()) {
-    console.log("🟢 서버에서 보류 목록 조회");
-    return await getHoldOrders();
+    try {
+      const list = await getHoldOrders();
+      return list;
+    } catch (err) {
+      console.warn("서버 실패 → 로컬 fallback");
+      return getHoldsOffline();
+    }
   } else {
-    console.log("🔴 오프라인 로컬 보류 목록 조회");
     return getHoldsOffline();
   }
 };
@@ -138,10 +157,14 @@ export const getHolds = async () => {
  */
 export const resumeHold = async (orderId) => {
   if (isOnline()) {
-    console.log("🟢 서버에서 보류 주문 재개");
-    return await resumeOrder(orderId);
+    try {
+      const result = await resumeOrder(orderId);
+      return result;
+    } catch (err) {
+      console.warn("서버 실패 → 로컬 fallback");
+      return getHoldByIdOffline(orderId);
+    }
   } else {
-    console.log("🔴 로컬에서 보류 주문 재개");
     return getHoldByIdOffline(orderId);
   }
 };
