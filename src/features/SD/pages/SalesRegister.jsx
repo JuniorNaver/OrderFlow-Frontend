@@ -4,7 +4,7 @@ import ProductSearchModal from "../components/shared/ProductSearchModal";
 import ReceiptQueryModal from "../components/receipt/ReceiptQueryModal";
 import SalesTable from "../components/sales/SalesTable";
 import { getProductByBarcode } from "../api/productApi";
-import { createOrder, completeOrder } from "../api/sdApi";
+import { createOrder, completeOrder, getOrderById } from "../api/sdApi";
 import { saveHold, getHolds, resumeHold } from "../api/holdMAnager";
 import BarcodeListener from "../components/BarcodeListener";
 import SummarySection from "../components/shared/SummarySection";
@@ -37,39 +37,38 @@ function SalesRegister() {
 
   // ✅ 주문 생성
   useEffect(() => {
-    const initOrder = async () => {
-      try {
-        showLoading("주문 정보를 불러오는 중입니다...");
+  const initOrder = async () => {
+    try {
+      showLoading("주문 정보를 불러오는 중입니다...");
 
-        const saved = localStorage.getItem("currentOrder");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const res = await fetch(`http://localhost:8080/api/sd/${parsed.orderId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
-              setCurrentOrder(data);
-              localStorage.setItem("currentOrder", JSON.stringify(data));
-              hideLoading();
-              return;
-            }
-          }
+      const saved = localStorage.getItem("currentOrder");
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const data = await getOrderById(parsed.orderId);
+
+        if (data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
+          setCurrentOrder(data);
+          localStorage.setItem("currentOrder", JSON.stringify(data));
+          hideLoading();
+          return;
         }
-
-        const order = await createOrder();
-        setCurrentOrder(order);
-        localStorage.setItem("currentOrder", JSON.stringify(order));
-      } catch (err) {
-        console.error("❌ 주문 생성 오류:", err);
-        showLoading(true);
-        setTimeout(() => hideLoading(false), 1500);
-        showToast("주문 생성 중 오류가 발생했습니다 ❌", "error");
-      } finally {
-        hideLoading();
       }
-    };
-    initOrder();
-  }, []);
+
+      const order = await createOrder();
+      setCurrentOrder(order);
+      localStorage.setItem("currentOrder", JSON.stringify(order));
+
+    } catch (err) {
+      console.error("❌ 주문 생성 오류:", err);
+      showToast("주문 생성 중 오류가 발생했습니다 ❌", "error");
+    } finally {
+      hideLoading();
+    }
+  };
+
+  initOrder();
+}, []);
 
   // ✅ 공통 상품 추가 로직 (검색 + 바코드)
   const handleAddProduct = async (product) => {
@@ -259,7 +258,28 @@ const handleResume = async (orderId) => {
             </button>
 
             <HoldButton
-              onHold={async () => showToast("보류 기능은 준비 중입니다.", "info")}
+              onHold={async () => {
+                try {
+                  // ✅ 현재 주문/상품 데이터 가져오기
+                  const currentOrder = JSON.parse(localStorage.getItem("currentOrder"));
+                  const salesItems = JSON.parse(localStorage.getItem("salesItems")) || [];
+
+                  // ✅ 보류 저장 실행
+                  const result = await saveHold(currentOrder.orderId, salesItems);
+                  console.log("📦 보류 저장 결과:", result);
+
+                  if (result.ok) {
+                    if (result.mode === "online") {
+                      showToast("✅ 서버에 보류 저장 완료", "success");
+                    } else {
+                      showToast("📦 오프라인에 임시 저장 완료", "info");
+                    }
+                  }
+                } catch (err) {
+                  console.error("보류 저장 중 오류:", err);
+                  showToast("❌ 보류 저장 실패", "error");
+                }
+              }}
               className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
               onHoldList={handleHoldList}
               onResume={handleResume}
