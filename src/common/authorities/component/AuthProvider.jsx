@@ -5,7 +5,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './useAuth'; // useAuth.jsx에서 정의된 Context
 import { loginUser, fetchMyInfo, logoutUser } from '../api/AuthService'; // ✅ 함수명 일치
-import ApiClient from '../api/ApiClient'; // 401 처리를 위해 사용
 
 /**
  * 전역 인증 상태와 인증 관련 기능을 제공하는 Provider 컴포넌트입니다.
@@ -75,35 +74,28 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         setUser(null);
-        navigate('/login');
+        navigate('/login', { replace: true });
     }, [navigate]);
     
     // ------------------------------------------------------------------
-    // 4. 초기 로드 및 401 처리
+    // 4. 초기 로드 및 401 처리 (✨ 수정됨)
     // ------------------------------------------------------------------
     useEffect(() => {
         loadUser();
 
-        // 🔹 ApiClient 인터셉터에서 401을 잡으면 자동 로그아웃 처리
-        // (현재 ApiClient는 onUnauthorized 콜백을 직접 지원하지 않으므로
-        //  인터셉터 내부에서 window.location.href = '/login' 처리됨)
-        const interceptorId = ApiClient.interceptors.response.use(
-            (response) => response,
-            (error) => {
-                if (error.response?.status === 401) {
-                    console.log("401 발생, 자동 로그아웃 처리 시작");
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    setUser(null);
-                    navigate('/login', { replace: true });
-                }
-                return Promise.reject(error);
-            }
-        );
+        // ✨ ApiClient에서 발생하는 "force-logout" 이벤트를 수신하여 자동 로그아웃 처리
+        const handleForceLogout = () => {
+            console.log("⚠️ ApiClient로부터 세션 만료 신호 수신 → 자동 로그아웃 실행");
+            logout();
+        };
 
-        // 컴포넌트 언마운트 시 인터셉터 해제
-        return () => ApiClient.interceptors.response.eject(interceptorId);
-    }, [loadUser, navigate]);
+        window.addEventListener("force-logout", handleForceLogout);
+
+        // 컴포넌트 언마운트 시 이벤트 리스너 해제
+        return () => {
+            window.removeEventListener("force-logout", handleForceLogout);
+        };
+    }, [loadUser, logout]);
     
     // 인증 상태 계산
     const isAuthenticated = user !== null;

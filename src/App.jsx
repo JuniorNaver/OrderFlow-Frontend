@@ -80,17 +80,14 @@ function App() {
   // ----------------------------------------------------
   // ✅ POS ↔ ERP 모드 전환
   // ----------------------------------------------------
-  const togglePOS = () => {
-    setIsPOS((prev) => {
-      const next = !prev;
-      const target = next
-        ? localStorage.getItem("lastPOSPath") || "/sd" // ERP → POS
-        : localStorage.getItem("lastERPPath") || "/";  // POS → ERP
+  const togglePOS = () => setIsPOS((prev) => !prev);
 
-      navigate(target);
-      return next;
-    });
-  };
+  useEffect(() => {
+    const target = isPOS
+      ? localStorage.getItem("lastPOSPath") || "/sd"  // ERP → POS
+      : localStorage.getItem("lastERPPath") || "/";   // POS → ERP
+    navigate(target);
+  }, [isPOS]);
 
   // ✅ 현재 모드에 따른 메뉴 설정
   const menus = isPOS ? posMenus : stockMenus;
@@ -131,7 +128,7 @@ function App() {
             <Route path="/pr/orders" element={<OrderManagementPage />} />
             <Route path="/pr/stores/:storeId/recommend" element={<RecommendPage />} />
             <Route path="/pr/detail/:gtin" element={<ProductDetailPage />} />
-            <Route path="/pr/categoryDelete" element={<CategoryListDeletePage/>} />
+            <Route path="/pr/categoryDelete" element={<CategoryListDeletePage />} />
             <Route path="/pr/shop" element={<ShopPage />} />
 
             {/* ---------------------------------------------------- */}
@@ -171,7 +168,7 @@ function App() {
             {/* ---------------------------------------------------- */}
             {/* GR (입고관리) */}
             {/* ---------------------------------------------------- */}
-            <Route path="/gr" element={<GRPage />}/>
+            <Route path="/gr" element={<GRPage />} />
           </Route>
         </Routes>
       </main>

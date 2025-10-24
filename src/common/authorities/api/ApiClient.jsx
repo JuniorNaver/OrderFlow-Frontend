@@ -1,10 +1,11 @@
 // ============================================================================
 // 📁 src/common/authorities/api/ApiClient.jsx
 // ============================================================================
-import axios from 'axios';
+import axios from "axios";
+import { toastBus } from "/src/common/utils/ToastBus"; // ✅ 추가
 
-// ⭐️ 백엔드 서버의 기본 URL을 설정합니다.
-const API_BASE_URL = 'http://localhost:8080/api';
+// 백엔드 서버의 기본 URL 지정
+const API_BASE_URL = "http://localhost:8080/api";
 
 const ApiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -20,53 +21,48 @@ const ApiClient = axios.create({
 ApiClient.interceptors.request.use(
     (config) => {
         // 로컬 스토리지에서 액세스 토큰을 가져옵니다.
-        const accessToken = localStorage.getItem("accessToken"); 
-        
+        const accessToken = localStorage.getItem("accessToken");
+
         if (accessToken) {
             // 토큰이 있으면 Authorization 헤더에 Bearer 토큰 형식으로 추가합니다.
-            config.headers.Authorization = `Bearer ${accessToken}`; 
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 // --------------------------------------------------------
-// 🛑 응답 인터셉터: 데이터 반환 및 인증 오류 (401 Unauthorized) 처리
+// 🛑 응답 인터셉터: 권한 오류 UX 처리 (로그아웃 ❌, 알림만 ✅)
 // --------------------------------------------------------
-// (주의: 요청 인터셉터에 오타가 있어 response.use가 두 번 사용된 것으로 보이나,
-//  여기서는 로직을 합쳐서 한 번의 응답 인터셉터로 처리합니다.)
 ApiClient.interceptors.response.use(
-    (response) => {
-        // ✅ 성공 응답일 경우 data만 반환
-        return response.data;
-    },
+    (response) => response.data,
     (error) => {
         const status = error.response?.status;
-        // ⭐️ error.config를 originalRequest 변수에 할당합니다. ⭐️
-        const originalRequest = error.config;
+        const url = error.config?.url;
 
-        // ✅ 401 Unauthorized 처리
-        if (status === 401 && originalRequest && !originalRequest._retry) {
-            originalRequest._retry = true;
-
-            // 🔸 로그아웃 API 요청 중에는 이 로직을 건너뜀 (중복 처리 방지)
-            if (!originalRequest.url.includes("/auth/logout")) {
-                console.warn("🔒 인증 만료: 토큰 제거 및 로그인 페이지로 이동");
-
-                // 1. 토큰 및 세션 정보 제거
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("refreshToken");
-                sessionStorage.clear();
-
-                // 2. 로그인 페이지로 리다이렉트
-                window.location.href = "/login";
-            }
+        // 로그아웃 API 요청 중이면 무시
+        if (url?.includes("/auth/logout")) {
+            return Promise.reject(error);
         }
 
-        // 모든 오류는 호출한 서비스 레이어로 전달
+        // 401: 인증 만료
+        if (status === 401) {
+            console.warn("🔒 세션 만료 감지 (401) —", url);
+            toastBus.emit("세션이 만료되었습니다. 다시 로그인해주세요.", "error");
+
+            // ✨ 약간의 지연을 두고 AuthProvider에 로그아웃 신호 전달
+            setTimeout(() => {
+                window.dispatchEvent(new Event("force-logout"));
+            }, 2500); // 2.5초 정도 기다린 뒤 로그아웃
+        }
+
+        // 403: 접근 권한 없음
+        if (status === 403) {
+            console.warn("🚫 접근 권한 없음 (403)");
+            toastBus.emit("이 페이지에 접근할 권한이 없습니다.", "error");
+        }
+
         return Promise.reject(error);
     }
 );
