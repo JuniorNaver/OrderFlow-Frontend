@@ -1,7 +1,7 @@
 // ============================================================================
 // 📁 /src/features/SD/api/sdApi.js
 // ============================================================================
-import ApiClient from "/src/common/authorities/api/ApiClient";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 
 const SD_BASE = "/sd";
 
@@ -10,6 +10,11 @@ export const createOrder = async () => {
   const storeId = localStorage.getItem("storeId") || "S001"; // 기본값 S001
   const res = await ApiClient.post(`${SD_BASE}/create`, null, { params: { storeId } });
   return res;
+};
+//자동 주문 생성
+export const getOrderById = async (orderId) => {
+  const res = await ApiClient.get(`${SD_BASE}/${orderId}`);
+  return res; // SalesHeaderDTO 반환
 };
 
 // 상품 추가
@@ -41,6 +46,6 @@ export const deleteItem = async (id) => {
 };
 
 export const deleteItemFromOrder = async (orderId, itemId) => {
-  const res = await api.delete(`/${orderId}/delete-item/${itemId}`);
+  const res = await ApiClient.delete(`/${orderId}/delete-item/${itemId}`);
   return res.data; // SalesHeaderDTO 반환됨
 };

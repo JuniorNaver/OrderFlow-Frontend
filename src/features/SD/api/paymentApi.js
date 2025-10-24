@@ -1,8 +1,12 @@
-import axios from "axios";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 
-const API_BASE = "http://localhost:8080/api";
+const PAYMENT_BASE = "/payments";
 
-export const createPayment = async (data) => {
-  const response = await axios.post(`${API_BASE}/payments`, data);
-  return response.data;
-};
+// ✅ named export로 변경
+export const createPayment = (data) => ApiClient.post(`${PAYMENT_BASE}`, data);
+
+// ✅ 다른 결제 관련 함수도 추가 가능
+export const cancelPayment = (itemId) =>
+  ApiClient.post(`${PAYMENT_BASE}/${itemId}/cancel`);
+
+export const getPaymentById = (id) => ApiClient.get(`${PAYMENT_BASE}/${id}`);

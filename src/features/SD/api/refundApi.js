@@ -1,27 +1,25 @@
-import axios from "axios";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 
-const API_BASE = "http://localhost:8080/api/refunds";
+/**
+ * ✅ 영수증 번호로 환불 대상 조회
+ */
+export const fetchRefundItems = (receiptNo) =>
+  ApiClient.get(`/refunds/receipt/${receiptNo}`);
 
-// ✅ 영수증 번호로 환불 대상 조회
-export const fetchRefundItems = async (receiptNo) => {
-  const res = await axios.get(`${API_BASE}/receipt/${receiptNo}`);
-  return res.data;
-};
+/**
+ * ✅ 환불 요청
+ */
+export const requestRefund = (data) =>
+  ApiClient.post(`/refunds/process`, data);
 
-// ✅ 환불 요청
-export const requestRefund = async (data) => {
-  const res = await axios.post(`${API_BASE}/process`, data);
-  return res.data;
-};
+/**
+ * ✅ 결제정보 검증 (카드번호 / 간편결제)
+ */
+export const verifyRefundInfo = (data) =>
+  ApiClient.post(`/refunds/verify`, data);
 
-// ✅ 결제정보 검증 (카드번호 / 간편결제)
-export const verifyRefundInfo = async (data) => {
-  const res = await axios.post(`${API_BASE}/verify`, data);
-  return res.data;
-};
-
-// ✅ 추가: 간편결제 PG 검증 함수
-export const verifyEasyPayRefund = async (impUid) => {
-  const res = await axios.get(`http://localhost:8080/api/refunds/verify/${impUid}`);
-  return res.data;
-};
+/**
+ * ✅ 간편결제 PG 검증 함수
+ */
+export const verifyEasyPayRefund = (impUid) =>
+  ApiClient.get(`/refunds/verify/${impUid}`);

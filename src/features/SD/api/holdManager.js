@@ -2,14 +2,14 @@
 // ⚙️ 기본 설정
 // 📁 /src/features/SD/api/holdManager.js
 // ============================================================================
-import ApiClient from "/src/common/authorities/api/ApiClient";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 
 // ✅ baseURL: http://localhost:8080/api/sd
 // ApiClient는 기본적으로 /api 경로를 포함하므로 SD 모듈 전용 prefix 추가 필요 없음
 const SD_BASE = "/sd";
 
 // 온라인 여부 판단
-const isOnline = () => window.navigator.onLine;
+const isOnline = () => typeof window !== "undefined" && window.navigator.onLine;
 
 // =======================
 // 🧾 온라인 (Spring 서버 저장)
@@ -114,17 +114,17 @@ export const getHoldByIdOffline = (id) => {
 export const saveHold = async (orderId, items) => {
   if (isOnline()) {
     try {
-      const result = await holdOrder(orderId);
-      return { ok: true, mode: "online", result };
+      const res = await holdOrder(orderId);
+      return { ok: true, mode: "online", data: res.data ?? res };
     } catch (err) {
       console.warn("🟡 서버 오류 → 오프라인 모드로 저장");
-      const offlineResult = saveHoldOffline({ orderId, items });
-      return { ok: true, mode: "offline", result: offlineResult };
+      const data = saveHoldOffline({ orderId, items });
+      return { ok: true, mode: "offline", data };
     }
   } else {
     console.log("🔴 오프라인 모드: 로컬에 임시 저장");
-    const offlineResult = saveHoldOffline({ orderId, items });
-    return { ok: true, mode: "offline", result: offlineResult };
+    const data = saveHoldOffline({ orderId, items });
+    return { ok: true, mode: "offline", data };
   }
 };
 
@@ -134,8 +134,8 @@ export const saveHold = async (orderId, items) => {
 export const getHolds = async () => {
   if (isOnline()) {
     try {
-      const list = await getHoldOrders();
-      return list;
+      const res = await getHoldOrders();
+      return Array.isArray(res) ? res : res?.data ?? res?.holds ?? [];
     } catch (err) {
       console.warn("서버 실패 → 로컬 fallback");
       return getHoldsOffline();
@@ -151,8 +151,8 @@ export const getHolds = async () => {
 export const resumeHold = async (orderId) => {
   if (isOnline()) {
     try {
-      const result = await resumeOrder(orderId);
-      return result;
+      const res = await resumeOrder(orderId);
+      return res.data ?? res;
     } catch (err) {
       console.warn("서버 실패 → 로컬 fallback");
       return getHoldByIdOffline(orderId);

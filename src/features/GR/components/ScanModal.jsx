@@ -13,7 +13,7 @@ export default function ScanModal({ onClose, onSuccess }) {
       setLoading(true);
       const data = await searchPOByBarcode(barcode);
       setPoData(data);
-    } catch (err) {
+    } catch {
       alert("❌ 발주를 찾을 수 없습니다.");
     } finally {
       setLoading(false);
