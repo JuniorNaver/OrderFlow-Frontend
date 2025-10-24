@@ -2,8 +2,9 @@
 // 📁 src/features/PO/api/poApi.js
 // ============================================================================
 
+import ApiClient from "../../../common/authorities/api/ApiClient";
+
 // ✅ 공통 ApiClient (JWT 자동 포함)
-import ApiClient from "/src/common/authorities/api/ApiClient";
 
 // ✅ baseURL은 ApiClient 내부에서 이미 http://localhost:8080/api 로 설정되어 있음
 //    따라서 별도 axios 인스턴스 생성 불필요

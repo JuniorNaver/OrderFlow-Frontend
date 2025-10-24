@@ -1,4 +1,4 @@
-import apiClient from "../../../services/apiClient";
+import ApiClient from "../../../services/apiClient";
 import { useMemo, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2, RefreshCw ,Search } from "lucide-react";
@@ -7,12 +7,12 @@ import { filterCategories } from "../util/filterCategories";
 /** ----------------------------- API LAYER ------------------------------ **/
 
 async function fetchCategories() {
-    const { data } = await apiClient.get("/api/categories");
+    const { data } = await ApiClient.get("/api/categories");
     return data;
 }
 
 async function deleteCategory(kancode) {
-    await apiClient.delete(`/api/categories/${encodeURIComponent(kancode)}`);
+    await ApiClient.delete(`/api/categories/${encodeURIComponent(kancode)}`);
     
 }
 
