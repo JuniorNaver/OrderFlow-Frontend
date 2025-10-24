@@ -155,7 +155,7 @@ const totalText = useMemo(() => {
       disabled={product.orderable === false || qty < 1 || (qInv.data?.available ?? 1) < 1}
       className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
     >
-      발주 담기
+      장바구니
     </button>
   </div>
 </header>
@@ -198,7 +198,7 @@ const totalText = useMemo(() => {
                     tab === k ? "bg-gray-900 text-white" : "hover:bg-gray-50"
                   }`}
                 >
-                  {k === "info" ? "상세정보" : k === "stock" ? "재고" : "입출고 이력"}
+                  {k === "info" ? "상세정보" : k === "stock" ? "재고" : null }
                 </button>
               ))}
             </div>
@@ -212,7 +212,6 @@ const totalText = useMemo(() => {
                   reserving={mReserve.isPending}
                 />
               )}
-              {tab === "history" && <HistoryPanel gtin={product.gtin} />}
             </div>
           </div>
         </div>
@@ -263,28 +262,18 @@ function Info({ description }) {
   );
 }
 
-function StockPanel({ loading, data, onReserve, reserving }) {
+function StockPanel({ loading, data, }) {
   if (loading) return <div className="text-gray-400">재고 불러오는 중…</div>;
   if (!data) return <div className="text-gray-400">재고 정보 없음</div>;
 
-  const { available, onHand, reserved } = data;
+  const { available} = data;
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="가용" value={available} />
-        <Stat label="재고" value={onHand} />
-        <Stat label="예약" value={reserved} />
+        <Stat label="재고" value={available} />
       </div>
       <div className="flex gap-2">
-        <button
-          onClick={() => onReserve(1)}
-          disabled={reserving || available <= 0}
-          className="px-3 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
-        >
-          1개 예약
-        </button>
-        {/* 필요하면 수량 입력/증감 버튼 추가 */}
       </div>
     </div>
   );
@@ -297,10 +286,6 @@ function Stat({ label, value }) {
       <div className="text-lg font-semibold">{value ?? "-"}</div>
     </div>
   );
-}
-
-function HistoryPanel() {
-  return <div className="text-sm text-gray-500">입출고 이력 연동 예정</div>;
 }
 
 function Skeleton() {
