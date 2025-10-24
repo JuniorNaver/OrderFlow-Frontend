@@ -1,8 +1,9 @@
-// src/features/STK/components/DisposalList.jsx
-
-import React, { useState, useEffect } from 'react';
-import { fetchDisposalList } from '../api/stockApi'; // ⭐️ 이제 사용됨
+import React, { useState, useEffect, useMemo } from 'react'; // useMemo 추가
+import { fetchDisposalList } from '../api/stockApi'; 
 import { useNavigate } from 'react-router-dom';
+
+// ⭐️ 페이지당 항목 수 상수를 정의합니다.
+const ITEMS_PER_PAGE = 15;
 
 /**
  * 유통기한 만료 재고 목록을 표시하고, 폐기 수량을 입력받는 컴포넌트입니다.
@@ -11,23 +12,24 @@ const DisposalList = () => {
     // disposalData: API로 불러온 재고 정보와 사용자가 입력한 quantity를 담는 상태
     const [disposalData, setDisposalData] = useState([]); 
     const [isLoading, setIsLoading] = useState(true);
+    // ⭐️ 페이지네이션을 위한 현재 페이지 상태를 추가합니다. (기본값: 1)
+    const [currentPage, setCurrentPage] = useState(1); 
     const navigate = useNavigate();
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                // ⭐️ 실제 API 호출: /stk/list/expired 엔드포인트 사용
                 const rawData = await fetchDisposalList(); 
                 
-                // API 응답 데이터 (rawData)를 기반으로 초기 폐기 수량(quantity)을 재고 수량(stock 또는 quantity 필드)으로 설정
                 const initialData = rawData.map(item => ({ 
                     ...item, 
-                    // API 응답이 'quantity' 필드를 가진다고 가정하고, 이를 stock으로 사용
                     stock: item.quantity, 
                     quantity: item.quantity || 0 // 폐기 수량 초기화 (기본값: 전량)
                 }));
 
                 setDisposalData(initialData);
+                // ⭐️ 새로운 데이터가 로드되면 현재 페이지를 1로 리셋합니다.
+                setCurrentPage(1); 
             } catch (error) {
                 console.error("폐기 목록 데이터를 불러오는 데 실패했습니다.", error);
             } finally {
@@ -37,15 +39,40 @@ const DisposalList = () => {
         loadData();
     }, []);
 
+    // ⭐️ 페이지네이션 로직 계산
+    // 1. 전체 페이지 수를 계산합니다.
+    const totalPages = Math.ceil(disposalData.length / ITEMS_PER_PAGE);
+
+    // 2. 현재 페이지에 표시할 데이터를 계산합니다. (disposalData와 currentPage가 변경될 때만 재계산)
+    // 중요한 점: handleQuantityChange의 index는 paginatedData의 인덱스 기준이 아닌
+    // disposalData의 인덱스 기준이 되어야 합니다.
+    const paginatedData = useMemo(() => {
+        const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+        const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+        return disposalData.slice(indexOfFirstItem, indexOfLastItem);
+    }, [disposalData, currentPage]);
+    
+    // 3. 페이지 변경 핸들러
+    const handlePrevPage = () => {
+        setCurrentPage(prev => Math.max(1, prev - 1)); // 1페이지 미만으로 내려가지 않도록 합니다.
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage(prev => Math.min(totalPages, prev + 1)); // 마지막 페이지를 넘지 않도록 합니다.
+    };
+    
     // 핸들러: 수량 입력 변경 시 상태 업데이트
-    const handleQuantityChange = (index, value) => {
-        const item = disposalData[index];
-        const maxStock = item.stock || item.quantity; // stock 필드가 없다면 quantity 필드를 사용
+    const handleQuantityChange = (paginatedIndex, value) => {
+        // ⭐️ paginatedIndex를 실제 disposalData의 index로 변환합니다.
+        const actualIndex = (currentPage - 1) * ITEMS_PER_PAGE + paginatedIndex;
+        
+        const item = disposalData[actualIndex];
+        const maxStock = item.stock || item.quantity; 
         const newQuantity = Math.max(0, Math.min(parseInt(value) || 0, maxStock));
         
         setDisposalData(prevData => 
             prevData.map((dataItem, i) => 
-                i === index ? { ...dataItem, quantity: newQuantity } : dataItem
+                i === actualIndex ? { ...dataItem, quantity: newQuantity } : dataItem
             )
         );
     };
@@ -59,8 +86,6 @@ const DisposalList = () => {
             return;
         }
 
-        // ⭐️ 경로를 '/stk/adjustment/disposal'에서 '/stk/disposal'로 변경하여 라우팅 오류를 회피합니다.
-        // (App.jsx의 라우팅 정의와 일치하도록 수정이 필요)
         navigate('/stk/disposal', { state: { items: selectedForDisposal } });
     };
 
@@ -81,37 +106,69 @@ const DisposalList = () => {
                 <span style={{ ...styles.col, flex: 1, justifyContent: 'center' }}>가용 재고</span>
             </div>
 
-            {disposalData.length === 0 ? (
+            {paginatedData.length === 0 && disposalData.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px', color: '#999' }}>유통기한 만료된 폐기 대상 제품이 없습니다.</div>
             ) : (
-                disposalData.map((item, index) => (
-                    // API 응답에 Lot ID가 없으므로 index를 key로 사용 (경고 방지)
-                    <div key={item.lotId || index} style={styles.itemRow}>
-                        <span style={{ ...styles.col, flex: 0.5 }}>{index + 1}</span>
-                        <div style={{ ...styles.col, flex: 3, padding: '0 10px' }}>
-                            <div style={styles.productName}>{item.productName || item.name}</div>
+                // ⭐️ disposalData 대신 paginatedData를 매핑합니다.
+                paginatedData.map((item, index) => {
+                    // ⭐️ NO 표시를 현재 페이지에 맞게 계산합니다.
+                    const actualNo = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                    return (
+                        // API 응답에 Lot ID가 없으므로 index를 key로 사용 (경고 방지)
+                        <div key={item.lotId || actualNo} style={styles.itemRow}>
+                            <span style={{ ...styles.col, flex: 0.5 }}>{actualNo}</span>
+                            <div style={{ ...styles.col, flex: 3, padding: '0 10px' }}>
+                                <div style={styles.productName}>{item.productName || item.name}</div>
+                            </div>
+                            <span style={{ ...styles.col, flex: 1.5, textAlign: 'right', justifyContent: 'flex-end' }}>
+                                {item.expiryDate || 'N/A'}
+                            </span>
+                            
+                            {/* 폐기 수량 입력 필드 */}
+                            <div style={{ ...styles.col, flex: 2, display: 'flex', justifyContent: 'center' }}>
+                                <input type="number" 
+                                    // ⭐️ item.quantity는 disposalData에서 가져온 현재 수량입니다.
+                                    value={item.quantity} 
+                                    // ⭐️ paginatedData의 index를 전달합니다.
+                                    onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                    min="0"
+                                    max={item.stock}
+                                    style={styles.quantityInput} 
+                                />
+                            </div>
+                            
+                            {/* 가용 재고 */}
+                            <span style={{ ...styles.col, flex: 1, textAlign: 'center', justifyContent: 'center' }}>
+                                {item.stock}
+                            </span>
                         </div>
-                        <span style={{ ...styles.col, flex: 1.5, textAlign: 'right', justifyContent: 'flex-end' }}>
-                            {item.expiryDate || 'N/A'}
-                        </span>
-                        
-                        {/* 폐기 수량 입력 필드 */}
-                        <div style={{ ...styles.col, flex: 2, display: 'flex', justifyContent: 'center' }}>
-                            <input type="number" 
-                                value={item.quantity} 
-                                onChange={(e) => handleQuantityChange(index, e.target.value)}
-                                min="0"
-                                max={item.stock}
-                                style={styles.quantityInput} 
-                            />
-                        </div>
-                        
-                        {/* 가용 재고 */}
-                        <span style={{ ...styles.col, flex: 1, textAlign: 'center', justifyContent: 'center' }}>
-                            {item.stock}
-                        </span>
-                    </div>
-                ))
+                    )
+                })
+            )}
+
+            {/* ⭐️ 페이지네이션 UI (전체 페이지가 1보다 클 경우에만 표시) */}
+            {totalPages > 1 && (
+                <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+                    <button 
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                        style={styles.pageButton}
+                    >
+                        &larr; 이전
+                    </button>
+                    
+                    <span style={styles.pageInfo}>
+                        {currentPage} / {totalPages} 페이지
+                    </span>
+                    
+                    <button 
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        style={styles.pageButton}
+                    >
+                        다음 &rarr;
+                    </button>
+                </div>
             )}
             
             {/* 폐기 버튼 영역 */}
@@ -137,7 +194,7 @@ const DisposalList = () => {
 };
 
 // ------------------------------------------------------------------
-// 스타일 정의 (이전과 동일)
+// 스타일 정의 (페이징 버튼 스타일 추가)
 // ------------------------------------------------------------------
 
 const containerStyles = {
@@ -186,6 +243,18 @@ const styles = {
         textAlign: 'right',
         borderTop: '1px solid #eee',
         paddingTop: '15px'
+    },
+    pageButton: {
+        padding: '8px 16px', 
+        cursor: 'pointer', 
+        backgroundColor: '#007bff', 
+        color: 'white', 
+        border: 'none', 
+        borderRadius: '4px'
+    },
+    pageInfo: {
+        padding: '8px 0', 
+        fontWeight: 'bold'
     }
 };
 
