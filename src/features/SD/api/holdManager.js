@@ -4,6 +4,7 @@
 // ============================================================================
 import ApiClient from "../../../common/authorities/api/ApiClient";
 
+
 // ✅ baseURL: http://localhost:8080/api/sd
 // ApiClient는 기본적으로 /api 경로를 포함하므로 SD 모듈 전용 prefix 추가 필요 없음
 const SD_BASE = "/sd";
@@ -112,9 +113,10 @@ export const getHoldByIdOffline = (id) => {
  * ✅ 보류 저장 (온라인/오프라인 자동 판단)
  */
 export const saveHold = async (orderId, items) => {
+
   if (isOnline()) {
     try {
-      const res = await holdOrder(orderId);
+      const res = await holdOrder(orderId, items);
       return { ok: true, mode: "online", data: res.data ?? res };
     } catch (err) {
       console.warn("🟡 서버 오류 → 오프라인 모드로 저장");

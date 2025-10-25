@@ -1,10 +1,10 @@
 import { useState } from "react";
-import axios from "axios";
 import {
   fetchRefundItems,
   verifyRefundInfo,
   verifyEasyPayRefund,
-} from "../../api/refundApi";
+  requestRefund, // ✅ 추가
+} from "../../api/refundApi"; // ApiClient 기반 API 파일 사용
 
 export default function RefundModal({ onClose, onRefundComplete }) {
   const [receiptNo, setReceiptNo] = useState("");
@@ -49,54 +49,29 @@ export default function RefundModal({ onClose, onRefundComplete }) {
     }
   };
 
-  // 💰 실제 환불 API 호출
+  // 💰 실제 환불 API 호출 (requestRefund 사용)
   const executeRefund = async (detailValue = "") => {
     const selectReason =
       reason === "OTHER" ? customReason.trim() || "기타 사유" : reason;
 
-    try {
-      // 💡 expDate 포함해서 백엔드로 전송
-      const payload = {
-        paymentId,
-        cancelAmount: totalAmount,
-        refundReason: selectReason || "CUSTOMER_CHANGE",
-        detailReason:
-          paymentMethod === "CARD" ? detailValue : customReason || "",
+    const payload = {
+      paymentId,
+      cancelAmount: totalAmount,
+      refundReason: selectReason || "CUSTOMER_CHANGE",
+      detailReason:
+        paymentMethod === "CARD" ? detailValue : customReason || "",
+      cardNo: cardNumber || "",
         items: items.map((item) => ({
-          gtin: item.gtin,
-          quantity: item.qty ?? item.salesQuantity ?? 1,
-          cardNo: cardNumber || "",
-          expDate: item.expDate || null,
-        })),
-      };
+        gtin: item.gtin,
+        quantity: item.qty ?? item.salesQuantity ?? 1,
+        expDate: item.expDate || null,
+      })),
+    };
 
-      console.log("📤 환불 요청 데이터:", payload);
+    console.log("📤 환불 요청 데이터:", payload);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/refunds",
-        payload
-      );
-
-      console.log("💰 환불 완료 응답:", response.data);
-      alert("✅ 환불 완료: " + response.data.refundStatus);
-      onRefundComplete?.(response.data);
-      onClose();
-    } catch (e) {
-      console.error("❌ 환불 실패:", e);
-
-      const message =
-        e.response?.data?.reason ||
-        e.response?.data?.message ||
-        "환불 처리 중 오류가 발생했습니다.";
-
-      if (message.includes("이미 환불된")) {
-        alert("⚠️ 이미 환불이 완료된 거래입니다.");
-      } else if (message.includes("결제 내역이 존재하지 않습니다")) {
-        alert("결제 내역을 찾을 수 없습니다.");
-      } else {
-        alert(message);
-      }
-    }
+    // ✅ ApiClient 기반 함수 호출
+    await requestRefund(payload, onRefundComplete, onClose);
   };
 
   // 💳 카드 결제 검증
@@ -299,3 +274,4 @@ export default function RefundModal({ onClose, onRefundComplete }) {
     </div>
   );
 }
+
