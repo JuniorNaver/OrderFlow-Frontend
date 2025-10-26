@@ -36,28 +36,34 @@ function SalesRegister() {
   const { showToast } = useToast(); // ✅ 토스트 (선택)
 
   // ✅ 주문 생성
-  useEffect(() => {
+ useEffect(() => {
   const initOrder = async () => {
     try {
       showLoading("주문 정보를 불러오는 중입니다...");
 
+      // ✅ 1️⃣ localStorage에 저장된 주문 확인
       const saved = localStorage.getItem("currentOrder");
 
       if (saved) {
         const parsed = JSON.parse(saved);
         const data = await getOrderById(parsed.orderId);
 
-        if (data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
+        // ✅ 이미 존재하고 완료되지 않았다면 복원
+        if (data && data.salesStatus !== "COMPLETED" && data.salesStatus !== "CANCELLED") {
           setCurrentOrder(data);
           localStorage.setItem("currentOrder", JSON.stringify(data));
           hideLoading();
-          return;
+          return; // ✅ 여기서 끝냄 (새 주문 안 만듦)
         }
       }
 
-      const order = await createOrder();
-      setCurrentOrder(order);
-      localStorage.setItem("currentOrder", JSON.stringify(order));
+      // ✅ 2️⃣ 저장된 주문이 없거나 완료/취소된 상태 → 새 주문 생성
+      const storeInfo = JSON.parse(localStorage.getItem("storeInfo"));
+      const storeId = storeInfo?.storeId || "S001";
+
+      const newOrder = await createOrder(storeId);
+      setCurrentOrder(newOrder);
+      localStorage.setItem("currentOrder", JSON.stringify(newOrder));
 
     } catch (err) {
       console.error("❌ 주문 생성 오류:", err);
@@ -133,36 +139,38 @@ function SalesRegister() {
     }
   };
 
-  // ✅ 보류 저장
+ // ✅ 보류 저장
   const handleHold = async () => {
-  if (!currentOrder) return alert("⛔ 현재 주문이 없습니다.");
-
+  if (!currentOrder) return showToast("⛔ 현재 주문이 없습니다.", "error");
   try {
-    await saveHold(currentOrder.orderId);
-    alert("💾 보류 저장 완료!");
+    const items = JSON.parse(localStorage.getItem("salesItems") || "[]");
+    const result = await saveHold(currentOrder.orderId, items);
+    showToast(
+      result.mode === "online" ? "✅ 서버에 보류 저장 완료" : "📦 오프라인 임시 저장",
+      "success"
+    );
 
-    // ✅ 1. 현재 주문 초기화
+    // ✅ (1) 테이블 초기화 — 바로 실행
+    window.clearSalesItems?.();
+
+    // ✅ (2) 기존 주문 제거
     localStorage.removeItem("currentOrder");
 
-    // ✅ 2. 새 주문 생성
+    // ✅ (3) 새 주문 생성
     const next = await createOrder();
     setCurrentOrder(next);
     localStorage.setItem("currentOrder", JSON.stringify(next));
 
-    // ✅ 3. 테이블 비우기
-    if (window.clearSalesItems) window.clearSalesItems();
+    // ✅ (4) 금액 초기화
     setSalesItems([]);
-
-    // ✅ 4. 금액 초기화
     setTotalAmount(0);
     setPaidTotal(0);
     setChangeAmount(0);
-
   } catch (err) {
-    console.error("보류 저장 오류:", err);
-    alert("보류 저장 중 오류 발생");
+    showToast("보류 저장 중 오류 ❌", "error");
   }
 };
+
 
   // ✅ 보류 목록 조회
   const handleHoldList = async () => {
@@ -192,7 +200,6 @@ const handleResume = async (orderId) => {
     alert("보류 재개 실패");
   }
 };
-
 
   return (
     <div className="p-10 bg-gray-50 min-h-screen text-[18px] relative overflow-visible">
@@ -257,36 +264,12 @@ const handleResume = async (orderId) => {
               영수증
             </button>
 
-            <HoldButton
-              onHold={async () => {
-                try {
-                  // ✅ 현재 주문/상품 데이터 가져오기
-                  const currentOrder = JSON.parse(localStorage.getItem("currentOrder"));
-                  const salesItems = JSON.parse(localStorage.getItem("salesItems")) || [];
-
-                  // ✅ 보류 저장 실행
-                  const result = await saveHold(currentOrder.orderId, salesItems);
-                  console.log("📦 보류 저장 결과:", result);
-
-                  if (result.ok) {
-                    if (result.mode === "online") {
-                      showToast("✅ 서버에 보류 저장 완료", "success");
-                    } else {
-                      showToast("📦 오프라인에 임시 저장 완료", "info");
-                    }
-                  }
-                } catch (err) {
-                  console.error("보류 저장 중 오류:", err);
-                  showToast("❌ 보류 저장 실패", "error");
-                }
-              }}
-              className="w-[160px] h-[78px] bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600 text-xl font-bold"
-              onHoldList={handleHoldList}
-              onResume={handleResume}
-              holdList={holdList}
-            >
-              보류
-            </HoldButton>
+             <HoldButton
+                onHold={handleHold}
+                onHoldList={handleHoldList}  // ✅ 여기에 연결됨
+                onResume={handleResume}
+                holdList={holdList}
+              />
 
             <button
               onClick={() => setShowSearch(true)}
