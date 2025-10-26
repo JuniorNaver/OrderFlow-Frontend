@@ -251,7 +251,7 @@ export default function POPage() {
 
   // 총 매입가(= 현재 발주 금액) 계산
   const [usedBudget, setUsedBudget] = useState(2000000); // 예: 누적 사용 금액
-  const [monthBudget, setMonthBudget] = useState(3000000); // 예: 월 예산
+  const [monthBudget, setMonthBudget] = useState(2050000); // 예: 월 예산
   const order = items.reduce(
     (sum, it) => sum + (it.totalPrice ?? it.price * it.qty),
     0
