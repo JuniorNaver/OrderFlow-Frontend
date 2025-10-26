@@ -3,7 +3,7 @@
 // ============================================================================
 
 // ✅ 공통 ApiClient (JWT 자동 포함)
-import ApiClient from "/src/common/authorities/api/ApiClient";
+import ApiClient from "../../authorities/api/ApiClient";
 
 const storeApi = {
   /** ✅ 1️⃣ 지점 등록 (관리자 전용) */

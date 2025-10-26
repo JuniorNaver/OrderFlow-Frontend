@@ -1,5 +1,9 @@
+// ============================================================================
+// 📁 src/features/SD/components/refund/RefundModal.jsx
+// ============================================================================
+import ApiClient from "../../../../common/authorities/api/ApiClient";
+
 import { useState } from "react";
-import axios from "axios";
 import {
   fetchRefundItems,
   verifyRefundInfo,
@@ -72,14 +76,12 @@ export default function RefundModal({ onClose, onRefundComplete }) {
 
       console.log("📤 환불 요청 데이터:", payload);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/refunds",
-        payload
-      );
+      // ✅ ApiClient 사용 (JWT·인터셉터 적용)
+      const response = await ApiClient.post("/refunds", payload);
 
-      console.log("💰 환불 완료 응답:", response.data);
-      alert("✅ 환불 완료: " + response.data.refundStatus);
-      onRefundComplete?.(response.data);
+      console.log("💰 환불 완료 응답:", response);
+      alert("✅ 환불 완료: " + (response.refundStatus ?? "성공"));
+      onRefundComplete?.(response);
       onClose();
     } catch (e) {
       console.error("❌ 환불 실패:", e);

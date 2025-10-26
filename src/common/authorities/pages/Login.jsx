@@ -1,58 +1,59 @@
 // ============================================================================
 // 📁 src/common/authorities/pages/Login.jsx
 // ============================================================================
+
 import React, { useState, useCallback } from "react";
 import { useAuth } from "../component/useAuth";
 import { Lock, Mail, User } from "lucide-react";
-
-const API_BASE_URL = "http://localhost:8080";
+import ApiClient from "../api/ApiClient";
 
 // =========================================================================
 // 비밀번호 초기화 팝업 컴포넌트 (API 연결)
 // =========================================================================
 const PasswordResetModal = ({ isOpen, onClose }) => {
-    const [id, setId] = useState('');
-    const [email, setEmail] = useState('');
-    const [message, setMessage] = useState('');
+    const [id, setId] = useState("");
+    const [email, setEmail] = useState("");
+    const [message, setMessage] = useState("");
     const [isSuccess, setIsSuccess] = useState(false);
 
     // ⭐️ 비밀번호 초기화 요청 API 호출 핸들러
-    const handleResetSubmit = useCallback(async (e) => {
-        e.preventDefault();
-        setMessage('');
+    const handleResetSubmit = useCallback(
+        async (e) => {
+            e.preventDefault();
+            setMessage("");
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/password/reset-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: id, email }),
-            });
+            try {
+                // ✅ ApiClient 사용 (JWT 불필요한 public API지만 인터셉터로 통일)
+                await ApiClient.post("/auth/password/reset-request", {
+                    userId: id,
+                    email,
+                });
 
-            if (response.ok) {
-                setMessage('이메일로 비밀번호 재설정 링크가 발송되었습니다. 확인해 주세요.');
+                setMessage("이메일로 비밀번호 재설정 링크가 발송되었습니다. 확인해 주세요.");
                 setIsSuccess(true);
-            } else {
-                const errorData = await response.json().catch(() => null);
-                const errorMsg = errorData?.message || '비밀번호 초기화 요청에 실패했습니다. 정보를 확인해 주세요.';
+            } catch (error) {
+                console.error("API 통신 오류:", error);
+
+                const errorMsg =
+                    error.response?.data?.message ||
+                    error.message ||
+                    "비밀번호 초기화 요청에 실패했습니다. 정보를 확인해 주세요.";
+
                 setMessage(errorMsg);
+                setIsSuccess(false);
             }
-
-        } catch (error) {
-            console.error('API 통신 오류:', error);
-            setMessage('서버와 통신할 수 없습니다.');
-            setIsSuccess(false);
-        }
-
-    }, [id, email]);
+        },
+        [id, email]
+    );
 
     // 팝업 닫기 및 상태 초기화
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         onClose();
-        setId('');
-        setEmail('');
-        setMessage('');
+        setId("");
+        setEmail("");
+        setMessage("");
         setIsSuccess(false);
-    }
+    }, [onClose]);
 
     // ✅ ESC 키 입력 시 닫기 기능 추가
     React.useEffect(() => {
@@ -139,6 +140,7 @@ const LoginPage = () => {
     const [error, setError] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // ✅ 로그인 요청 핸들러
     const handleLoginSubmit = useCallback(
         async (e) => {
             e.preventDefault();
@@ -146,10 +148,13 @@ const LoginPage = () => {
             try {
                 await login(userId, password);
             } catch (err) {
+                console.error("로그인 실패:", err);
+
                 const errorMessage =
                     err.response?.data?.message ||
                     err.message ||
                     "로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.";
+
                 setError(errorMessage);
             }
         },
@@ -185,7 +190,7 @@ const LoginPage = () => {
                             required
                             className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="아이디를 입력하세요"
-                            autoComplete="username" // ✅ 아이디 자동완성 힌트
+                            autoComplete="username" // ✅ 자동완성 힌트
                         />
                     </div>
 
@@ -200,7 +205,7 @@ const LoginPage = () => {
                             required
                             className="w-full border rounded-md p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="비밀번호를 입력하세요"
-                            autoComplete="current-password" // ✅ 비밀번호 자동완성 힌트
+                            autoComplete="current-password" // ✅ 자동완성 힌트
                         />
                     </div>
 
@@ -222,6 +227,7 @@ const LoginPage = () => {
                 </div>
             </div>
 
+            {/* ✅ 공통 ApiClient 기반 비밀번호 초기화 모달 */}
             <PasswordResetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </>
     );

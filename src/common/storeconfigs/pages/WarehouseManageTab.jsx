@@ -19,6 +19,7 @@ const WarehouseManageTab = ({ storeId, mode }) => {
     queryKey: ["storeCapacity", storeId],
     queryFn: async () => {
       const res = await storeApi.getById(storeId);
+      console.log(res);
       return res.data;
     },
     enabled: !!storeId,

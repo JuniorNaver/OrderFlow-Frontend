@@ -30,7 +30,7 @@
 //   → 전역은 전체 페이지 오버레이, MiniLoader는 부분 컴포넌트 로딩용
 // ========================================================================
 
-
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 export default function MiniLoader({ message = "로딩 중...", size = 6 }) {
