@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 import { Link } from "react-router-dom";
-import { createPO } from "../../PO/api/poApi";
+import { usePOApi } from "../../PO/api/poApi";
 
 const ZONES = [
   { key: "room", label: "실온", icon: <Sun className="h-5 w-5" /> },
@@ -15,6 +15,9 @@ const slug = (s) => (s || "").trim().replace(/\s+/g, "_");
 const unslug = (s) => (s || "").replace(/_/g, " ");
 
 export default function PRBrowse() {
+  // PO(장바구니 담기 기능)
+  const { createPO } = usePOApi();
+
   const [zone, setZone] = useState("room");
   const [corners, setCorners] = useState([]);
   const [kans, setKans] = useState([]);
@@ -199,9 +202,8 @@ export default function PRBrowse() {
             {ZONES.map((z) => (
               <button
                 key={z.key}
-                className={`px-3 py-1.5 rounded-xl border ${
-                  zone === z.key ? "bg-black text-white" : "bg-white"
-                }`}
+                className={`px-3 py-1.5 rounded-xl border ${zone === z.key ? "bg-black text-white" : "bg-white"
+                  }`}
                 onClick={() => setZone(z.key)}
                 title={z.label}
               >
@@ -223,9 +225,8 @@ export default function PRBrowse() {
               {corners.map((c) => (
                 <button
                   key={c.id}
-                  className={`text-left p-3 rounded-xl border hover:shadow ${
-                    cornerId === c.id ? "ring-2 ring-black" : ""
-                  }`}
+                  className={`text-left p-3 rounded-xl border hover:shadow ${cornerId === c.id ? "ring-2 ring-black" : ""
+                    }`}
                   onClick={() => setCornerId(c.id)}
                 >
                   <div className="font-medium">{c.name || "기타"}</div>
@@ -391,17 +392,11 @@ export default function PRBrowse() {
                     <button
                       onClick={async () => {
                         try {
-                          // ✅ createPO 호출 (기존 poId가 있으면 재사용)
-                          const res = await createPO(
-                            p.gtin,
-                            {
-                              itemNo: null,
-                              orderQty: qtyByGtin[p.gtin] ?? 1, // 현재 입력된 수량
-                              unitPrice: p.price ?? 3000,
-                              gtin: p.gtin,
-                            },
-                            poId // 기존 poId 있으면 그대로 사용
-                          );
+                          // ✅ createPO 호출 (gtin, { orderQty })
+                          const res = await createPO({
+                            gtin: p.gtin,
+                            orderQty: qtyByGtin[p.gtin] ?? 1, // 현재 입력된 수량
+                          });
 
                           // ✅ 백엔드에서 새 poId 생성된 경우, 상태에 저장
                           if (!poId && res.poId) {
@@ -415,21 +410,21 @@ export default function PRBrowse() {
                           showToast("장바구니 추가 중 오류가 발생했습니다 ❌");
                         }
                       }}
-                      className={`mt-3 w-full rounded-xl text-sm py-2 ${
-                        canAdd
+                      className={`mt-3 w-full rounded-xl text-sm py-2 ${canAdd
                           ? "bg-gray-900 text-white hover:opacity-90"
                           : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
+                        }`}
                       disabled={!canAdd}
                     >
                       {adding[p.gtin]
                         ? "담는 중…"
                         : !p.orderable
-                        ? "발주불가"
-                        : avail <= 0
-                        ? "품절"
-                        : "장바구니"}
+                          ? "발주불가"
+                          : avail <= 0
+                            ? "품절"
+                            : "장바구니"}
                     </button>
+
                   </div>
                 );
               })}
@@ -443,6 +438,6 @@ export default function PRBrowse() {
           </div>
         )}
       </main>
-    </div>
+    </div >
   );
 }

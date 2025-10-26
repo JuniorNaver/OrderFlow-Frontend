@@ -1,4 +1,6 @@
-import ApiClient from "../../../services/apiClient";
+// C:\teamYouthCase\OrderFlow-Frontend\src\features\PR\pages\CategoryListDeletePage.jsx
+
+import ApiClient from "../../../common/authorities/api/ApiClient";
 import { useMemo, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2, RefreshCw ,Search } from "lucide-react";

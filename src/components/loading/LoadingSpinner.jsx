@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 // ========================================================================
 // ⚙️ Loading 전역 로딩 시스템 — 활용법 요약
 // ------------------------------------------------------------------------
@@ -63,7 +62,7 @@
 //         └── RootProvider.jsx  ← 여기에 LoadingProvider 등록 완료
 // ========================================================================
 
-
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 export default function LoadingSpinner({ message = "로딩 중입니다..." }) {

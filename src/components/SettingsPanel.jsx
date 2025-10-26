@@ -8,7 +8,7 @@ import AccountManage from "../common/authorities/pages/AccountManage";
 import { useAuth } from "../common/authorities/component/useAuth";
 
 const SettingsPanel = ({ open, onClose }) => {
-  const { user, isAuthenticated } = useAuth(); // ✅ 실제 로그인 사용자 정보
+  const { user } = useAuth(); // ✅ 실제 로그인 사용자 정보
   const isAdmin = user?.roleId?.includes("ADMIN");
   const storeId = user?.storeId;
 

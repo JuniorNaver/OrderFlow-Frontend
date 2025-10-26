@@ -1,4 +1,4 @@
-import apiClient from "../../../services/apiClient";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 import { getCurrentStoreId } from "./shop";
 /**
  * @typedef {{productCode:string, productName:string, suggestedQty:number, marginRate?:number, reason?:string, unitPrice?:number, zone?:string, category?:string}} RecommendItem
@@ -34,7 +34,7 @@ export const getRecommend = async (storeId, params = {}) => {
     qp.categories = qp.categories.join(","); // "음료,스낵,즉석식품"
   }
 
-  const { data } = await apiClient.get(
+  const { data } = await ApiClient.get(
     `/api/v1/pr/stores/${encodeURIComponent(sid)}/recommendations`,
     { params: qp } // ← 추후 Top3 서버필터용 파라미터 지원
   );
@@ -42,11 +42,11 @@ export const getRecommend = async (storeId, params = {}) => {
 };
 
 export const createPurchaseRequest = (storeId, dto) =>
-  apiClient
+  ApiClient
     .post(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
     .then(r => r.data);
 
 export const listPurchaseRequests = (storeId, params) =>
-  apiClient
+  ApiClient
     .get(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
     .then(r => r.data);

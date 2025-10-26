@@ -3,7 +3,7 @@
 // ============================================================================
 
 // ✅ 공통 ApiClient (JWT 자동 부착 + 401 처리 포함)
-import ApiClient from "/src/common/authorities/api/ApiClient";
+import ApiClient from "../../../common/authorities/api/ApiClient";
 
 /**
  * PR 모듈 공용 HTTP 유틸

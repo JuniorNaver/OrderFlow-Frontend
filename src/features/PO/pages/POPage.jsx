@@ -1,19 +1,18 @@
 
 import React, { useEffect, useState } from "react";
-import { confirmOrder, deleteCartItems, getSavedCartList, saveCart, updateQuantity } from "../api/poApi";
+import { usePOApi } from "../api/poApi"; // ✅ userId 자동 전달됨
+import { getProduct } from "../../PR/api/product";
+import { useLocation, useNavigate } from "react-router-dom";
 import BudgetBar from "../components/BudgetBar";
 import CapacityChart from "../components/CapacityChart";
 import ItemList from "../components/ItemList";
 import SavedCartModal from "../components/SavedCartModal";
 import NeedleChart from "../components/NeedleChart";
-import { mockItems, mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
 import Empty from "../components/Empty";
 import InsertNameModal from "../components/InsertNameModal";
-import { useLocation, useNavigate } from "react-router-dom";
-import { getProduct } from "../../PR/api/product";
-import { getCartItems } from "../api/poApi"; 
+import { mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
 
-// ✅ 여기(컴포넌트 밖)에 헬퍼 정의
+// ✅ 상품 식별자 보정용 (GTIN or ProductId)
 async function resolveProductIdOrGtin(raw) {
   if (raw.id || raw.productId) return { productId: raw.id ?? raw.productId };
 
@@ -30,122 +29,96 @@ async function resolveProductIdOrGtin(raw) {
 }
 
 export default function POPage() {
-  const initialPoId = localStorage.getItem('currentPoId') || null; 
+  const {
+    createPO,
+    getCurrentCartId,
+    getCartItems,
+    updateQuantity,
+    deleteCartItems,
+    saveCart,
+    getSavedCartList,
+    deleteSavedCart,
+    confirmOrder,
+  } = usePOApi();
+
+  const initialPoId = getCurrentCartId() || null;
   const [items, setItems] = useState([]);
   const [poId, setPoId] = useState(initialPoId);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [savedCarts, setSavedCarts] = useState(mockSavedCarts);
+  const [selectAll, setSelectAll] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
 
 
-  // /** '장바구니 추가' 버튼 클릭시  */
-  // const handleAddToCart = async (product) => {
-  //   try {
-  //     // 1️⃣ 아직 발주 헤더(장바구니)가 없다면 새로 생성
-  //     let currentPoId = poId;
-  //     if (!currentPoId) {
-  //       currentPoId = await createPO(); // 💡 여기서 헤더 생성
-  //       setPoId(currentPoId);                 // 저장
-  //     }
-
-  //     const res = await api.post(`/api/po/${currentPoId}/items`, {
-  //     productId: product.id, // 또는 gtin 사용시 백엔드 스펙에 맞춰 바꾸기
-  //     qty: 1,
-  //   });
-
-  //     // 서버가 itemNo를 돌려준다고 가정
-  //     const serverItem = res.data; // { itemNo, price, ... }
-  //     setItems((prev) => [
-  //       ...prev,
-  //       {
-  //         itemNo: serverItem.itemNo,
-  //         gtin: product.gtin ?? product.productCode,
-  //         productName: product.productName,
-  //         imageUrl: product.imageUrl,
-  //         price: serverItem.price ?? product.price ?? 0,
-  //         qty: 1,
-  //         totalPrice: (serverItem.price ?? product.price ?? 0) * 1,
-  //         selected: false,
-  //       },
-  //     ]);
-  //   } catch (err) {
-  //     console.error("상품 추가 실패:", err);
-  //     alert("장바구니 추가 중 오류가 발생했습니다.");
-  //   }
-  // };
-
-  
-  // 2) 상세에서 넘어온 품목을 장바구니에 합치기
- useEffect(() => {
-  const s = location.state;
-  if (!s || !Array.isArray(s.items) || s.items.length === 0) return;
-
-  (async () => {
+  // ✅ ‘장바구니 추가’
+  const handleAddToCart = async (product, orderQty) => {
     try {
-      let currentPoId = poId;
-      if (!currentPoId) {
-        // ✅ createPO()가 내부적으로 /po 생성 + 아이템 추가까지 처리
-        const firstItem = s.items[0];
-        const idOrGtin = await resolveProductIdOrGtin(firstItem);
-        const first = await createPO(
-          firstItem.gtin ?? idOrGtin.gtin,
-          {
-            itemNo: null,
-            orderQty: Number(firstItem.qty || 1),
-            unitPrice: firstItem.price ?? 0,
-            gtin: firstItem.gtin ?? firstItem.productCode,
-          }
-        );
-        currentPoId = first.poId;
-        setPoId(currentPoId);
-        localStorage.setItem("currentPoId", currentPoId);
-      }
+      // 1️⃣ 서버에 상품 추가 요청
+      const added = await createPO({
+        gtin: product.gtin,
+        orderQty: orderQty ?? 1, // 기본 수량
+      });
 
-      // ✅ 나머지 품목 추가
-      for (let i = 1; i < s.items.length; i++) {
-        const raw = s.items[i];
-        const idOrGtin = await resolveProductIdOrGtin(raw);
-        await createPO(
-          raw.gtin ?? idOrGtin.gtin,
-          {
-            itemNo: null,
-            orderQty: Number(raw.qty || 1),
-            unitPrice: raw.price ?? 0,
-            gtin: raw.gtin ?? raw.productCode,
-          },
-          currentPoId
-        );
-      }
+      // 2️⃣ 서버에서 최신 장바구니 아이템 목록 가져오기
+      const updated = await getCartItems(added.poId);
+      setItems(updated);
 
-      // ✅ 서버에서 최신 장바구니 불러오기
-      const itemsFromServer = await getCartItems(currentPoId);
-      setItems(itemsFromServer);
-
-      // 중복 추가 방지
-      navigate("/po", { replace: true, state: null });
-    } catch (e) {
-      console.error(e);
-    }
-  })();
-}, [location.state, navigate, poId]);
-
-  
-
-// 🧩 장바구니 페이지 로드시, 서버에서 아이템 불러오기
-useEffect(() => {
-  if (!poId) return; // poId가 설정된 경우에만 실행
-  (async () => {
-    try {
-      const itemsFromServer = await getCartItems(poId);
-      console.log("불러온 장바구니:", itemsFromServer);
-      setItems(itemsFromServer);
     } catch (err) {
-      console.error("장바구니 불러오기 실패:", err);
+      console.error("상품 추가 실패:", err);
+      alert("장바구니 추가 중 오류가 발생했습니다.");
+    }
+  };
+
+
+  // ✅ 상세 페이지에서 넘어온 품목 합치기
+  useEffect(() => {
+  const s = location.state;
+  if (!s?.items?.length) return;
+
+  (async () => {
+    try {
+      for (const product of s.items) {
+        await handleAddToCart(product);
+      }
+
+      navigate("/po", { replace: true, state: null });
+    } catch (err) {
+      console.error("상세페이지 상품 추가 실패:", err);
     }
   })();
-}, [poId]);
+}, [location.state]);
+
+
+
+  // 🧩 장바구니 페이지 로드시, 서버에서 아이템 불러오기
+  useEffect(() => {
+    if (!poId) return;
+    (async () => {
+      try {
+        const itemsFromServer = await getCartItems(poId);
+        console.log("불러온 장바구니:", itemsFromServer);
+
+        const normalized = itemsFromServer.map(it => ({
+          itemNo: it.itemNo,
+          gtin: it.gtin,
+          productName: it.productName,
+          qty: it.orderQty ?? 0,
+          price: it.purchasePrice ?? 0,
+          totalPrice: it.total ?? (it.purchasePrice ?? 0) * (it.orderQty ?? 0),
+          margin: it.margin ?? 0,
+          expectedArrival: it.expectedArrival,
+          selected: false,
+        }));
+
+        setItems(normalized);
+      } catch (err) {
+        console.error("장바구니 불러오기 실패:", err);
+      }
+    })();
+  }, [poId]);
+
 
 
 
@@ -180,18 +153,18 @@ useEffect(() => {
   // 수량 감소
   const handleDecrease = async (itemNo, currentQty) => {
     if (currentQty <= 1) return;
-    const newQty = currentQty -1;
+    const newQty = currentQty - 1;
     try {
       await updateQuantity(itemNo, newQty);
       setItems((prev) =>
         prev.map((it) =>
-          it.itemNo === itemNo 
+          it.itemNo === itemNo
             ? {
-                ...it,
-                qty: newQty,
-                totalPrice: newQty * it.price,
-                totalMargin: newQty * it.margin,
-              }
+              ...it,
+              qty: newQty,
+              totalPrice: newQty * it.price,
+              totalMargin: newQty * it.margin,
+            }
             : it
         )
       );
@@ -201,12 +174,7 @@ useEffect(() => {
     }
   };
 
-
-
-
-
   // 전체 선택 토글
-  const [selectAll, setSelectAll] = useState(false);
   const handleSelectAll = () => {
     const newValue = !selectAll;
     setSelectAll(newValue);
@@ -241,17 +209,17 @@ useEffect(() => {
   const handleDelete = async () => {
     const selectedItems = items.filter((it) => it.selected); // 선택된 항목만 필터링
     if (selectedItems.length === 0) {
-        alert("삭제할 항목을 선택해주세요."); 
-        return;
+      alert("삭제할 항목을 선택해주세요.");
+      return;
     }
     const itemIdsToDelete = selectedItems.map(it => it.itemNo); // 삭제할 ID 목록 추출
     try {
-        await deleteCartItems(itemIdsToDelete); 
-        const remaining = items.filter((it) => !it.selected);
-        setItems(remaining);
+      await deleteCartItems(itemIdsToDelete);
+      const remaining = items.filter((it) => !it.selected);
+      setItems(remaining);
     } catch (err) {
-        console.error("상품 삭제 실패:", err);
-        alert("상품 삭제 중 오류가 발생했습니다.");
+      console.error("상품 삭제 실패:", err);
+      alert("상품 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -268,7 +236,7 @@ useEffect(() => {
   const handleConfirmSave = async (cartName) => {
     try {
       // 장바구니 저장 요청
-      await saveCart(poId, { remarks: cartName});
+      await saveCart(poId, { remarks: cartName });
 
       alert(`'${cartName}' 장바구니가 저장되었습니다.`);
 
@@ -301,19 +269,19 @@ useEffect(() => {
 
   // 불러오기 삭제 버튼 
   const handleDeleteSavedCart = async (e, cart) => {
-  e.stopPropagation();
-  if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
+    e.stopPropagation();
+    if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
 
-  try {
-    await deleteSavedCart(cart.poId); // ✅ itemNo → poId
-  } catch (err) {
-    console.error("장바구니 삭제 실패:", err);
-  } finally {
-    setSavedCarts((prev) =>
-      prev.filter((c) => String(c.poId) !== String(cart.poId))
-    );
-  }
-};
+    try {
+      await deleteSavedCart(cart.poId); // ✅ itemNo → poId
+    } catch (err) {
+      console.error("장바구니 삭제 실패:", err);
+    } finally {
+      setSavedCarts((prev) =>
+        prev.filter((c) => String(c.poId) !== String(cart.poId))
+      );
+    }
+  };
 
 
 
@@ -337,96 +305,96 @@ useEffect(() => {
     }
     try {
       // 선택 라인만 확정하는 스펙이라면 itemNo 배열도 전달
-    // await confirmOrder(poId, selectedItems.map(it => it.itemNo));
-    await confirmOrder(poId);
-    alert(`${selectedItems.length}개 상품을 발주 확정했습니다.`);
-  } catch (err) {
-    console.error("발주 요청 실패:", err);
-    alert("발주 중 오류가 발생했습니다.");
+      // await confirmOrder(poId, selectedItems.map(it => it.itemNo));
+      await confirmOrder(poId);
+      alert(`${selectedItems.length}개 상품을 발주 확정했습니다.`);
+    } catch (err) {
+      console.error("발주 요청 실패:", err);
+      alert("발주 중 오류가 발생했습니다.");
     }
   };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
       {items.length === 0 ? (
-          
-          <Empty handleLoad={handleLoad}/>
+
+        <Empty handleLoad={handleLoad} />
 
       ) : (
-      <div className="w-full max-w-7xl flex items-stretch space-x-8">
-        {/* 왼쪽 영역 */}
-        <div className="flex-1 flex flex-col ">
-          {/* 헤더 */}
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">
-              장바구니{" "}
-              <span className="text-gray-500 text-lg">({items.length})</span>
-            </h1>
-            <div className="space-x-3">
+        <div className="w-full max-w-7xl flex items-stretch space-x-8">
+          {/* 왼쪽 영역 */}
+          <div className="flex-1 flex flex-col ">
+            {/* 헤더 */}
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-3xl font-bold">
+                장바구니{" "}
+                <span className="text-gray-500 text-lg">({items.length})</span>
+              </h1>
+              <div className="space-x-3">
+                <button
+                  onClick={handleSave}
+                  className="bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded"
+                >
+                  저장
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded"
+                >
+                  삭제
+                </button>
+                <button
+                  onClick={handleLoad}
+                  className="bg-gray-300 hover:bg-gray-300 text-white font-semibold px-4 py-2 rounded border border-gray-300"
+                >
+                  불러오기
+                </button>
+              </div>
+            </div>
+
+            {/* 상품 목록 */}
+            <ItemList
+              items={items}
+              selectAll={selectAll}
+              onSelectAll={handleSelectAll}
+              onSelect={handleSelect}
+              onIncrease={handleIncrease}
+              onDecrease={handleDecrease}
+            />
+
+            {/* 예산 바 */}
+            <div className="mb-9">
+              <BudgetBar
+                used={usedBudget}
+                order={order}
+                budget={monthBudget}
+                monthLabel="3월 발주금액"
+              />
+            </div>
+
+            {/* 바늘 지표계 */}
+            <div className="flex justify-start pl-5 mb-7">
+              <NeedleChart value={65} max={100} />
+            </div>
+
+            {/* 발주 버튼 */}
+            <div className="flex justify-center mt-12 mb-8">
               <button
-                onClick={handleSave}
-                className="bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded"
+                onClick={handleOrder}
+                className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl py-4 px-20 rounded-none shadow-md transition-all duration-200"
               >
-                저장
-              </button>
-              <button
-                onClick={handleDelete}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded"
-              >
-                삭제
-              </button>
-              <button
-                onClick={handleLoad}
-                className="bg-gray-300 hover:bg-gray-300 text-white font-semibold px-4 py-2 rounded border border-gray-300"
-              >
-                불러오기
+                총 {items.length}개 발주하기
               </button>
             </div>
           </div>
 
-          {/* 상품 목록 */}
-          <ItemList
-            items={items}
-            selectAll={selectAll}
-            onSelectAll={handleSelectAll}
-            onSelect={handleSelect}
-            onIncrease={handleIncrease}
-            onDecrease={handleDecrease}
-          />
-
-          {/* 예산 바 */}
-          <div className="mb-9">
-            <BudgetBar 
-              used={usedBudget} 
-              order={order} 
-              budget={monthBudget} 
-              monthLabel="3월 발주금액"
-            />
-          </div>
-          
-          {/* 바늘 지표계 */}
-          <div className="flex justify-start pl-5 mb-7">
-            <NeedleChart value={65} max={100} />
-          </div>
-
-          {/* 발주 버튼 */}
-          <div className="flex justify-center mt-12 mb-8">
-            <button
-              onClick={handleOrder}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl py-4 px-20 rounded-none shadow-md transition-all duration-200"
-            >
-              총 {items.length}개 발주하기
-            </button>
+          {/* 오른쪽 영역(CapacityChart) */}
+          <div className="w-[350px] relative">
+            <div className="sticky top-20">
+              <CapacityChart data={mockWarehouseData} />
+            </div>
           </div>
         </div>
-
-        {/* 오른쪽 영역(CapacityChart) */}
-        <div className="w-[350px] relative">
-          <div className="sticky top-20">
-            <CapacityChart data={mockWarehouseData} />
-          </div>
-        </div>
-      </div>
       )}
 
       {/* 불러오기 모달 표시 */}
