@@ -40,7 +40,12 @@ export default function BudgetBar({ month = "3월", used, order, budget }) {
             className={`absolute top-0 h-8 flex justify-center items-center text-xs font-semibold z-10 ${
               isOver ? "bg-red-400 text-white" : "bg-green-400 text-gray-800"
             } shadow-md`}
-            style={{ width: `${orderPercent}%`, left: `${usedPercent}%`,  transition: "width 0.18s cubic-bezier(0.25, 1, 0.5, 1)"}}
+            style={{ 
+              width: `${orderPercent}%`,
+              left: `${usedPercent}%`,
+              transition: "width 0.18s cubic-bezier(0.25, 1, 0.5, 1)",
+              whiteSpace: "nowrap"
+            }}
           >
             {order.toLocaleString()}원
           </div>
