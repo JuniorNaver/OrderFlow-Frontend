@@ -1,0 +1,8 @@
+/* 체크박스 기본 스타일 통일 */
+input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  accent-color: #2563eb !important; /* ✅ 파란색 체크 (tailwind 'blue-600' 색상) */
+  cursor: pointer !important;
+  vertical-align: middle !important;
+}

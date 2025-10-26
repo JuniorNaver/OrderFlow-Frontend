@@ -69,11 +69,32 @@ export const usePOApi = () => {
     await ApiClient.post(`/po/save/${poId}`, body);
 
   /** ✅ 저장된 장바구니 목록 조회 */
-  const getSavedCartList = async () => await ApiClient.get(`/po/saved`);
+  const getSavedCartList = async () => {
+    const res = await ApiClient.get(`/po/saved`);
+    console.log("ApiClient 응답 구조:", res);
+    return res;
+  }
+
+
+
+
+
+
+
 
   /** ✅ 저장된 장바구니 상세 조회 */
-  const getSavedCartItems = async (poId) =>
-    await ApiClient.get(`/po/savedCart/${poId}`);
+  const getSavedCartItems = async (poId) =>{
+    const res = await ApiClient.get(`/po/savedCart/${poId}`);
+      console.log("서버 응답:", res);
+
+    return res;
+  }
+
+
+
+
+
+
 
   /** ✅ 저장된 장바구니 삭제 */
   const deleteSavedCart = async (poId) =>
