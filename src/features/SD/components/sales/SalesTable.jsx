@@ -16,14 +16,13 @@ export default function SalesTable({
   // ✅ 외부에서 테이블 아이템을 일괄 주입
   window.loadSalesItems = (raw = []) => {
     const mapped = raw.map((it, idx) => ({
-      id: it.no || it.productId || it.gtin || idx,
-      gtin: it.gtin || it.productId || idx.toString(),
-      name: it.productName || it.name || "상품",
-      price: Number(it.sdPrice ?? it.price ?? 0),
-      qty: Number(it.salesQuantity ?? it.qty ?? 1),
-      originalStock: Number(it.stockQuantity ?? it.originalStock ?? it.stock ?? 0),
-      stock: Math.max(0, (it.stockQuantity ?? 0) - (it.salesQuantity ?? 0)),
-   subtotal: Number(it.sdPrice ?? it.price ?? 0) * Number(it.salesQuantity ?? it.qty ?? 1),
+      id: it.no || idx,                         // SalesItem.no
+      gtin: it.gtin,                            // 상품 바코드
+      name: it.productName,                     // 상품명
+      price: Number(it.sdPrice ?? 0),           // 판매 단가 (sdPrice = unitPrice)
+      qty: Number(it.salesQuantity ?? 1),       // 수량
+      stock: Number(it.stockQuantity ?? 0),     // 표시용 재고
+      subtotal: Number(it.subtotal ?? 0),       // 소계 (백엔드 계산값)
     }));
     setItems(mapped);
   };
