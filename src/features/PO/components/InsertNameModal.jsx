@@ -1,13 +1,15 @@
 import React, { useState } from "react";
+import { useToast } from "../../../components/providers/ToastProvider";
 
 export default function InsertNameModal({ isOpen, onClose, onConfirm }) {
   const [cartName, setCartName] = useState("");
+  const { showToast } = useToast();
 
   if (!isOpen) return null; // 닫혀있으면 렌더링 안 함
 
   const handleConfirm = () => {
     if (!cartName.trim()) {
-      alert("제목을 입력해주세요.");
+      showToast("제목을 입력해주세요.");
       return;
     }
     onConfirm(cartName); // 부모에 전달

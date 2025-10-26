@@ -1,5 +1,6 @@
 import React from "react";
 
+
 export default function ItemList({
   items,
   selectAll,
@@ -43,14 +44,14 @@ export default function ItemList({
               >
                 {/* 상품명 */}
                 <td className="py-3 px-4">
-                  <div className="flex items-center">
+                  <div className="flex items-center min-h-[48px]">
                     <input
                       type="checkbox"
                       checked={!!item.selected}
                       onChange={() => onSelect(item.itemNo)}
-                      className="w-5 h-5"
+                      className="w-[18px] h-[18px] accent-blue-600 cursor-pointer shrink-0 align-middle"
                     />
-                    <span className="ml-12 text-gray-800">{item.productName}</span>
+                    <span className="ml-12 text-gray-800 leading-tight break-words">{item.productName}</span>
                   </div>
                 </td>
 

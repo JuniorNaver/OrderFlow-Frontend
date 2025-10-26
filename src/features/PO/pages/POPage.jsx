@@ -11,6 +11,9 @@ import NeedleChart from "../components/NeedleChart";
 import Empty from "../components/Empty";
 import InsertNameModal from "../components/InsertNameModal";
 import { mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
+import OrderComplete from "../components/OrderComplete";
+import { useToast } from "../../../components/providers/ToastProvider";
+
 
 // ✅ 상품 식별자 보정용 (GTIN or ProductId)
 async function resolveProductIdOrGtin(raw) {
@@ -37,19 +40,51 @@ export default function POPage() {
     deleteCartItems,
     saveCart,
     getSavedCartList,
+    getSavedCartItems,
     deleteSavedCart,
     confirmOrder,
   } = usePOApi();
 
-  const initialPoId = getCurrentCartId() || null;
-  const [items, setItems] = useState([]);
-  const [poId, setPoId] = useState(initialPoId);
+  const { showToast } = useToast();
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [savedCarts, setSavedCarts] = useState(mockSavedCarts);
   const [selectAll, setSelectAll] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [savedList, setSavedList] = useState([]);
+  const [showSavedList, setShowSavedList] = useState(false); // 모달 표시 여부
+  const [isOrderComplete, setIsOrderComplete] = useState(false); // "발주가 확정되었습니다."
+
+  // 새로고침하면 poId, item 초기화 되는거 방지 
+  const [poId, setPoId] = useState(() => {
+    const savedPoId = localStorage.getItem("poId");
+    return savedPoId ? Number(savedPoId) : null;
+  });
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem("cartItems");
+    return saved ? JSON.parse(saved) : [];
+  });
+  // 변경될 때마다 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem("cartItems", JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    if (poId) localStorage.setItem("poId", poId);
+  }, [poId]);
+  // DB동기화
+  useEffect(() => {
+    if (poId && items.length === 0) {
+      // 서버에서 실제 장바구니 아이템 다시 불러오기
+      (async () => {
+        const restored = await getSavedCartItems(poId);
+        setItems(restored);
+      })();
+    }
+  }, []);
+
 
 
   // ✅ ‘장바구니 추가’
@@ -67,7 +102,7 @@ export default function POPage() {
 
     } catch (err) {
       console.error("상품 추가 실패:", err);
-      alert("장바구니 추가 중 오류가 발생했습니다.");
+      showToast("장바구니 추가 중 오류가 발생했습니다.");
     }
   };
 
@@ -90,6 +125,23 @@ export default function POPage() {
   })();
 }, [location.state]);
 
+
+  // ✅ 장바구니 페이지 로드시, 현재 PR 상태 장바구니(poId) 조회
+  useEffect(() => {
+    (async () => {
+      try {
+        const currentPoId = await getCurrentCartId(); // ✅ await 중요
+        if (currentPoId) {
+          setPoId(currentPoId);
+          console.log("현재 PR 헤더 ID:", currentPoId);
+        } else {
+          console.log("현재 진행 중(PR) 장바구니가 없습니다.");
+        }
+      } catch (err) {
+        console.error("현재 장바구니 ID 불러오기 실패:", err);
+      }
+    })();
+  }, []); 
 
 
   // 🧩 장바구니 페이지 로드시, 서버에서 아이템 불러오기
@@ -146,7 +198,7 @@ export default function POPage() {
       );
     } catch (err) {
       console.error("수량 증가 실패:", err);
-      alert("서버와 통신 중 오류가 발생했습니다.");
+      showToast("서버와 통신 중 오류가 발생했습니다.");
     }
   };
 
@@ -170,7 +222,7 @@ export default function POPage() {
       );
     } catch (err) {
       console.error("수량 감소 실패:", err);
-      alert("서버와 통신 중 오류가 발생했습니다.")
+      showToast("서버와 통신 중 오류가 발생했습니다.")
     }
   };
 
@@ -209,7 +261,7 @@ export default function POPage() {
   const handleDelete = async () => {
     const selectedItems = items.filter((it) => it.selected); // 선택된 항목만 필터링
     if (selectedItems.length === 0) {
-      alert("삭제할 항목을 선택해주세요.");
+      showToast("삭제할 항목을 선택해주세요.");
       return;
     }
     const itemIdsToDelete = selectedItems.map(it => it.itemNo); // 삭제할 ID 목록 추출
@@ -219,13 +271,9 @@ export default function POPage() {
       setItems(remaining);
     } catch (err) {
       console.error("상품 삭제 실패:", err);
-      alert("상품 삭제 중 오류가 발생했습니다.");
+      showToast("상품 삭제 중 오류가 발생했습니다.");
     }
   };
-
-
-
-
 
   // 장바구니 저장버튼
   const handleSave = () => {
@@ -238,35 +286,86 @@ export default function POPage() {
       // 장바구니 저장 요청
       await saveCart(poId, { remarks: cartName });
 
-      alert(`'${cartName}' 장바구니가 저장되었습니다.`);
+      showToast(`'${cartName}' 장바구니가 저장되었습니다.`);
 
       // ✅ 저장 완료 후 목록을 다시 불러와 최신화
       const updatedList = await getSavedCartList();
       setSavedCarts(updatedList);
     } catch (err) {
       console.error("장바구니 저장 실패:", err);
-      alert("장바구니 저장 중 오류가 발생했습니다.");
+      showToast("장바구니 저장 중 오류가 발생했습니다.");
     } finally {
       setIsNameModalOpen(false);
     }
   };
 
-  // '불러오기' 버튼 클릭
+  // 불러오기 버튼 눌렀을 때
   const handleLoad = async () => {
-    const list = await getSavedCartList();
-    console.log("저장된 장바구니:", list);
-    setShowSavedList(true); // 목업데이터 출력 
+    try {
+      const list = await getSavedCartList();
+
+      if (!list || list.length === 0) {
+        showToast("저장된 장바구니가 없습니다.");
+        return; // 🚫 모달 안 열고 종료
+      }
+
+      setSavedList(list);
+      setShowSavedList(true); // ✅ 모달 표시
+    } catch (err) {
+      console.error("저장된 장바구니 불러오기 실패:", err);
+      showToast("장바구니 목록을 불러오는 중 오류가 발생했습니다.");
+    }
   };
 
-  // 불러오기 임시 데이터 
-  const [showSavedList, setShowSavedList] = useState(false); // 모달 표시 여부
 
-  // 특정 저장본을 클릭했을 때
-  const handleSelectSavedCart = (cart) => {
-    setItems(cart.items);
-    setShowSavedList(false);
+
+
+
+
+  
+
+  // 특정 저장본을 클릭했을 때 상품 목록 불러오기
+  const handleSelectSavedCart = async (cart) => {
+    try {
+      // 1️⃣ 해당 장바구니의 poId를 이용해서 아이템 목록 조회
+      const itemsFromServer = await getSavedCartItems(cart.poId);
+      console.log("🧩 getSavedCartItems 응답:", itemsFromServer);
+
+      // 2️⃣ 데이터 정규화
+      const normalized = itemsFromServer.map(it => ({
+        itemNo: it.itemNo,
+        gtin: it.gtin,
+        productName: it.productName,
+        qty: it.orderQty ?? 0,
+        price: it.purchasePrice ?? 0,
+        totalPrice: it.total ?? (it.purchasePrice ?? 0) * (it.orderQty ?? 0),
+        margin: it.margin ?? 0,
+        expectedArrival: it.expectedArrival,
+        selected: false,
+      }));
+
+      // 3️⃣ 상태 갱신
+      setItems(normalized);
+      setPoId(cart.poId);
+      setShowSavedList(false);
+
+      console.log(`"${cart.remarks}" 장바구니 불러오기 완료`);
+    } catch (err) {
+      console.error("저장된 장바구니 불러오기 실패:", err);
+      showToast("장바구니를 불러오는 중 오류가 발생했습니다.");
+    }
+    console.log("선택한 장바구니:", cart);
   };
 
+
+
+
+
+
+
+
+
+  
   // 불러오기 삭제 버튼 
   const handleDeleteSavedCart = async (e, cart) => {
     e.stopPropagation();
@@ -283,10 +382,6 @@ export default function POPage() {
     }
   };
 
-
-
-
-
   // 모달 닫기
   const handleCloseModal = () => {
     setShowSavedList(false);
@@ -294,32 +389,50 @@ export default function POPage() {
 
   // 발주확정 버튼
   const handleOrder = async () => {
-    const selectedItems = items.filter(it => it.selected);
-    if (selectedItems.length === 0) {
-      alert("장바구니가 비어있습니다.");
+    const allItems = items;
+    if (allItems.length === 0) {
+      showToast("장바구니가 비어있습니다.");
       return;
     }
     if (!poId) {
-      alert("발주 헤더가 없습니다. 다시 시도해 주세요.");
+      showToast("발주 헤더가 없습니다. 다시 시도해 주세요.");
       return;
     }
     try {
-      // 선택 라인만 확정하는 스펙이라면 itemNo 배열도 전달
-      // await confirmOrder(poId, selectedItems.map(it => it.itemNo));
       await confirmOrder(poId);
-      alert(`${selectedItems.length}개 상품을 발주 확정했습니다.`);
+
+      //발주 완료 후 LocalStorage 초기화
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("poId");
+      setItems([]);
+      setPoId(null);
+
+      // 완료 화면
+      setIsOrderComplete(true); 
+
     } catch (err) {
       console.error("발주 요청 실패:", err);
-      alert("발주 중 오류가 발생했습니다.");
+      showToast("발주 중 오류가 발생했습니다.");
     }
   };
 
+  // 발주 완료 후 "발주내역 보기" 버튼
+  const handleViewOrders = () => {
+    window.location.href = "/gr";
+  };
+
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
-      {items.length === 0 ? (
+      
+      {isOrderComplete ? (
+        <OrderComplete  // 발주 완료 화면 
+          handleViewOrders={handleViewOrders} // "발주내역 보기" 버튼
+        />
+      ) : (
 
+      items.length === 0 ? (
         <Empty handleLoad={handleLoad} />
-
       ) : (
         <div className="w-full max-w-7xl flex items-stretch space-x-8">
           {/* 왼쪽 영역 */}
@@ -372,9 +485,14 @@ export default function POPage() {
               />
             </div>
 
-            {/* 바늘 지표계 */}
+            {/* 바늘 지표계
             <div className="flex justify-start pl-5 mb-7">
               <NeedleChart value={65} max={100} />
+            </div> */}
+
+            {/* ✅ 가운데 정렬 공간 (추후 콘텐츠 예정) */}
+            <div className="flex justify-center items-center my-8">
+              {/* 여기에 나중에 넣을 콘텐츠가 들어갈 예정 */}
             </div>
 
             {/* 발주 버튼 */}
@@ -395,11 +513,12 @@ export default function POPage() {
             </div>
           </div>
         </div>
-      )}
+      ))}
 
       {/* 불러오기 모달 표시 */}
       {showSavedList && (
         <SavedCartModal
+          list={savedList}
           carts={savedCarts}
           onSelect={handleSelectSavedCart}
           onClose={handleCloseModal}
