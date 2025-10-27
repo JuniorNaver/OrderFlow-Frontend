@@ -9,14 +9,41 @@ import { filterCategories } from "../util/filterCategories";
 /** ----------------------------- API LAYER ------------------------------ **/
 
 async function fetchCategories() {
-    const { data } = await ApiClient.get("/api/categories");
-    return data;
+    const  data  = await ApiClient.get("/categories");
+    const pickArray = (x) => {
+    if (!x) return [];
+    if (Array.isArray(x)) return x;
+    const cands = [x.content, x.items, x.list, x.results, x.data, x.data?.content, x.data?.items];
+    const arr = cands.find(Array.isArray);
+    if (Array.isArray(arr)) return arr;
+    return typeof x === "object" ? Object.values(x) : [];
+  };
+
+  
+
+  const raw = pickArray(data);
+  console.debug("raw length ▶", raw.length, "sample keys ▶", Object.keys(raw?.[0] ?? {}));
+
+
+ const normalize = (c = {}) => ({
+   kanCode: c.kanCode,
+   name: c.name ?? c.smallCategory ?? c.mediumCategory ?? c.largeCategory ?? c.totalCategory ?? "(이름 없음)",
+   parentKanCode: c.parent?.kanCode ?? null, // ← parent는 객체
+   largeCategory: c.largeCategory ?? null,
+   mediumCategory: c.mediumCategory ?? null,
+   smallCategory: c.smallCategory ?? null
+ });
+ const list = raw.map(normalize).filter(x => !!x.kanCode);
+  console.debug("normalized length ▶", list.length);
+  return list;
 }
 
-async function deleteCategory(kancode) {
-    await ApiClient.delete(`/api/categories/${encodeURIComponent(kancode)}`);
+// 카테고리 삭제
+  async function deleteCategory(kanCode) {
+    if (!kanCode) throw new Error("Kan 코드가 비었습니다.");
+    await ApiClient.delete(`/categories/${encodeURIComponent(kanCode)}`)
     
-}
+  }
 
 
 /** ------------------------------ PURE UTILS --------------------------- **/

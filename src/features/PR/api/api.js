@@ -1,12 +1,5 @@
 import ApiClient from "../../../common/authorities/api/ApiClient";
 import { getCurrentStoreId } from "./shop";
-/**
- * @typedef {{productCode:string, productName:string, suggestedQty:number, marginRate?:number, reason?:string, unitPrice?:number, zone?:string, category?:string}} RecommendItem
- * @typedef {{storeId?:string, generatedAt?:string, items:RecommendItem[]}} RecommendDto
- * @typedef {{productCode:string, qty:number, unitPrice?:number}} PurchaseRequestLine
- * @typedef {{storeId:string, lines:PurchaseRequestLine[], note?:string}} PurchaseRequestCreateDto
- * @typedef {{id:string, storeId:string, lines:PurchaseRequestLine[], createdAt:string, status:"CREATED"|"APPROVED"|"REJECTED"}} PurchaseRequestDto
- */
 
 /** 응답 정규화: items | content | list | array → 항상 { items, storeId?, generatedAt? } */
 function normalizeRecommend(data) {
@@ -34,8 +27,8 @@ export const getRecommend = async (storeId, params = {}) => {
     qp.categories = qp.categories.join(","); // "음료,스낵,즉석식품"
   }
 
-  const { data } = await ApiClient.get(
-    `/api/v1/pr/stores/${encodeURIComponent(sid)}/recommendations`,
+  const  data    = await ApiClient.get(
+    `/v1/pr/stores/${encodeURIComponent(sid)}/recommendations`,
     { params: qp } // ← 추후 Top3 서버필터용 파라미터 지원
   );
   return normalizeRecommend(data);
@@ -43,10 +36,10 @@ export const getRecommend = async (storeId, params = {}) => {
 
 export const createPurchaseRequest = (storeId, dto) =>
   ApiClient
-    .post(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
+    .post(`/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, dto)
     .then(r => r.data);
 
 export const listPurchaseRequests = (storeId, params) =>
   ApiClient
-    .get(`/api/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
+    .get(`/v1/pr/stores/${encodeURIComponent(storeId)}/orders`, { params })
     .then(r => r.data);
