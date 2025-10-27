@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { usePOApi } from "../../PO/api/poApi";
 
 const ZONES = [
-  { key: "room", label: "실온", icon: <Sun className="h-5 w-5" /> },
+  { key: "room", label: " 실온", icon: <Sun className="h-5 w-5" /> },
   { key: "chilled", label: "냉장", icon: <Refrigerator className="h-5 w-5" /> },
   { key: "frozen", label: "냉동", icon: <Snowflake className="h-5 w-5" /> },
   { key: "other", label: "기타", icon: <PackageOpen className="h-5 w-5" /> },
@@ -111,7 +111,15 @@ export default function PRBrowse() {
     setError(null);
     try {
       const data = await fetchProducts(kanCode, 0, 20);
-      setProducts(data);
+      const normalized = data.map(p => ({
+        gtin: p.gtin ?? p.productCode ?? p.id,
+        name: p.name ?? p.productName ?? p.title ?? "",
+        price: p.price ?? p.unitPrice ?? p.purchasePrice,
+        unit: p.unit ?? p.unitName ?? p.packageUnit,
+        imageUrl: p.imageUrl ?? p.image ?? p.thumbnailUrl ?? null,
+        orderable: (p.orderable ?? true),
+      }));
+      setProducts(normalized);
     } catch (e) {
       setError(e.message || "상품을 불러오지 못했어요.");
     } finally {
@@ -178,6 +186,46 @@ export default function PRBrowse() {
       return { ...m, [gtin]: safe };
     });
   }
+
+  async function addToCart(p) {
+  const gtin = p.gtin;
+  const qty = qtyByGtin[gtin] ?? 1;
+  if (qty <= 0) return;
+
+  // 로딩 플래그 ON
+  setAdding(s => ({ ...s, [gtin]: true }));
+  const prevAvail = availableByGtin[gtin] ?? 0;
+
+  try {
+    // 1) 서버에 예약(available = onHand - reserved 라면 필수)
+    await reserve(gtin, qty); // 필요 시 storeId 등 인자 추가
+
+    // 2) PO 라인 생성 (기존 poId 있으면 재사용)
+    const res = await createPO({ poId, gtin, orderQty: qty });
+    if (!poId && res?.poId) setPoId(res.poId);
+
+    // 3) 낙관적 차감
+    setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - qty) }));
+    // 수량도 가용치 범위로 보정
+    setQtyByGtin(m => ({
+      ...m,
+      [gtin]: Math.min(m[gtin] ?? 1, Math.max(1, prevAvail - qty)),
+    }));
+
+    showToast(`${p.name} ${qty}개 담았습니다 ✅`);
+  } catch (e) {
+    console.error("장바구니 담기 실패:", e);
+    showToast(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌");
+  } finally {
+    // 로딩 플래그 OFF
+    setAdding(s => ({ ...s, [gtin]: false }));
+    // 4) 서버 진실값으로 단건 재동기화(가볍고 정확)
+    try {
+      const inv = await fetchAvailable(gtin);
+      setAvailableByGtin(m => ({ ...m, [gtin]: inv?.available ?? 0 }));
+    } catch {/* no-op */}
+  }
+}
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -390,26 +438,7 @@ export default function PRBrowse() {
 
                     {/* 담기 버튼 */}
                     <button
-                      onClick={async () => {
-                        try {
-                          // ✅ createPO 호출 (gtin, { orderQty })
-                          const res = await createPO({
-                            gtin: p.gtin,
-                            orderQty: qtyByGtin[p.gtin] ?? 1, // 현재 입력된 수량
-                          });
-
-                          // ✅ 백엔드에서 새 poId 생성된 경우, 상태에 저장
-                          if (!poId && res.poId) {
-                            setPoId(res.poId);
-                          }
-
-                          // ✅ 수량 상태 초기화 or 유지
-                          showToast(`${p.name} ${qtyByGtin[p.gtin] ?? 1}개 담았습니다 ✅`);
-                        } catch (err) {
-                          console.error("장바구니 담기 실패:", err);
-                          showToast("장바구니 추가 중 오류가 발생했습니다 ❌");
-                        }
-                      }}
+                      onClick={() => addToCart(p)}
                       className={`mt-3 w-full rounded-xl text-sm py-2 ${canAdd
                           ? "bg-gray-900 text-white hover:opacity-90"
                           : "bg-gray-200 text-gray-500 cursor-not-allowed"
