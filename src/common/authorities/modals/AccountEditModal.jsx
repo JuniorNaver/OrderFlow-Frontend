@@ -17,8 +17,9 @@ const AccountEditModal = ({ isOpen, onClose, onSave, accountData }) => {
                 ...accountData, 
                 userId: accountData.userId || accountData.accountId || '',
                 enabled: accountData.enabled !== undefined ? accountData.enabled : true,
-                // ⭐️ 수정: accountData.position에는 roleId가 담겨 있다고 가정
+                // ⭐️ accountData.position에는 roleId가 담겨 있다고 가정
                 position: accountData.position || '', 
+                // ❌ workspace 필드 제거
             });
         }
     }, [accountData]);
@@ -31,26 +32,26 @@ const AccountEditModal = ({ isOpen, onClose, onSave, accountData }) => {
             ...prev, 
             [name]: type === 'checkbox' 
                 ? checked
-                : (name === 'storeId' && value !== '') ? Number(value) : value
+                // ✅ 비표준 공백 제거 후 표준 공백 사용
+                : value // storeId는 문자열로 처리
         }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // 필수 항목 검사
-        if (!formData.userId || !formData.name || !formData.storeId || !formData.workspace || !formData.position) {
+        // ✅ 비표준 공백 제거 및 workspace 필수 항목 검사 제거
+        if (!formData.userId || !formData.name || !formData.storeId || !formData.position) {
             alert("필수 항목을 모두 입력해주세요.");
             return;
         }
         
-        // ⭐️ DTO에 맞는 필드만 전송 (position에는 roleId가 담겨 있음)
+        // ✅ 비표준 공백 제거 및 DTO에 맞는 필드만 전송 (workspace 제거)
         const updateData = {
             name: formData.name,
-            workspace: formData.workspace,
             email: formData.email,
             position: formData.position, 
-            storeId: formData.storeId ? Number(formData.storeId) : null,
+            storeId: formData.storeId || null,
             enabled: formData.enabled, 
         };
 
@@ -76,13 +77,11 @@ const AccountEditModal = ({ isOpen, onClose, onSave, accountData }) => {
                     
                     <div className="input-group">
                         <label>점포 ID</label>
-                        <input type="number" name="storeId" value={formData.storeId || ''} onChange={handleChange} required />
+                        {/* storeId type은 text로 유지 */}
+                        <input type="text" name="storeId" value={formData.storeId || ''} onChange={handleChange} required />
                     </div>
 
-                    <div className="input-group">
-                        <label>워크스페이스</label>
-                        <input type="text" name="workspace" value={formData.workspace || ''} onChange={handleChange} placeholder="워크스페이스 이름" required />
-                    </div>
+                    {/* ❌ workspace 입력 필드 제거 */}
 
                     {/* ⭐️ 직급 (권한) 필드: value는 roleId, 보여주는 것은 description */}
                     <div className="input-group">
@@ -95,7 +94,7 @@ const AccountEditModal = ({ isOpen, onClose, onSave, accountData }) => {
                         >
                             <option value="">-- 직급 선택 --</option>
                             {ROLE_OPTIONS.map(role => (
-                                <option key={role.id} value={role.id}> {/* ⭐️ value를 roleId로 설정 */}
+                                <option key={role.id} value={role.id}> 
                                     {role.desc}
                                 </option>
                             ))}
