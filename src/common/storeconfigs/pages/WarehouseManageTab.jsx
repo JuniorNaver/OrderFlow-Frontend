@@ -32,22 +32,27 @@ const WarehouseManageTab = ({ storeId }) => {
         총 용량: {totalCurrentCapacity} / {totalMaxCapacity} m³
       </h2>
 
-      {warehouses.map((w) => (
-        <div
-          key={w.warehouseId}
-          className="p-3 border rounded-lg shadow-sm flex justify-between"
-        >
-          <div>
-            <p className="font-semibold">{w.warehouseName}</p>
-            <p className="text-sm text-gray-500">
-              보관방식: {w.storageMethod}
+      {warehouses.map((w) => {
+        const percent = ((w.currentCapacity / w.maxCapacity) * 100).toFixed(1);
+        return (
+          <div key={w.warehouseId} className="p-3 border rounded-lg shadow-sm space-y-1">
+            <div className="flex justify-between">
+              <p className="font-semibold">{w.warehouseName}</p>
+              <p className="text-sm text-gray-600">{percent}%</p>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-teal-500 h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${percent}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {w.currentCapacity} / {w.maxCapacity} m³ · 보관방식: {w.storageMethod}
             </p>
           </div>
-          <p className="text-sm">
-            {w.currentCapacity} / {w.maxCapacity} m³
-          </p>
-        </div>
-      ))}
+        );
+      })}
+
     </div>
   );
 };
