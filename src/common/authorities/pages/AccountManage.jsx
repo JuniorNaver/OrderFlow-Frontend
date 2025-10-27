@@ -35,7 +35,6 @@ const AccountManage = () => {
     const [accountsPerPage] = useState(15); // 15행 고정
 
     // [R] 사용자 목록 조회 및 검색
-    // useCallback을 사용하여 loadAccounts 함수가 불필요하게 재생성되는 것을 방지합니다.
     const loadAccounts = useCallback(async (search = '') => {
         setIsLoading(true);
         setError(null);
@@ -47,6 +46,7 @@ const AccountManage = () => {
                 userId: acc.userId || acc.accountId,
                 position: acc.position || acc.roleId, // position 또는 roleId 사용
                 enabled: acc.enabled !== undefined ? acc.enabled : true,
+                // ❌ workspace 필드를 백엔드 응답에서 제외하거나 사용하지 않음
             })));
             // 💡 검색 또는 재조회 시 1페이지로 리셋
             setCurrentPage(1); 
@@ -77,14 +77,13 @@ const AccountManage = () => {
                 password: formData.password,
                 name: formData.name,
                 email: formData.email,
-                workspace: formData.workspace,
+                // ❌ workspace 필드 제거
                 roleId: formData.position,
-                storeId: Number(formData.storeId) || null,
+                storeId: Number(formData.storeId) || null, // Number() 변환 로직 유지
                 enabled: formData.enabled
             };
 
             const createdUser = await createAccount(createData);
-            // alert(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`); // alert 사용 금지
             console.log(`계정 ${createdUser.userId}가 성공적으로 생성되었습니다.`);
             setIsCreateModalOpen(false);
             loadAccounts();
@@ -111,14 +110,13 @@ const AccountManage = () => {
         try {
             const updatedUser = await updateAccount(userId, {
                 name: updateData.name,
-                workspace: updateData.workspace,
+                // ❌ workspace 필드 제거
                 email: updateData.email,
                 roleId: updateData.position, 
-                storeId: updateData.storeId ? Number(updateData.storeId) : null,
+                storeId: updateData.storeId ? Number(updateData.storeId) : null, // Number() 변환 로직 유지
                 enabled: updateData.enabled
             });
 
-            // alert(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`); // alert 사용 금지
             console.log(`계정 ${updatedUser.userId}의 정보가 성공적으로 수정되었습니다.`);
             setIsEditModalOpen(false);
             setSelectedAccount(null);
@@ -138,7 +136,6 @@ const AccountManage = () => {
 
         try {
             await deleteAccount(userId);
-            // alert(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`); // alert 사용 금지
             console.log(`계정 ID: ${userId} 가 성공적으로 삭제되었습니다.`);
             
             const newAccounts = accounts.filter(acc => acc.userId !== userId);
@@ -179,11 +176,11 @@ const AccountManage = () => {
         }
 
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px', gap: '5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '15px', gap: '3px', flexWrap: 'wrap' }}>
                 <button 
                     onClick={() => paginate(currentPage - 1)} 
                     disabled={currentPage === 1}
-                    style={{ padding: '8px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px' }}
+                    style={{ padding: '6px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px', fontSize: '0.8rem' }}
                 >
                     &lt; 이전
                 </button>
@@ -192,10 +189,11 @@ const AccountManage = () => {
                         key={number} 
                         onClick={() => paginate(number)} 
                         style={{
-                            padding: '8px 12px',
+                            padding: '6px 10px',
                             border: '1px solid #ccc',
                             borderRadius: '4px',
                             cursor: 'pointer',
+                            fontSize: '0.8rem',
                             // 현재 페이지 강조를 위한 최소한의 인라인 스타일
                             backgroundColor: currentPage === number ? '#007bff' : 'white', 
                             color: currentPage === number ? 'white' : 'black',
@@ -208,7 +206,7 @@ const AccountManage = () => {
                 <button 
                     onClick={() => paginate(currentPage + 1)} 
                     disabled={currentPage === totalPages}
-                    style={{ padding: '8px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px' }}
+                    style={{ padding: '6px', border: '1px solid #ccc', cursor: 'pointer', borderRadius: '4px', fontSize: '0.8rem' }}
                 >
                     다음 &gt;
                 </button>
@@ -217,8 +215,10 @@ const AccountManage = () => {
     };
 
     return (
+        // ⭐️ 슬라이드 메뉴에 맞게 클래스 이름 유지하되, CSS에서 너비 최소화
         <div className="account-manage-container">
-            <h1 className="page-title">사용자 계정 관리</h1>
+            {/* ⭐️ 타이틀 크기 조정 */}
+            <h2 className="page-title">사용자 계정 관리</h2>
 
             {error && <div className="error-message">{error}</div>}
 
@@ -226,24 +226,27 @@ const AccountManage = () => {
                 <form onSubmit={handleSearch} className="search-form">
                     <input
                         type="text"
-                        placeholder="이름 또는 ID로 검색"
+                        placeholder="이름/ID 검색"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"
+                        // ⭐️ 검색 인풋 너비 조정
+                        style={{ width: '180px', padding: '8px 10px', fontSize: '0.9rem' }}
                     />
-                    <button type="submit" className="search-button" disabled={isLoading}>
-                        <Search size={18} /> 검색
+                    <button type="submit" className="search-button" disabled={isLoading} style={{ padding: '8px 10px' }}>
+                        <Search size={16} /> 검색
                     </button>
                 </form>
                 <button
                     onClick={() => { setIsCreateModalOpen(true); setError(null); }}
                     className="create-button"
+                    style={{ padding: '8px 10px' }}
                 >
-                    <UserPlus size={18} /> 새 계정 생성
+                    <UserPlus size={16} /> 생성
                 </button>
             </div>
 
-            {isLoading && <div className="flex justify-center items-center min-h-[150px]"> <MiniLoader message="지점 정보를 불러오는 중..." /></div>}
+            {isLoading && <div className="flex justify-center items-center min-h-[150px]"> <MiniLoader message="계정 정보를 불러오는 중..." /></div>}
 
             {!isLoading && (
                 <div className="table-wrapper">
@@ -252,8 +255,7 @@ const AccountManage = () => {
                             <tr>
                                 <th>ID</th>
                                 <th>이름</th>
-                                <th>이메일</th>
-                                <th>워크스페이스</th>
+                                {/* ❌ 워크스페이스 제거 */}
                                 <th>직책</th>
                                 <th>점포 ID</th>
                                 <th>활성화</th>
@@ -265,10 +267,11 @@ const AccountManage = () => {
                             {currentAccounts.length > 0 ? (
                                 currentAccounts.map((account) => (
                                     <tr key={account.userId || account.name + account.email}>
-                                        <td>{account.userId}</td>
-                                        <td>{account.name}</td>
-                                        <td>{account.email}</td>
-                                        <td>{account.workspace}</td>
+                                        {/* ⭐️ ID와 이름, 이메일은 필요한 경우 오버플로우 처리 */}
+                                        <td title={account.userId}>{account.userId}</td>
+                                        <td title={account.name}>{account.name}</td>
+                                        {/* <td>{account.email}</td> ❌ 이메일은 너무 길 수 있어 제거 고려 */}
+                                        {/* <td>{account.workspace}</td> ❌ 워크스페이스 제거 */}
                                         <td>{getRoleDescription(account.position)}</td> {/* ⭐️ 변환하여 표시 */}
                                         <td>{account.storeId}</td>
                                         <td>{account.enabled ? 'Y' : 'N'}</td>
@@ -277,22 +280,25 @@ const AccountManage = () => {
                                                 onClick={() => handleEditClick(account)}
                                                 className="edit-button"
                                                 title="수정"
+                                                style={{ padding: '4px' }} // 버튼 크기 축소
                                             >
-                                                <Edit size={16} />
+                                                <Edit size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(account.userId)}
                                                 className="delete-button"
                                                 title="삭제"
+                                                style={{ padding: '4px' }} // 버튼 크기 축소
                                             >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={14} />
                                             </button>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="8" className="no-data">등록된 계정이 없거나 검색 결과가 없습니다.</td>
+                                    {/* ⭐️ colSpan 조정 (6개 컬럼) */}
+                                    <td colSpan="6" className="no-data">등록된 계정이 없거나 검색 결과가 없습니다.</td>
                                 </tr>
                             )}
                         </tbody>
