@@ -3,6 +3,7 @@ import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 import { Link } from "react-router-dom";
 import { usePOApi } from "../../PO/api/poApi";
+import { toastBus } from "../../../common/utils/ToastBus";
 
 const ZONES = [
   { key: "room", label: " 실온", icon: <Sun className="h-5 w-5" /> },
@@ -36,11 +37,23 @@ export default function PRBrowse() {
   const [poId, setPoId] = useState(null); // 현재 장바구니의 헤더 ID
 
   const toastTimerRef = useRef(null);
-  const showToast = useCallback((msg, duration = 1500) => {
-    setToast(msg);
+
+  // 전역 ToastBus 구독: 어디서 emit해도 여기서 표시됨
+useEffect(() => {
+  const unsub = toastBus.subscribe(({ message, type }) => {
+    setToast({ message, type });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), duration);
-  }, []);
+    toastTimerRef.current = setTimeout(() => setToast(null), 1500);
+  });
+  return () => {
+    unsub();
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  };
+}, []);
+
+  const showToast = useCallback((message, type = "info") => {
+   toastBus.emit(message, type); // 전역 버스로 발행
+ }, []);
 
   useEffect(() => {
     return () => {
@@ -144,7 +157,7 @@ export default function PRBrowse() {
         );
         if (!abort) setAvailableByGtin(Object.fromEntries(pairs));
       } catch (e) {
-        if (!abort) setToast(e.message || "재고 조회 실패");
+        if (!abort) toastBus.emit(e.message || "재고 조회 실패", "error");
       }
     })();
     return () => {
@@ -212,10 +225,10 @@ export default function PRBrowse() {
       [gtin]: Math.min(m[gtin] ?? 1, Math.max(1, prevAvail - qty)),
     }));
 
-    showToast(`${p.name} ${qty}개 담았습니다 ✅`);
+    showToast(`${p.name} ${qty}개 담았습니다 ✅`, "success");
   } catch (e) {
     console.error("장바구니 담기 실패:", e);
-    showToast(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌");
+    showToast(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌", "error");
   } finally {
     // 로딩 플래그 OFF
     setAdding(s => ({ ...s, [gtin]: false }));
@@ -235,15 +248,6 @@ export default function PRBrowse() {
           <div className="flex items-center gap-3 text-xl font-bold text-gray-900">
             <div className="h-8 w-8 rounded-xl bg-black text-white grid place-items-center">OF</div>
             <span>OrderFlow 발주(PR)</span>
-            {toast && (
-              <div
-                className="fixed bottom-4 right-4 z-50 rounded-xl bg-black text-white text-sm px-4 py-2 shadow transition-opacity duration-300"
-                role="status"
-                aria-live="polite"
-              >
-                {toast}
-              </div>
-            )}
           </div>
 
           <nav className="flex gap-2">
@@ -262,9 +266,10 @@ export default function PRBrowse() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-6 space-y-6">
+      <main className="mx-auto max-w-6xl px-5 py-6">
         {/* 코너 선택기 */}
-        <div className="rounded-2xl border bg-white p-4 space-y-3">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 auto-rows-min">
+          <aside className="rounded-2xl border bg-white p-4 space-y-3 lg:col-start-1 lg:row-start-1">
           <label className="block text-sm font-medium mb-1">코너</label>
           {loadingCorners ? (
             <div className="text-sm text-gray-500">코너 불러오는 중…</div>
@@ -290,12 +295,14 @@ export default function PRBrowse() {
               )}
             </div>
           )}
-        </div>
+          </aside>
+        
+        
 
         {/* KAN 리스트 */}
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900">
+        <section className="rounded-2xl border bg-white overflow-hidden lg:col-start-2 lg:row-start-1">
+          <div className="p-3 flex items-center justify-between border-b">
+            <h2 className="text-sm font-semibold text-gray-900">
               {cornerId
                 ? `선택 코너: ${cornerId.replaceAll("_", " ")}`
                 : "코너를 선택하세요"}
@@ -309,7 +316,7 @@ export default function PRBrowse() {
             loadingKans ? (
               <div className="text-sm text-gray-500">카테고리 불러오는 중…</div>
             ) : (
-              <ul className="divide-y rounded-xl border bg-white">
+              <ul className="max-h-[calc(100vh-280px)] overflow-auto divide-y">
                 {kans.map((k) => (
                   <li
                     key={k.id}
@@ -338,7 +345,7 @@ export default function PRBrowse() {
         </section>
 
         {/* 상품 그리드 */}
-        <section>
+        <section className="lg:col-span-2 self-start">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900">상품 목록</h2>
             <div className="text-sm text-gray-500">총 {products.length}개</div>
@@ -353,6 +360,11 @@ export default function PRBrowse() {
             <div className="p-6 text-sm text-red-500 border rounded-xl bg-white">
               {error}
             </div>
+          )}
+          {!loadingProds && !error && products.length === 0 && (
+        <div className="p-6 text-sm text-gray-500 border rounded-xl bg-white">
+          상품이 없습니다. 왼쪽에서 KAN을 선택해 주세요.
+        </div>
           )}
 
           {!loadingProds && !error && products.length > 0 && (
@@ -460,12 +472,7 @@ export default function PRBrowse() {
             </div>
           )}
         </section>
-
-        {toast && (
-          <div className="fixed bottom-4 right-4 z-50 rounded-xl bg-black text-white text-sm px-4 py-2 shadow">
-            {toast}
-          </div>
-        )}
+        </div>
       </main>
     </div >
   );
