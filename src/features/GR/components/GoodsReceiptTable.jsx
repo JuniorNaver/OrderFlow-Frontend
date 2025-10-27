@@ -20,11 +20,19 @@ export default function GoodsReceiptTable({ receipts, onSelect }) {
         </thead>
 
         <tbody>
-          {receipts.map((item) => (
+          {receipts.map((r) => (
             <GoodsReceiptItemRow
-              key={item.id}
-              item={item}
-              onSelect={onSelect}
+              key={r.poId}               // ✅ key 필수
+              item={{
+                id: r.poId,
+                poId: r.poId,
+                externalId: r.externalId,
+                totalAmount: r.totalAmount,
+                userName: r.userName,
+                status: r.status,
+                receiptDate: r.receiptDate,
+              }}
+              onSelect={onSelect}        // ✅ 부모에서 받은 onSelect 전달
             />
           ))}
         </tbody>
