@@ -1,24 +1,23 @@
 export default function GoodsReceiptItemRow({ item, onSelect }) {
   const handleSelect = (e) => {
     const checked = e.target.checked;
+    const targetId = item.grHeaderId ?? item.poId; // ✅ 입고ID 우선, 없으면 발주ID fallback
+
     onSelect((prev) => {
       if (checked) {
-        // ✅ 이미 선택된 항목이면 중복 추가 방지
-        return prev.includes(item.id) ? prev : [...prev, item.id];
+        // ✅ 중복 방지
+        return prev.includes(targetId) ? prev : [...prev, targetId];
       } else {
-        // ✅ 체크 해제 시 목록에서 제거
-        return prev.filter((id) => id !== item.id);
+        // ✅ 해제 시 제거
+        return prev.filter((id) => id !== targetId);
       }
     });
   };
 
+  // ✅ 상태별 색상
   const statusColor =
     {
-      출고: "bg-blue-500",
-      취소: "bg-red-500",
-      도착: "bg-green-500",
-      대기: "bg-gray-400",
-      CONFIRMED: "bg-green-500", // ✅ 백엔드 ENUM 대응
+      CONFIRMED: "bg-green-500",
       PENDING: "bg-gray-400",
       RECEIVED: "bg-blue-500",
       CANCELED: "bg-red-500",
@@ -26,8 +25,8 @@ export default function GoodsReceiptItemRow({ item, onSelect }) {
 
   return (
     <tr className="hover:bg-gray-50 transition">
-      {/* ✅ 체크박스 */}
-      <td className="p-2 border">
+      {/* ✅ 선택 */}
+      <td className="p-2 border text-center">
         <input
           type="checkbox"
           onChange={handleSelect}
@@ -35,33 +34,54 @@ export default function GoodsReceiptItemRow({ item, onSelect }) {
         />
       </td>
 
-      {/* ✅ 주요 정보 */}
-      <td className="p-2 border">{item.id}</td>
-      <td className="p-2 border">{item.poId || "-"}</td>
-      <td className="p-2 border">{item.receiptNo || "-"}</td>
-      <td className="p-2 border">{item.qty || 0}</td>
-      <td className="p-2 border">{item.totalAmount?.toLocaleString() || 0}</td>
+      {/* ✅ 입고번호 (없을 경우 - 표시) */}
+      <td className="p-2 border text-center">
+        {item.poId ?? "-"}
+      </td>
+
+      {/* ✅ 발주코드 */}
+      <td className="p-2 border text-center">
+        {item.externalId || "-"}
+      </td>
+
+      {/* ✅ 수량 (입고가 아직 없으면 0) */}
+      <td className="p-2 border text-right">
+        {item.totalQty ?? 0}
+      </td>
+
+      {/* ✅ 총 금액 */}
+      <td className="p-2 border text-right">
+        {item.totalAmount?.toLocaleString() ?? 0}
+      </td>
 
       {/* ✅ 상태 */}
-      <td className="p-2 border">
-        <span
-          className={`text-white px-2 py-1 rounded text-xs ${statusColor}`}
-        >
-          {item.status || "대기"}
+      <td className="p-2 border text-center">
+        <span className={`text-white px-2 py-1 rounded text-xs ${statusColor}`}>
+          {item.status || "PENDING"}
         </span>
       </td>
 
-      {/* ✅ 날짜 정보 */}
-      <td className="p-2 border">{item.receiptDate || "-"}</td>
-      <td className="p-2 border">{item.expectedDate || "-"}</td>
+      {/* ✅ 입고일자 / 예상입고일 */}
+      <td className="p-2 border text-center">
+        {item.receiptDate ?? "-"}
+      </td>
+      <td className="p-2 border text-center">
+        {item.expectedArrival ?? "-"}
+      </td>
 
       {/* ✅ 편집 버튼 */}
-      <td className="p-2 border">
+      <td className="p-2 border text-center">
         <button
           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-          onClick={() => alert(`🧾 [${item.id}] 편집 기능은 준비 중입니다.`)}
+          onClick={() =>
+            alert(
+              `🧾 [${
+                item.grHeaderId ?? item.poId
+              }] (${item.poExternalId || "-"}) 상세 기능은 준비 중입니다.`
+            )
+          }
         >
-          편집
+          상세
         </button>
       </td>
     </tr>

@@ -4,6 +4,7 @@ import {
   confirmGoodsReceipt,
   cancelGoodsReceipt,
   deleteGoodsReceipt,
+  createAndConfirmGR,
 } from "../api/grApi";
 import { useToast } from "/src/components/providers/ToastProvider";
 
@@ -11,20 +12,38 @@ export default function GoodsReceiptActions({ selected = [] }) {
   const [showScan, setShowScan] = useState(false);
   const { showToast } = useToast();
 
-  /** ✅ 입고 확정 */
+    /** ✅ 입고 확정 */
   const handleConfirm = async () => {
     if (selected.length === 0)
-      return showToast("선택된 항목이 없습니다.", "warning");
+      return showToast("⚠ 확정할 항목을 선택하세요.", "warning");
 
-    if (!confirm(`선택된 ${selected.length}건을 입고 확정하시겠습니까?`)) return;
+    const id = selected[0]; // ✅ 하나만 처리 (여러 건 확정 지원하려면 map으로 변경)
+    const target = receipts.find(
+      (r) => r.grHeaderId === id || r.poId === id
+    );
+
+    if (!target) {
+      showToast("⚠ 선택된 데이터가 없습니다.", "warning");
+      return;
+    }
+
+    if (!confirm("입고를 확정하시겠습니까?")) return;
 
     try {
-      await Promise.all(selected.map((id) => confirmGoodsReceipt(id)));
+      if (!target.grHeaderId) {
+        // 🟢 아직 입고가 없으면 GR 생성 + 확정
+        await createAndConfirmGR(target.poId);
+      } else {
+        // 🟢 이미 입고가 있으면 그냥 확정
+        await confirmGoodsReceipt(target.grHeaderId);
+      }
+
       showToast("✅ 입고 확정 완료!", "success");
       window.location.reload();
     } catch (err) {
       console.error("❌ 입고 확정 중 오류:", err);
-      showToast("❌ 입고 확정 중 오류가 발생했습니다.", "error");
+      const msg = err.response?.data?.message || err.message;
+      showToast(`입고 확정 실패: ${msg}`, "error");
     }
   };
 
@@ -80,9 +99,6 @@ export default function GoodsReceiptActions({ selected = [] }) {
             className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600 shadow-sm transition"
           >
             스캔
-          </button>
-          <button className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-500 shadow-sm transition">
-            내보내기
           </button>
           <button
             onClick={handleConfirm}
