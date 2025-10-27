@@ -1,35 +1,52 @@
 import { useState } from "react";
 import { searchPOByBarcode, createAndConfirmGR } from "../api/grApi";
 import POItemListModal from "./POItemListModal";
+import { useToast } from "/src/components/providers/ToastProvider"; // ✅ 전역 토스트
 
 export default function ScanModal({ onClose, onSuccess }) {
   const [barcode, setBarcode] = useState("");
   const [poData, setPoData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showItemsModal, setShowItemsModal] = useState(false);
+  const { showToast } = useToast(); // ✅ 토스트 훅
 
   const handleSearch = async () => {
     try {
       setLoading(true);
       const data = await searchPOByBarcode(barcode);
       setPoData(data);
+      showToast("✅ 발주 정보를 불러왔습니다.", "success");
     } catch {
-      alert("❌ 발주를 찾을 수 없습니다.");
+      showToast("❌ 발주를 찾을 수 없습니다.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleConfirm = async () => {
-    if (!poData?.poId) return alert("발주 정보가 없습니다.");
+    if (!poData?.poId) {
+      showToast("⚠ 발주 정보가 없습니다.", "warning");
+      return;
+    }
+
     if (!confirm("입고를 확정하시겠습니까?")) return;
 
     try {
       await createAndConfirmGR(poData.poId);
-      alert("✅ 입고가 완료되었습니다!");
+      showToast("✅ 입고가 완료되었습니다!", "success");
       onSuccess();
+      onClose();
     } catch (err) {
-      alert("❌ 입고 확정 실패: " + err.message);
+      const status = err.response?.status;
+      const message = err.response?.data || err.message;
+
+      if (status === 409) {
+        showToast("⚠ 이미 입고 처리된 발주입니다.", "warning");
+      } else if (status === 400) {
+        showToast(message || "요청이 잘못되었습니다.", "error");
+      } else {
+        showToast("❌ 입고 확정 중 오류가 발생했습니다.", "error");
+      }
     }
   };
 
@@ -56,12 +73,11 @@ export default function ScanModal({ onClose, onSuccess }) {
 
           {poData && (
             <div className="mt-4 border-t pt-3 space-y-2">
-              <p><b>발주번호:</b> {poData.poBarcode}</p>
+              <p><b>발주번호:</b> {poData.externalId}</p>
               <p><b>담당자:</b> {poData.userName}</p>
               <p><b>총 금액:</b> {poData.totalAmount?.toLocaleString()}원</p>
               <p><b>상태:</b> {poData.status}</p>
 
-              {/* ✅ 상세보기 버튼 */}
               <button
                 onClick={() => setShowItemsModal(true)}
                 className="mt-3 w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300"
@@ -80,7 +96,6 @@ export default function ScanModal({ onClose, onSuccess }) {
         </div>
       </div>
 
-      {/* ✅ 품목 상세 모달 */}
       {showItemsModal && (
         <POItemListModal
           items={poData?.items || []}

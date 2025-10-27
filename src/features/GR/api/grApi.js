@@ -42,3 +42,8 @@ export const searchPOByBarcode = async (barcode) => {
 export const createAndConfirmGR = async (poId) => {
   return ApiClient.post(`${BASE_URL}/scan-confirm`, { poId });
 };
+
+/** ✅ 8. 입고 삭제 */
+export const deleteGoodsReceipt = async (id) => {
+  return ApiClient.delete(`${BASE_URL}/${id}`);
+};
