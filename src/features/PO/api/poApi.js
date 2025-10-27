@@ -86,9 +86,18 @@ export const usePOApi = () => {
   const getSavedCartItems = async (poId) =>{
     const res = await ApiClient.get(`/po/savedCart/${poId}`);
       console.log("서버 응답:", res);
-
     return res;
   }
+
+  // ✅ 저장된 장바구니 상세조회시 status=PR 1행 복제
+  const loadSavedCart = async (poId) => {
+    const res = await ApiClient.post(`/po/savedCart/${poId}/load`);
+    return res.data; // { poId: 새로 생성된 PR ID }
+  };
+
+
+
+
 
 
 
@@ -115,5 +124,6 @@ export const usePOApi = () => {
     getSavedCartItems,
     deleteSavedCart,
     confirmOrder,
+    loadSavedCart
   };
 };

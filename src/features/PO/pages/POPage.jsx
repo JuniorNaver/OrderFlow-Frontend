@@ -13,6 +13,8 @@ import InsertNameModal from "../components/InsertNameModal";
 import { mockSavedCarts, mockWarehouseData } from "../mock/Mockup";
 import OrderComplete from "../components/OrderComplete";
 import { useToast } from "../../../components/providers/ToastProvider";
+import SavedCartEmptyModal from "../components/SavedCartEmptyModal";
+
 
 
 // ✅ 상품 식별자 보정용 (GTIN or ProductId)
@@ -43,6 +45,7 @@ export default function POPage() {
     getSavedCartItems,
     deleteSavedCart,
     confirmOrder,
+    loadSavedCart,
   } = usePOApi();
 
   const { showToast } = useToast();
@@ -56,6 +59,8 @@ export default function POPage() {
   const [savedList, setSavedList] = useState([]);
   const [showSavedList, setShowSavedList] = useState(false); // 모달 표시 여부
   const [isOrderComplete, setIsOrderComplete] = useState(false); // "발주가 확정되었습니다."
+  const [showEmptyModal, setShowEmptyModal] = useState(false); // "저장된 장바구니가 없습니다"
+
 
   // 새로고침하면 poId, item 초기화 되는거 방지 
   const [poId, setPoId] = useState(() => {
@@ -173,6 +178,8 @@ export default function POPage() {
 
 
 
+
+  
 
 
 
@@ -299,14 +306,14 @@ export default function POPage() {
     }
   };
 
-  // 불러오기 버튼 눌렀을 때
+  // 불러오기 버튼 눌렀을 때 모달 열기
   const handleLoad = async () => {
     try {
       const list = await getSavedCartList();
 
       if (!list || list.length === 0) {
-        showToast("저장된 장바구니가 없습니다.");
-        return; // 🚫 모달 안 열고 종료
+        setShowEmptyModal(true); // 모달 표시
+        return;
       }
 
       setSavedList(list);
@@ -322,11 +329,22 @@ export default function POPage() {
 
 
 
-  
+
+
+
+
+
+
+
+
+
 
   // 특정 저장본을 클릭했을 때 상품 목록 불러오기
   const handleSelectSavedCart = async (cart) => {
     try {
+
+
+
       // 1️⃣ 해당 장바구니의 poId를 이용해서 아이템 목록 조회
       const itemsFromServer = await getSavedCartItems(cart.poId);
       console.log("🧩 getSavedCartItems 응답:", itemsFromServer);
@@ -354,8 +372,11 @@ export default function POPage() {
       console.error("저장된 장바구니 불러오기 실패:", err);
       showToast("장바구니를 불러오는 중 오류가 발생했습니다.");
     }
-    console.log("선택한 장바구니:", cart);
   };
+
+
+
+
 
 
 
@@ -369,10 +390,21 @@ export default function POPage() {
   // 불러오기 삭제 버튼 
   const handleDeleteSavedCart = async (e, cart) => {
     e.stopPropagation();
-    if (!window.confirm(`'${cart.name}' 장바구니를 삭제하시겠습니까?`)) return;
 
+    // 실시간으로 삭제
     try {
       await deleteSavedCart(cart.poId); // ✅ itemNo → poId
+      setSavedCarts((prev) => {
+        const updated = prev.filter((c) => String(c.poId) !== String(cart.poId));
+
+        // ✅ 삭제 후 비었으면 모달 표시
+        if (updated.length === 0) {
+          setShowSavedList(false);      // 기존 SavedCartModal 닫기
+          setShowEmptyModal(true);      // "장바구니가 없습니다" 모달 띄우기
+        }
+        return updated;
+      });
+
     } catch (err) {
       console.error("장바구니 삭제 실패:", err);
     } finally {
@@ -381,6 +413,19 @@ export default function POPage() {
       );
     }
   };
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // 모달 닫기
   const handleCloseModal = () => {
@@ -485,11 +530,6 @@ export default function POPage() {
               />
             </div>
 
-            {/* 바늘 지표계
-            <div className="flex justify-start pl-5 mb-7">
-              <NeedleChart value={65} max={100} />
-            </div> */}
-
             {/* ✅ 가운데 정렬 공간 (추후 콘텐츠 예정) */}
             <div className="flex justify-center items-center my-8">
               {/* 여기에 나중에 넣을 콘텐츠가 들어갈 예정 */}
@@ -524,6 +564,10 @@ export default function POPage() {
           onClose={handleCloseModal}
           onDelete={handleDeleteSavedCart}
         />
+      )}
+
+      {showEmptyModal && (
+        <SavedCartEmptyModal onClose={() => setShowEmptyModal(false)} />
       )}
 
       <InsertNameModal

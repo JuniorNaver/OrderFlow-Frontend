@@ -12,9 +12,9 @@ export const mockItems = [
 ];
 
 export const mockWarehouseData = {
-  room: { current: 600, incoming: 200, capacity: 1000 },
-  cold: { current: 400, incoming: 100, capacity: 800 },
-  frozen: { current: 300, incoming: 50, capacity: 600 },
+  room: { current: 600, incoming: 0, capacity: 1000 },
+  cold: { current: 400, incoming: 0, capacity: 800 },
+  frozen: { current: 300, incoming: 0, capacity: 600 },
 };
 
 export const mockSavedCarts = [
