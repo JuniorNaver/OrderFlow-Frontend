@@ -39,8 +39,8 @@ export const confirmGoodsReceipt = async (grId) => {
  * - 상태를 CANCELED로 변경 (reason은 선택적)
  * - 백엔드: PUT /api/gr/{grId}/cancel?reason=...
  */
-export const cancelGoodsReceipt = async (grId, reason = "no reason") => {
-  return ApiClient.put(`${BASE_URL}/${grId}/cancel`, null, {
+export const cancelGoodsReceipt = async (poId, reason = "no reason") => {
+  return ApiClient.put(`${BASE_URL}/${poId}/cancel`, null, {
     params: { reason },
   });
 };
@@ -72,11 +72,12 @@ export const createAndConfirmGR = async (poId) => {
   return ApiClient.post(`${BASE_URL}/scan-confirm`, { poId });
 };
 
-/**
- * ✅ 8. 입고 삭제
- * - 특정 입고 내역을 완전히 삭제
- * - 백엔드: DELETE /api/gr/{grId}
- */
-export const deleteGoodsReceipt = async (id) => {
-  return ApiClient.delete(`${BASE_URL}/${id}`);
+export const searchGoodsReceipts = async (query, startDate, endDate) => {
+  const params = new URLSearchParams();
+  if (query) params.append("query", query);
+  if (startDate) params.append("startDate", startDate);
+  if (endDate) params.append("endDate", endDate);
+
+  return ApiClient.get(`${BASE_URL}/search?${params.toString()}`);
 };
+

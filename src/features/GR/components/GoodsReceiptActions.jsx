@@ -3,7 +3,6 @@ import ScanModal from "./ScanModal";
 import {
   confirmGoodsReceipt,
   cancelGoodsReceipt,
-  deleteGoodsReceipt,
   createAndConfirmGR,
 } from "../api/grApi";
 import { useToast } from "/src/components/providers/ToastProvider";
@@ -65,23 +64,6 @@ export default function GoodsReceiptActions({ selected = [] }) {
     }
   };
 
-  /** 🗑 삭제 */
-  const handleDelete = async () => {
-    if (selected.length === 0)
-      return showToast("삭제할 항목을 선택하세요.", "warning");
-
-    if (!confirm(`정말로 ${selected.length}건을 삭제하시겠습니까?`)) return;
-
-    try {
-      await Promise.all(selected.map((id) => deleteGoodsReceipt(id)));
-      showToast("🗑 선택된 입고가 삭제되었습니다.", "success");
-      window.location.reload();
-    } catch (err) {
-      console.error("❌ 삭제 중 오류:", err);
-      showToast("❌ 삭제 실패", "error");
-    }
-  };
-
   /** 🔁 초기화 */
   const handleReset = () => {
     if (confirm("모든 선택을 초기화하시겠습니까?")) {
@@ -110,14 +92,9 @@ export default function GoodsReceiptActions({ selected = [] }) {
 
         {/* 🔹 오른쪽 버튼 그룹 */}
         <div className="flex space-x-2">
+       
           <button
             onClick={handleCancel}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 shadow-sm transition"
-          >
-            발주 취소
-          </button>
-          <button
-            onClick={handleDelete}
             className="px-4 py-2 bg-orange-400 text-white rounded hover:bg-orange-500 shadow-sm transition"
           >
             삭제
