@@ -31,24 +31,38 @@ export default function ScanModal({ onClose, onSuccess }) {
 
     if (!confirm("입고를 확정하시겠습니까?")) return;
 
-    try {
-      await createAndConfirmGR(poData.poId);
-      showToast("✅ 입고가 완료되었습니다!", "success");
-      onSuccess();
-      onClose();
-    } catch (err) {
-      const status = err.response?.status;
-      const message = err.response?.data || err.message;
+     try {
+    // ✅ 입고 생성 + 확정 API 호출
+    await createAndConfirmGR(poData.poId);
 
-      if (status === 409) {
-        showToast("⚠ 이미 입고 처리된 발주입니다.", "warning");
-      } else if (status === 400) {
-        showToast(message || "요청이 잘못되었습니다.", "error");
+    showToast("✅ 입고가 완료되었습니다!", "success");
+
+    // ✅ 목록 갱신 or 상위 콜백 호출
+    if (typeof onSuccess === "function") onSuccess();
+
+    // ✅ 모달 닫기
+    onClose();
+  } catch (err) {
+    const status = err.response?.status;
+    const message = err.response?.data || err.message;
+
+    console.error("입고 확정 오류:", err);
+
+    if (status === 409) {
+      showToast("⚠ 이미 입고 처리된 발주입니다.", "warning");
+    } else if (status === 400) {
+      if (message.includes("창고 없음")) {
+        showToast("⚠ 해당 점포의 창고가 등록되어 있지 않습니다.", "warning");
+      } else if (message.includes("발주 없음")) {
+        showToast("⚠ 유효하지 않은 발주 정보입니다.", "warning");
       } else {
-        showToast("❌ 입고 확정 중 오류가 발생했습니다.", "error");
+        showToast(message || "요청이 잘못되었습니다.", "error");
       }
+    } else {
+      showToast("❌ 입고 확정 중 오류가 발생했습니다.", "error");
     }
-  };
+  }
+};
 
   return (
     <>
@@ -103,6 +117,7 @@ export default function ScanModal({ onClose, onSuccess }) {
           onClose={() => setShowItemsModal(false)}
         />
       )}
+
     </>
   );
 }

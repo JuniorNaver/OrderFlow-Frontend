@@ -40,8 +40,7 @@ export default function GRPage() {
         <GoodsReceiptForm onSearch={setReceipts} />
 
         {/* 🔸 버튼 영역 */}
-        <GoodsReceiptActions selected={selected} />
-
+        <GoodsReceiptActions selected={selected} receipts={receipts} />
         {/* 📋 테이블 */}
         <div className="pt-4">
           {loading ? (
