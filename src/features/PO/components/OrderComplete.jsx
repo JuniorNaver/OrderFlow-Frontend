@@ -3,7 +3,7 @@ import { CheckCircle } from "lucide-react";
 
 export default function OrderComplete({ handleViewOrders }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-gray-700 bg-white">
+    <div className="flex flex-col items-center justify-center py-24 text-gray-700 bg-gray-50 min-h-screen">
       {/* ✅ 완료 아이콘 */}
       <CheckCircle size={80} className="text-blue-500 mb-6" />
 
@@ -15,7 +15,7 @@ export default function OrderComplete({ handleViewOrders }) {
       <div className="flex gap-3">
         <button
           onClick={handleViewOrders}
-          className="border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium px-6 py-1 rounded-lg"
+          className="border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium px-6 py-1 rounded-lg transition"
         >
           발주 내역 보기
         </button>

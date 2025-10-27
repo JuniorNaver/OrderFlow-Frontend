@@ -38,7 +38,7 @@ export default function BudgetBar({ month = "3월", used, order, budget }) {
           {/* 발주 예산 */}
           <div
             className={`absolute top-0 h-8 flex justify-center items-center text-xs font-semibold z-10 ${
-              isOver ? "bg-red-400 text-white" : "bg-green-400 text-gray-800"
+              isOver ? "bg-red-500 text-white" : "bg-green-400 text-gray-800"
             } shadow-md`}
             style={{ 
               width: `${orderPercent}%`,
@@ -47,7 +47,7 @@ export default function BudgetBar({ month = "3월", used, order, budget }) {
               whiteSpace: "nowrap"
             }}
           >
-            {order.toLocaleString()}원
+            {/* {order.toLocaleString()}원 */}
           </div>
         </div>
 
