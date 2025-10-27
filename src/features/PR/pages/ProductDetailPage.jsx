@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getProduct, getRelated } from "../api/product";
 import { fetchAvailable, reserve } from "../api/browse";
 import { usePOApi } from "../../PO/api/poApi";
+import { toastBus } from "../../../common/utils/ToastBus";
 
 export default function ProductDetailPage() {
   const { gtin = "" } = useParams();
@@ -13,6 +14,7 @@ export default function ProductDetailPage() {
   const { createPO }= usePOApi();
   const [tab, setTab] = useState("info"); // info | stock | history
   const [qty, setQty] = useState(1);
+  const [adding, setAdding] = useState(false);
   const [poId, setPoId] = useState(() => {
     try { return localStorage.getItem("poId"); } catch { return null; }
   });
@@ -83,29 +85,47 @@ const totalText = useMemo(() => {
 
   async function addToCart() {
     if (!product?.gtin) return;
+
     const orderQty = clampQty(qty); // 가용 한도 내 보정
+    const prevAvail = qInv.data?.available ?? 0;    // 현재 가용(캐시)
     
+    setAdding(true);
     try {
       // 1) 재고 예약 (가용 = onHand - reserved 정책이라면 필수)
       await reserve(product.gtin, orderQty);
 
       // 2) PO 라인 생성(기존 헤더 있으면 재사용)
-      const res = await createPO({ poId, gtin: product.gtin, orderQty: qty });
-      const newId = res?.poId ?? res?.id ?? res?.data?.poId ?? res?.data?.id;
-      if (!poId && newId) {
-        setPoId(newId);
-        try { localStorage.setItem("poId", String(newId)); } catch {}
-      }
+       const res = await createPO({ poId, gtin: product.gtin, orderQty });
+    const newId = res?.poId ?? res?.id ?? res?.data?.poId ?? res?.data?.id;
+    if (!poId && newId) {
+      setPoId(newId);
+      try { localStorage.setItem("poId", String(newId)); } catch {}
+    }
+
+    // 수량도 가용 범위로 보정 (담은 만큼 줄어든 가용 한도 내)
+    setQty((q) => {
+      const nextMax = Math.max(1, prevAvail - orderQty);
+      const n = Number.isFinite(Number(q)) ? Math.floor(Number(q)) : 1;
+      return Math.max(1, Math.min(n, nextMax));
+    });
 
       // 3) 재고쿼리만 즉시 새로고침
-      qc.invalidateQueries({ queryKey: ["available", product.gtin] });
+      qc.setQueryData(["available", product.gtin], (old) => {
+      const curAvail = old?.available ?? prevAvail ?? 0;
+      return { ...(old || {}), available: Math.max(0, curAvail - orderQty) };
+    });
 
       // 4) PO로 이동
-      nav("/po");
-    } catch (e) {
-      console.error("장바구니 담기에 실패했어요", e);
-    }
+      toastBus.emit(`${product.productName} ${orderQty}개 담았습니다 ✅`, "success");
+  } catch (e) {
+    console.error("장바구니 담기 실패:", e);
+    toastBus.emit(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌", "error");
+  } finally {
+    setAdding(false);
+    // 5) 서버 진실값으로 단건 재동기화
+    qc.invalidateQueries({ queryKey: ["available", product.gtin] });
   }
+}
 
   return (
     <div className="p-6 space-y-6">
@@ -169,7 +189,7 @@ const totalText = useMemo(() => {
       disabled={product.orderable === false || qty < 1 || (qInv.data?.available ?? 1) < 1}
       className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
     >
-      장바구니
+      {adding ? "담는 중…" : "장바구니"}
     </button>
   </div>
 </header>
