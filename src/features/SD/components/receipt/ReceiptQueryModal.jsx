@@ -8,14 +8,20 @@ function ReceiptQueryModal({ onClose }) {
   const [selected, setSelected] = useState(null);
 
   const handleSearch = async () => {
-    try {
-      const data = await getReceiptsByDate(date);
-      setReceipts(data);
-    } catch (e) {
-      console.error(e);
+  try {
+    const receipts = await getReceiptsByDate(date);
+    console.log("✅ receipts:", receipts);
+    setReceipts(receipts);
+  } catch (e) {
+    console.error("❌ 영수증 조회 실패:", e);
+    if (e.response?.status === 401) {
+      alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+    } else {
       alert("영수증 조회 실패");
     }
-  };
+  }
+};
+
 
   const handleReissue = async (receiptNo) => {
     try {
