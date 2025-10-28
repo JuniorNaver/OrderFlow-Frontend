@@ -5,7 +5,6 @@ const stockMenus = [
     children: [
       { label: "상품 발주", path: "/pr" },
       { label: "발주 추천 상품", path: "/pr/stores/${storeId}/recommend" },
-      { label: "재고 부족 상품", path: "/pr/out-of-stock" },
     ]
   },
   {

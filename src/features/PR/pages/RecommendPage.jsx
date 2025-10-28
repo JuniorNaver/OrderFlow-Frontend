@@ -331,8 +331,7 @@ const RecommendCard = React.memo(function RecommendCard({ item, defaultQty, sele
             disabled={adding || (available ?? 0) <= 0}
             onClick={() => onAdd(qty)}
           >
-            담기
-            {adding ? "담는 중..." : (available <= 0 ? "품절" : "담기")}
+            {adding ? "담는 중..." : (available <= 0 ? "품절" : "장바구니")}
           </button>
         )}
       </div>
