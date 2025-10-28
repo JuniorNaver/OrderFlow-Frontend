@@ -84,6 +84,7 @@ function SalesRegister() {
   }
 
     try {
+      // ✅ 주의: 단가는 백엔드 PriceMaster에서 계산됨 (product.price 사용 금지)
       if (window.addItemToSales) {
         window.addItemToSales(product);
       } else {

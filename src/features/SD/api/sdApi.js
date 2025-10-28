@@ -24,11 +24,10 @@ export const getOrderById = async (orderId) => {
 export const addItemToOrder = async (orderId, product) => {
   const payload = {
     gtin: product.gtin,
-    quantity: 1,
-    unitPrice: product.price,
+    quantity: 1, // ✅ 수량만 전달
   };
   const res = await ApiClient.post(`${SD_BASE}/${orderId}/add-item`, payload);
-  return res; // ✅
+  return res; // ✅ res.data에 unitPrice, subtotal, stockQuantity 포함됨
 };
 
 // ✅ 수량 수정

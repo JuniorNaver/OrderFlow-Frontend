@@ -1,6 +1,9 @@
+import React, { useState } from "react";
 import GoodsReceiptItemRow from "./GoodsReceiptItemRow";
+import POItemListModal from "./POItemListModal";
 
 export default function GoodsReceiptTable({ receipts, onSelect }) {
+  const [selectedItems, setSelectedItems] = useState(null);
   return (
     <div className="overflow-x-auto border rounded-md shadow-sm">
       <table className="min-w-full text-sm text-center border-collapse">
@@ -14,7 +17,7 @@ export default function GoodsReceiptTable({ receipts, onSelect }) {
             <th className="p-2 border">상태</th>
             <th className="p-2 border">입고일자</th>
             <th className="p-2 border">예상 입고일</th>
-            <th className="p-2 border">상세</th>
+            {/* <th className="p-2 border">상세</th> */}
           </tr>
         </thead>
 
@@ -31,12 +34,25 @@ export default function GoodsReceiptTable({ receipts, onSelect }) {
                     status: r.status,
                     receiptDate: r.receiptDate,
                     expectedArrival: r.expectedArrival,
+                    // items: r.items,
                   }}
               onSelect={onSelect}
+              // onDetail={(items) => setSelectedItems(items)}
             />
           ))}
         </tbody>
       </table>
+
+      {selectedItems && (
+        <POItemListModal
+          items={selectedItems}
+          onConfirm={() => {
+            alert("입고 확정 기능은 준비 중입니다 ✅");
+            setSelectedItems(null);
+          }}
+          onClose={() => setSelectedItems(null)}
+        />
+      )}
     </div>
   );
 }

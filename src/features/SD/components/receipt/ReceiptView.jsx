@@ -23,12 +23,20 @@ export default function ReceiptView({ receipt }) {
         <div className="mt-3">
             <h3 className="font-semibold border-b pb-1">상품 내역</h3>
             <ul className="mt-2 text-sm">
-            {receipt.items.map((item, idx) => (
-                <li key={idx} className="flex justify-between">
-                <span>{item.productName} x {item.salesQuantity}</span>
-                <span>{item.subtotal.toLocaleString()}원</span>
+           {receipt.items.map((item, idx) => {
+              const subtotal = item.subtotal ?? (item.unitPrice * item.salesQuantity);
+              return (
+                <li key={idx} className="flex justify-between text-sm">
+                  <span>
+                    {item.productName}
+                    <span className="text-gray-500 text-xs ml-1">
+                      ({item.unitPrice.toLocaleString()} × {item.salesQuantity})
+                    </span>
+                  </span>
+                  <span>₩{subtotal.toLocaleString()}</span>
                 </li>
-            ))}
+              );
+            })}
             </ul>
         </div>
         )}
