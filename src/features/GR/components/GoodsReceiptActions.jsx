@@ -12,7 +12,7 @@ export default function GoodsReceiptActions({ selected = [] }) {
   const { showToast } = useToast();
 
     /** ✅ 입고 확정 */
-  const handleConfirm = async () => {
+  /*const handleConfirm = async () => {
     if (selected.length === 0)
       return showToast("⚠ 확정할 항목을 선택하세요.", "warning");
 
@@ -44,7 +44,7 @@ export default function GoodsReceiptActions({ selected = [] }) {
       const msg = err.response?.data?.message || err.message;
       showToast(`입고 확정 실패: ${msg}`, "error");
     }
-  };
+  };*/
 
   /** 🚫 발주 취소 */
   const handleCancel = async () => {
@@ -82,12 +82,12 @@ export default function GoodsReceiptActions({ selected = [] }) {
           >
             스캔
           </button>
-          <button
+          {/*<button
             onClick={handleConfirm}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-sm transition"
           >
             입고 확정
-          </button>
+          </button>*/}
         </div>
 
         {/* 🔹 오른쪽 버튼 그룹 */}

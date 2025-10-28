@@ -19,7 +19,7 @@ export default function SalesTable({
       id: it.no || idx,                         // SalesItem.no
       gtin: it.gtin,                            // 상품 바코드
       name: it.productName,                     // 상품명
-      price: Number(it.sdPrice ?? 0),           // 판매 단가 (sdPrice = unitPrice)
+      price: Number(it.unitPrice ?? 0),           // 판매 단가 (sdPrice = unitPrice)
       qty: Number(it.salesQuantity ?? 1),       // 수량
       stock: Number(it.stockQuantity ?? 0),     // 표시용 재고
       subtotal: Number(it.subtotal ?? 0),       // 소계 (백엔드 계산값)
@@ -51,45 +51,54 @@ const handleAddItem = async (product) => {
     const savedItem = await addItemToOrder(currentOrder.orderId, {
       gtin: product.gtin || product.id,
       quantity: 1,
-      price: product.price || 0,
     });
 
     console.log("✅ DB 응답:", savedItem);
 
     setItems((prev) => {
-      const existing = prev.find((it) => it.gtin === savedItem.gtin);
+  const existing = prev.find((it) => it.gtin === savedItem.gtin);
 
-      if (existing) {
-        const updatedOriginal = Number(savedItem.stockQuantity ?? existing.originalStock ?? 0);
-        const updatedStock = Math.max(0, updatedOriginal - Number(savedItem.salesQuantity ?? (existing.qty + 1)));
-        return prev.map((it) =>
-          it.gtin === savedItem.gtin
-            ? {
-                ...it,
-                qty: Number(savedItem.salesQuantity ?? (existing.qty + 1)),
-                stock: updatedStock, // ✅ 서버 계산된 재고 그대로 반영
-                price: savedItem.sdPrice ?? it.price,
-                originalStock: updatedOriginal, // ✅ 원재고는 stockQuantity
-              }
-            : it
-        );
-      } else {
-        const qty = Number(savedItem.salesQuantity ?? 1);
-        const baseOriginal = Number(savedItem.stockQuantity ?? product.stock ?? 0);
-        return [
-          ...prev,
-          {
-            id: savedItem.no || savedItem.id,
-            gtin: savedItem.gtin,
-            name: savedItem.productName || product.productName || "상품명 미등록",
-            qty,
-            price: Number(savedItem.sdPrice) || product.price || 0,
-            originalStock: baseOriginal,
-            stock: Math.max(0, baseOriginal - qty), // ✅ 서버 값 반영
-          },
-        ];
-      }
-    });
+   const resolvedPrice =
+      Number(
+        savedItem.unitPrice ??
+        savedItem.sdPrice ??
+        (savedItem.subtotal && savedItem.salesQuantity
+          ? savedItem.subtotal / savedItem.salesQuantity
+          : product.price ?? 0)
+      );
+
+  if (existing) {
+    const updatedOriginal = Number(savedItem.stockQuantity ?? existing.originalStock ?? 0);
+    const updatedStock = Math.max(0, updatedOriginal - Number(savedItem.salesQuantity ?? (existing.qty + 1)));
+    return prev.map((it) =>
+      it.gtin === savedItem.gtin
+        ? {
+            ...it,
+            qty: Number(savedItem.salesQuantity ?? (existing.qty + 1)),
+            stock: updatedStock,
+            price: resolvedPrice,
+            originalStock: updatedOriginal,
+          }
+        : it
+    );
+  } else {
+    const qty = Number(savedItem.salesQuantity ?? 1);
+    const baseOriginal = Number(savedItem.stockQuantity ?? product.stock ?? 0);
+    return [
+      ...prev,
+      {
+        id: savedItem.no || savedItem.id,
+        gtin: savedItem.gtin,
+        name: savedItem.productName || product.productName || "상품명 미등록",
+        qty,
+        price: resolvedPrice,
+        originalStock: baseOriginal,
+        stock: Math.max(0, baseOriginal - qty),
+      },
+    ];
+  }
+});
+
   } catch (err) {
     console.error("❌ 상품 추가 실패:", err);
     alert("상품을 추가하지 못했습니다.");
@@ -122,6 +131,13 @@ const handleAddItem = async (product) => {
           console.log("📦 PATCH 요청 시도:", id, newQty);
           const res = await updateItemQuantity(id, newQty);
           console.log("📬 PATCH 응답 성공:", res);
+          if (res?.unitPrice) {
+     setItems((prev) =>
+       prev.map((it) =>
+         it.id === id ? { ...it, price: Number(res.unitPrice) } : it
+       )
+     );
+   }
         } catch (err) {
           console.error("❌ PATCH 요청 실패:", err);
         }

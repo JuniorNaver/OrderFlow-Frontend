@@ -1,4 +1,4 @@
-export default function GoodsReceiptItemRow({ item, onSelect }) {
+export default function GoodsReceiptItemRow({ item, onSelect, onDetail }) {
   const handleSelect = (e) => {
     const checked = e.target.checked;
     const targetId = item.grHeaderId ?? item.poId; // ✅ 입고ID 우선, 없으면 발주ID fallback
@@ -70,20 +70,14 @@ export default function GoodsReceiptItemRow({ item, onSelect }) {
       </td>
 
       {/* ✅ 편집 버튼 */}
-      <td className="p-2 border text-center">
+      {/* <td className="p-2 border text-center">
         <button
           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-          onClick={() =>
-            alert(
-              `🧾 [${
-                item.grHeaderId ?? item.poId
-              }] (${item.poExternalId || "-"}) 상세 기능은 준비 중입니다.`
-            )
-          }
+          onClick={() => onDetail(item.items || [])}
         >
           상세
         </button>
-      </td>
+      </td> */}
     </tr>
   );
 }

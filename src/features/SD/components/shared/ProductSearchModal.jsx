@@ -69,7 +69,7 @@ function ProductSearchModal({ onClose, onSelect }) {
                     {product.name || product.productName}
                   </span>
                   <span className="text-gray-600 text-sm">
-                    ₩ {product.price?.toLocaleString() ?? 0}
+                    ₩ {(product.unitPrice ?? product.salePrice ?? product.price ?? 0).toLocaleString()}
                   </span>
                 </div>
               </button>
