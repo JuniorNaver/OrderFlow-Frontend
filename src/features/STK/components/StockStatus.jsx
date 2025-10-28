@@ -6,6 +6,8 @@ import InventoryListComponent from './InventoryListComponent';
 
 // ⭐️ 페이지당 항목 수 상수를 정의합니다.
 const ITEMS_PER_PAGE = 15;
+// ⭐️ 한 블록당 페이지 수 상수를 정의합니다. (요청하신 10으로 설정)
+const PAGES_PER_BLOCK = 10;
 
 const StockStatus = () => {
     // 상태 관리
@@ -53,22 +55,52 @@ const StockStatus = () => {
     // ⭐️ 페이지네이션 로직 계산
     // 전체 페이지 수를 계산합니다.
     const totalPages = Math.ceil(stockData.length / ITEMS_PER_PAGE);
+    
+    // ⭐️ 페이지 블록 관련 계산
+    const totalBlocks = Math.ceil(totalPages / PAGES_PER_BLOCK); // 전체 블록 수
+    const currentBlock = Math.ceil(currentPage / PAGES_PER_BLOCK); // 현재 페이지가 속한 블록 번호
+    const startPage = (currentBlock - 1) * PAGES_PER_BLOCK + 1; // 현재 블록의 시작 페이지
+    // 현재 블록의 끝 페이지는 totalPages를 넘지 않도록 합니다.
+    const endPage = Math.min(startPage + PAGES_PER_BLOCK - 1, totalPages); 
 
     // 현재 페이지에 표시할 데이터를 계산합니다. (stockData와 currentPage가 변경될 때만 재계산)
     const paginatedData = useMemo(() => {
         const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
         const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+        // 페이지가 바뀌면 데이터 범위도 같이 바뀝니다.
         return stockData.slice(indexOfFirstItem, indexOfLastItem);
     }, [stockData, currentPage]);
 
-    // 페이지 변경 핸들러
-    const handlePrevPage = () => {
-        setCurrentPage(prev => Math.max(1, prev - 1)); // 1페이지 미만으로 내려가지 않도록 합니다.
+    // ⭐️ 페이지 변경 핸들러
+    const handlePageClick = (pageNumber) => {
+        setCurrentPage(pageNumber);
     };
 
-    const handleNextPage = () => {
-        setCurrentPage(prev => Math.min(totalPages, prev + 1)); // 마지막 페이지를 넘지 않도록 합니다.
+    // 이전 페이지 변경 핸들러 (기존 로직 유지)
+    const handlePrevPage = () => {
+        setCurrentPage(prev => Math.max(1, prev - 1));
     };
+
+    // 다음 페이지 변경 핸들러 (기존 로직 유지)
+    const handleNextPage = () => {
+        setCurrentPage(prev => Math.min(totalPages, prev + 1));
+    };
+
+    // ⭐️ 이전 블록으로 이동
+    const handlePrevBlock = () => {
+        // 이전 블록의 첫 페이지로 이동 (예: 11페이지에서 << 클릭 시 1페이지로)
+        const newPage = Math.max(1, startPage - PAGES_PER_BLOCK);
+        setCurrentPage(newPage);
+    };
+
+    // ⭐️ 다음 블록으로 이동
+    const handleNextBlock = () => {
+        // 다음 블록의 첫 페이지로 이동 (예: 1페이지에서 >> 클릭 시 11페이지로)
+        const newPage = Math.min(totalPages, endPage + 1);
+        // 만약 newPage가 totalPages를 넘어가는 경우 (마지막 블록에서 클릭 시), totalPages로 설정됩니다.
+        setCurrentPage(newPage);
+    };
+
 
     if (isLoading) return <div>로딩 중...</div>;
     if (error) return <div>오류: {error}</div>;
@@ -94,26 +126,81 @@ const StockStatus = () => {
 
             {/* ⭐️ 페이지네이션 UI (전체 페이지가 1보다 클 경우에만 표시) */}
             {totalPages > 1 && (
-                <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+                <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px', gap: '5px' }}>
+                    
+                    {/* ⭐️ 이전 블록 버튼 (첫 블록이 아닐 때만 표시) */}
+                    {currentBlock > 1 && (
+                        <button 
+                            onClick={handlePrevBlock}
+                            style={{ 
+                                padding: '8px', cursor: 'pointer', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', 
+                                transition: 'background-color 0.3s', 
+                                minWidth: '35px', fontWeight: 'bold'
+                            }}
+                        >
+                            &lt;&lt;
+                        </button>
+                    )}
+
+                    {/* 기존 이전 페이지 버튼 */}
                     <button 
                         onClick={handlePrevPage}
                         disabled={currentPage === 1}
-                        style={{ padding: '8px 16px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
+                        style={{ 
+                            padding: '8px 12px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', 
+                            opacity: currentPage === 1 ? 0.6 : 1, transition: 'opacity 0.3s'
+                        }}
                     >
                         &larr; 이전
                     </button>
                     
-                    <span style={{ padding: '8px 0', fontWeight: 'bold' }}>
-                        {currentPage} / {totalPages} 페이지
-                    </span>
+                    {/* ⭐️ 페이지 번호 버튼 리스트 */}
+                    {/* startPage부터 endPage까지 배열을 만들고 매핑합니다. */}
+                    {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+                        <button
+                            key={page}
+                            onClick={() => handlePageClick(page)}
+                            style={{ 
+                                padding: '8px 12px', 
+                                cursor: 'pointer', 
+                                border: `1px solid ${currentPage === page ? '#0056b3' : '#dee2e6'}`, 
+                                borderRadius: '4px',
+                                fontWeight: currentPage === page ? 'bold' : 'normal',
+                                backgroundColor: currentPage === page ? '#0056b3' : '#f8f9fa',
+                                color: currentPage === page ? 'white' : '#007bff',
+                                transition: 'background-color 0.3s, color 0.3s',
+                                minWidth: '35px'
+                            }}
+                        >
+                            {page}
+                        </button>
+                    ))}
                     
+                    {/* 기존 다음 페이지 버튼 */}
                     <button 
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages}
-                        style={{ padding: '8px 16px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
+                        style={{ 
+                            padding: '8px 12px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', 
+                            opacity: currentPage === totalPages ? 0.6 : 1, transition: 'opacity 0.3s'
+                        }}
                     >
                         다음 &rarr;
                     </button>
+
+                    {/* ⭐️ 다음 블록 버튼 (마지막 블록이 아닐 때만 표시) */}
+                    {currentBlock < totalBlocks && (
+                        <button 
+                            onClick={handleNextBlock}
+                            style={{ 
+                                padding: '8px', cursor: 'pointer', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px',
+                                transition: 'background-color 0.3s',
+                                minWidth: '35px', fontWeight: 'bold'
+                            }}
+                        >
+                            &gt;&gt;
+                        </button>
+                    )}
                 </div>
             )}
         </div>
