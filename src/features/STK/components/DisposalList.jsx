@@ -1,8 +1,49 @@
-import React, { useState, useEffect, useMemo } from 'react'; // useMemo 추가
-import { fetchDisposalList } from '../api/stockApi'; 
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// ⭐️ 페이지당 항목 수 상수를 정의합니다.
+// =========================================================
+// ⭐️ Mock API: 유통기한 만료 재고 목록을 시뮬레이션합니다.
+// (실제 환경에서는 '../api/stockApi'에서 가져온 fetchDisposalList를 사용해야 합니다.)
+// =========================================================
+
+// 날짜를 "YYYY-MM-DD" 형식의 문자열로 포맷하는 헬퍼 함수
+const formatDate = (date) => date.toISOString().split('T')[0];
+
+const today = new Date();
+const todayDate = formatDate(today);
+
+const yesterday = new Date(today);
+yesterday.setDate(today.getDate() - 1);
+const yesterdayDate = formatDate(yesterday);
+
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+const tomorrowDate = formatDate(tomorrow);
+
+/**
+ * 모의(Mock) API 함수
+ */
+const fetchDisposalList = async () => {
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+
+    return [
+        // 1. 만료됨 (필터링 후 표시되어야 함) - lotId가 Long 타입이므로 숫자로 설정
+        { lotId: 101, productName: '우유 1L (만료됨)', quantity: 20, expiryDate: yesterdayDate }, 
+        { lotId: 102, productName: '요거트 (만료일 오늘)', quantity: 50, expiryDate: todayDate }, 
+        { lotId: 103, productName: '파운드 케이크', quantity: 10, expiryDate: '2024-01-15' }, 
+        { lotId: 107, productName: '시금치', quantity: 5, expiryDate: yesterdayDate },
+
+        // 2. 만료되지 않음 (필터링 후 제외되어야 함)
+        { lotId: 104, productName: '신선 계란 (미만료)', quantity: 100, expiryDate: tomorrowDate }, 
+        { lotId: 105, productName: '물 500ml (미만료)', quantity: 300, expiryDate: '2026-12-31' }, 
+        
+        // 3. 날짜 누락/미만료 (필터링 후 제외되어야 함)
+        { lotId: 106, productName: '캔디 (날짜 없음)', quantity: 5, expiryDate: null },
+    ];
+};
+// =========================================================
+
+
 const ITEMS_PER_PAGE = 15;
 
 /**
@@ -12,7 +53,6 @@ const DisposalList = () => {
     // disposalData: API로 불러온 재고 정보와 사용자가 입력한 quantity를 담는 상태
     const [disposalData, setDisposalData] = useState([]); 
     const [isLoading, setIsLoading] = useState(true);
-    // ⭐️ 페이지네이션을 위한 현재 페이지 상태를 추가합니다. (기본값: 1)
     const [currentPage, setCurrentPage] = useState(1); 
     const navigate = useNavigate();
 
@@ -21,14 +61,19 @@ const DisposalList = () => {
             try {
                 const rawData = await fetchDisposalList(); 
                 
-                const initialData = rawData.map(item => ({ 
+                // 유통기한 만료 항목만 필터링
+                const today = todayDate; 
+                const expiredData = rawData.filter(item => {
+                    return item.expiryDate && item.expiryDate <= today;
+                });
+                
+                const initialData = expiredData.map(item => ({ 
                     ...item, 
                     stock: item.quantity, 
                     quantity: item.quantity || 0 // 폐기 수량 초기화 (기본값: 전량)
                 }));
 
                 setDisposalData(initialData);
-                // ⭐️ 새로운 데이터가 로드되면 현재 페이지를 1로 리셋합니다.
                 setCurrentPage(1); 
             } catch (error) {
                 console.error("폐기 목록 데이터를 불러오는 데 실패했습니다.", error);
@@ -40,33 +85,29 @@ const DisposalList = () => {
     }, []);
 
     // ⭐️ 페이지네이션 로직 계산
-    // 1. 전체 페이지 수를 계산합니다.
-    const totalPages = Math.ceil(disposalData.length / ITEMS_PER_PAGE);
+    // 안전 접근을 위해 disposalData를 사용하기 전에 빈 배열로 대체
+    const safeDisposalData = disposalData || []; 
+    const totalPages = Math.ceil(safeDisposalData.length / ITEMS_PER_PAGE);
 
-    // 2. 현재 페이지에 표시할 데이터를 계산합니다. (disposalData와 currentPage가 변경될 때만 재계산)
-    // 중요한 점: handleQuantityChange의 index는 paginatedData의 인덱스 기준이 아닌
-    // disposalData의 인덱스 기준이 되어야 합니다.
     const paginatedData = useMemo(() => {
         const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
         const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-        return disposalData.slice(indexOfFirstItem, indexOfLastItem);
-    }, [disposalData, currentPage]);
+        return safeDisposalData.slice(indexOfFirstItem, indexOfLastItem);
+    }, [safeDisposalData, currentPage]);
     
-    // 3. 페이지 변경 핸들러
     const handlePrevPage = () => {
-        setCurrentPage(prev => Math.max(1, prev - 1)); // 1페이지 미만으로 내려가지 않도록 합니다.
+        setCurrentPage(prev => Math.max(1, prev - 1)); 
     };
 
     const handleNextPage = () => {
-        setCurrentPage(prev => Math.min(totalPages, prev + 1)); // 마지막 페이지를 넘지 않도록 합니다.
+        setCurrentPage(prev => Math.min(totalPages, prev + 1)); 
     };
     
     // 핸들러: 수량 입력 변경 시 상태 업데이트
     const handleQuantityChange = (paginatedIndex, value) => {
-        // ⭐️ paginatedIndex를 실제 disposalData의 index로 변환합니다.
         const actualIndex = (currentPage - 1) * ITEMS_PER_PAGE + paginatedIndex;
         
-        const item = disposalData[actualIndex];
+        const item = safeDisposalData[actualIndex];
         const maxStock = item.stock || item.quantity; 
         const newQuantity = Math.max(0, Math.min(parseInt(value) || 0, maxStock));
         
@@ -78,18 +119,30 @@ const DisposalList = () => {
     };
 
    // 폐기 페이지 이동 핸들러 (선택된 재고를 가지고 이동)
-    const handleGoToDisposalPage = () => {
-        const selectedForDisposal = disposalData.filter(item => item.quantity > 0);
+   const handleGoToDisposalPage = () => {
+        // ⭐️ 오류 해결: disposalData가 undefined일 경우 빈 배열로 대체 후 filter 적용
+        const selectedForDisposal = (disposalData || []).filter(item => item.quantity > 0);
 
         if (selectedForDisposal.length === 0) {
-            alert("폐기할 수량을 1개 이상 입력해주세요.");
+            console.warn("폐기할 수량을 1개 이상 입력해주세요.");
             return;
         }
 
-        navigate('/stk/disposal', { state: { items: selectedForDisposal } });
+        // ⭐️ Long 타입 lotId 문제 해결: lotId를 숫자로 변환하고 DTO 구조에 맞게 매핑
+        const itemsForDisposal = selectedForDisposal.map(item => ({
+            // lotId를 명시적으로 숫자로 변환 (백엔드 Long 타입에 대응)
+            lotId: Number(item.lotId), 
+            // 백엔드가 targetQuantity를 기대한다고 가정
+            targetQuantity: item.quantity, 
+        }));
+
+        // 변환된 DTO 형식 데이터를 다음 페이지로 전달합니다.
+        // 실제 API 호출 로직은 이 다음 페이지나 별도 Service에서 처리됩니다.
+        navigate('/stk/disposal', { state: { items: itemsForDisposal } });
     };
 
-    const totalCount = disposalData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    // ⭐️ 오류 해결: disposalData가 undefined일 경우 빈 배열로 대체 후 reduce 적용
+    const totalCount = (disposalData || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
     
     if (isLoading) {
         return <div style={{ textAlign: 'center', padding: '50px' }}>폐기 목록 로딩 중...</div>;
@@ -106,15 +159,12 @@ const DisposalList = () => {
                 <span style={{ ...styles.col, flex: 1, justifyContent: 'center' }}>가용 재고</span>
             </div>
 
-            {paginatedData.length === 0 && disposalData.length === 0 ? (
+            {safeDisposalData.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px', color: '#999' }}>유통기한 만료된 폐기 대상 제품이 없습니다.</div>
             ) : (
-                // ⭐️ disposalData 대신 paginatedData를 매핑합니다.
                 paginatedData.map((item, index) => {
-                    // ⭐️ NO 표시를 현재 페이지에 맞게 계산합니다.
                     const actualNo = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                     return (
-                        // API 응답에 Lot ID가 없으므로 index를 key로 사용 (경고 방지)
                         <div key={item.lotId || actualNo} style={styles.itemRow}>
                             <span style={{ ...styles.col, flex: 0.5 }}>{actualNo}</span>
                             <div style={{ ...styles.col, flex: 3, padding: '0 10px' }}>
@@ -124,12 +174,9 @@ const DisposalList = () => {
                                 {item.expiryDate || 'N/A'}
                             </span>
                             
-                            {/* 폐기 수량 입력 필드 */}
                             <div style={{ ...styles.col, flex: 2, display: 'flex', justifyContent: 'center' }}>
                                 <input type="number" 
-                                    // ⭐️ item.quantity는 disposalData에서 가져온 현재 수량입니다.
                                     value={item.quantity} 
-                                    // ⭐️ paginatedData의 index를 전달합니다.
                                     onChange={(e) => handleQuantityChange(index, e.target.value)}
                                     min="0"
                                     max={item.stock}
@@ -137,7 +184,6 @@ const DisposalList = () => {
                                 />
                             </div>
                             
-                            {/* 가용 재고 */}
                             <span style={{ ...styles.col, flex: 1, textAlign: 'center', justifyContent: 'center' }}>
                                 {item.stock}
                             </span>
@@ -146,7 +192,6 @@ const DisposalList = () => {
                 })
             )}
 
-            {/* ⭐️ 페이지네이션 UI (전체 페이지가 1보다 클 경우에만 표시) */}
             {totalPages > 1 && (
                 <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
                     <button 
@@ -194,7 +239,7 @@ const DisposalList = () => {
 };
 
 // ------------------------------------------------------------------
-// 스타일 정의 (페이징 버튼 스타일 추가)
+// 스타일 정의
 // ------------------------------------------------------------------
 
 const containerStyles = {
