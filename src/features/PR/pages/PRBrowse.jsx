@@ -1,67 +1,40 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+// src/features/PR/pages/PRBrowse.jsx
+import React, { useEffect, useState } from "react";
 import { Sun, Refrigerator, Snowflake, PackageOpen } from "lucide-react";
 import { fetchCorners, fetchCategories, fetchProducts, fetchAvailable, reserve } from "../api/browse";
 import { Link } from "react-router-dom";
 import { usePOApi } from "../../PO/api/poApi";
-import { toastBus } from "../../../common/utils/ToastBus";
+import { useToast } from "../../../components/providers/ToastProvider"; // ✅ 전역 토스트 훅만 사용
 
 const ZONES = [
-  { key: "room", label: " 실온", icon: <Sun className="h-5 w-5" /> },
+  { key: "room", label: "실온", icon: <Sun className="h-5 w-5" /> },
   { key: "chilled", label: "냉장", icon: <Refrigerator className="h-5 w-5" /> },
   { key: "frozen", label: "냉동", icon: <Snowflake className="h-5 w-5" /> },
   { key: "other", label: "기타", icon: <PackageOpen className="h-5 w-5" /> },
 ];
 
-const slug = (s) => (s || "").trim().replace(/\s+/g, "_");
-const unslug = (s) => (s || "").replace(/_/g, " ");
-
 export default function PRBrowse() {
-  // PO(장바구니 담기 기능)
   const { createPO } = usePOApi();
+  const { showToast } = useToast(); // ✅ ToastProvider에서 가져옴
 
   const [zone, setZone] = useState("room");
   const [corners, setCorners] = useState([]);
   const [kans, setKans] = useState([]);
   const [cornerId, setCornerId] = useState(null);
 
-  // 상품 관련 상태
   const [products, setProducts] = useState([]);
   const [availableByGtin, setAvailableByGtin] = useState({});
   const [adding, setAdding] = useState({});
-  const [toast, setToast] = useState(null);
   const [loadingCorners, setLoadingCorners] = useState(false);
   const [loadingKans, setLoadingKans] = useState(false);
   const [loadingProds, setLoadingProds] = useState(false);
   const [error, setError] = useState(null);
   const [qtyByGtin, setQtyByGtin] = useState({});
-  const [poId, setPoId] = useState(null); // 현재 장바구니의 헤더 ID
+  const [poId, setPoId] = useState(null);
 
-  const toastTimerRef = useRef(null);
-
-  // 전역 ToastBus 구독: 어디서 emit해도 여기서 표시됨
-useEffect(() => {
-  const unsub = toastBus.subscribe(({ message, type }) => {
-    setToast({ message, type });
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), 1500);
-  });
-  return () => {
-    unsub();
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-  };
-}, []);
-
-  const showToast = useCallback((message, type = "info") => {
-   toastBus.emit(message, type); // 전역 버스로 발행
- }, []);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    };
-  }, []);
-
-  // 존 변경 → 코너 로드
+  // ------------------------------------------------------------
+  // ✅ 존 변경 → 코너 로드
+  // ------------------------------------------------------------
   useEffect(() => {
     let abort = false;
     setLoadingCorners(true);
@@ -71,25 +44,23 @@ useEffect(() => {
     setError(null);
 
     fetchCorners(zone)
-      .then((data) => {
-        if (!abort) setCorners(data);
-      })
+      .then((data) => !abort && setCorners(data))
       .catch((e) => {
         if (!abort) {
           setCorners([]);
           setError(e.message);
         }
       })
-      .finally(() => {
-        if (!abort) setLoadingCorners(false);
-      });
+      .finally(() => !abort && setLoadingCorners(false));
 
     return () => {
       abort = true;
     };
   }, [zone]);
 
-  // 코너 선택 → KAN 로드
+  // ------------------------------------------------------------
+  // ✅ 코너 선택 → KAN 로드
+  // ------------------------------------------------------------
   useEffect(() => {
     if (!cornerId) return;
     let abort = false;
@@ -99,38 +70,36 @@ useEffect(() => {
     setError(null);
 
     fetchCategories(zone, cornerId)
-      .then((data) => {
-        if (!abort) setKans(data);
-      })
+      .then((data) => !abort && setKans(data))
       .catch((e) => {
         if (!abort) {
           setKans([]);
           setError(e.message);
         }
       })
-      .finally(() => {
-        if (!abort) setLoadingKans(false);
-      });
+      .finally(() => !abort && setLoadingKans(false));
 
     return () => {
       abort = true;
     };
   }, [zone, cornerId]);
 
-  // KAN 클릭 → 상품 로드
+  // ------------------------------------------------------------
+  // ✅ KAN 클릭 → 상품 로드
+  // ------------------------------------------------------------
   async function onClickKan(kanCode) {
     setLoadingProds(true);
     setProducts([]);
     setError(null);
     try {
       const data = await fetchProducts(kanCode, 0, 20);
-      const normalized = data.map(p => ({
+      const normalized = data.map((p) => ({
         gtin: p.gtin ?? p.productCode ?? p.id,
         name: p.name ?? p.productName ?? p.title ?? "",
         price: p.price ?? p.unitPrice ?? p.purchasePrice,
         unit: p.unit ?? p.unitName ?? p.packageUnit,
         imageUrl: p.imageUrl ?? p.image ?? p.thumbnailUrl ?? null,
-        orderable: (p.orderable ?? true),
+        orderable: p.orderable ?? true,
       }));
       setProducts(normalized);
     } catch (e) {
@@ -140,7 +109,9 @@ useEffect(() => {
     }
   }
 
-  // 상품 로드 후 → 각 상품의 가용재고 조회
+  // ------------------------------------------------------------
+  // ✅ 상품 로드 후 각 상품의 가용재고 조회
+  // ------------------------------------------------------------
   useEffect(() => {
     if (!products?.length) {
       setAvailableByGtin({});
@@ -157,15 +128,17 @@ useEffect(() => {
         );
         if (!abort) setAvailableByGtin(Object.fromEntries(pairs));
       } catch (e) {
-        if (!abort) toastBus.emit(e.message || "재고 조회 실패", "error");
+        if (!abort) showToast(e.message || "재고 조회 실패", "error");
       }
     })();
     return () => {
       abort = true;
     };
-  }, [products]);
+  }, [products, showToast]);
 
-  // products 바뀔 때 수량 초기화
+  // ------------------------------------------------------------
+  // ✅ products 변경 시 수량 초기화
+  // ------------------------------------------------------------
   useEffect(() => {
     if (!products?.length) {
       setQtyByGtin({});
@@ -175,21 +148,23 @@ useEffect(() => {
     setQtyByGtin(init);
   }, [products]);
 
-  // 수량 제어 함수들
-  function incQty(gtin) {
+  // ------------------------------------------------------------
+  // ✅ 수량 조절 함수들
+  // ------------------------------------------------------------
+  const incQty = (gtin) => {
     setQtyByGtin((m) => {
       const cur = m[gtin] ?? 1;
       const avail = availableByGtin[gtin] ?? 0;
       const next = Math.min(cur + 1, Math.max(1, avail));
       return { ...m, [gtin]: next };
     });
-  }
+  };
 
-  function decQty(gtin) {
+  const decQty = (gtin) => {
     setQtyByGtin((m) => ({ ...m, [gtin]: Math.max(1, (m[gtin] ?? 1) - 1) }));
-  }
+  };
 
-  function setQty(gtin, val) {
+  const setQty = (gtin, val) => {
     const num = Number(val);
     setQtyByGtin((m) => {
       const avail = availableByGtin[gtin] ?? 0;
@@ -198,47 +173,49 @@ useEffect(() => {
         : m[gtin] ?? 1;
       return { ...m, [gtin]: safe };
     });
-  }
+  };
 
+  // ------------------------------------------------------------
+  // ✅ 장바구니 추가
+  // ------------------------------------------------------------
   async function addToCart(p) {
-  const gtin = p.gtin;
-  const qty = qtyByGtin[gtin] ?? 1;
-  if (qty <= 0) return;
+    const gtin = p.gtin;
+    const qty = qtyByGtin[gtin] ?? 1;
+    if (qty <= 0) return;
 
-  // 로딩 플래그 ON
-  setAdding(s => ({ ...s, [gtin]: true }));
-  const prevAvail = availableByGtin[gtin] ?? 0;
+    setAdding((s) => ({ ...s, [gtin]: true }));
+    const prevAvail = availableByGtin[gtin] ?? 0;
 
-  try {
-    // 1) 서버에 예약(available = onHand - reserved 라면 필수)
-    await reserve(gtin, qty); // 필요 시 storeId 등 인자 추가
-
-    // 2) PO 라인 생성 (기존 poId 있으면 재사용)
-    const res = await createPO({ poId, gtin, orderQty: qty });
-    if (!poId && res?.poId) setPoId(res.poId);
-
-    // 3) 낙관적 차감
-    setAvailableByGtin(m => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - qty) }));
-    // 수량도 가용치 범위로 보정
-    setQtyByGtin(m => ({
-      ...m,
-      [gtin]: Math.min(m[gtin] ?? 1, Math.max(1, prevAvail - qty)),
-    }));
-
-    showToast(`${p.name} ${qty}개 담았습니다 ✅`, "success");
-  } catch (e) {
-    console.error("장바구니 담기 실패:", e);
-    showToast(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌", "error");
-  } finally {
-    // 로딩 플래그 OFF
-    setAdding(s => ({ ...s, [gtin]: false }));
-    // 4) 서버 진실값으로 단건 재동기화(가볍고 정확)
     try {
-      const inv = await fetchAvailable(gtin);
-      setAvailableByGtin(m => ({ ...m, [gtin]: inv?.available ?? 0 }));
-    } catch {/* no-op */}
+      await reserve(gtin, qty);
+      const res = await createPO({ poId, gtin, orderQty: qty });
+      if (!poId && res?.poId) setPoId(res.poId);
+
+      setAvailableByGtin((m) => ({ ...m, [gtin]: Math.max(0, (m[gtin] ?? 0) - qty) }));
+      setQtyByGtin((m) => ({
+        ...m,
+        [gtin]: Math.min(m[gtin] ?? 1, Math.max(1, prevAvail - qty)),
+      }));
+
+      // ✅ Toast 표시
+      showToast(
+        `${p.name} ${qty}개 담았습니다`,
+        "success",
+        true,
+        "/po",
+        "장바구니 보기"
+      );
+    } catch (e) {
+      console.error("장바구니 담기 실패:", e);
+      showToast(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌", "error");
+    } finally {
+      setAdding((s) => ({ ...s, [gtin]: false }));
+      try {
+        const inv = await fetchAvailable(gtin);
+        setAvailableByGtin((m) => ({ ...m, [gtin]: inv?.available ?? 0 }));
+      } catch {/* no-op */}
+    }
   }
-}
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -474,6 +451,6 @@ useEffect(() => {
         </section>
         </div>
       </main>
-    </div >
+    </div>
   );
 }

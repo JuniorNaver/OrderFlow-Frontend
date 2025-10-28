@@ -208,7 +208,7 @@ const addToCart = useCallback(async (item, qty) => {
       return next;
     });
 
-    toastBus.emit(`${item.productName ?? productCode} ${orderQty}개 담았습니다 ✅`, "success");
+    toastBus.emit(`${item.productName ?? productCode} ${orderQty}개 담았습니다`, "success");
   } catch (e) {
     console.error("추천 담기 실패:", e);
     toastBus.emit(e?.message ?? "장바구니 추가 중 오류가 발생했습니다 ❌", "error");

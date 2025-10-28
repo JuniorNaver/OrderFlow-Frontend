@@ -49,7 +49,7 @@ const FinanceManageTab = ({ storeId, mode }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["storeFinance", storeId]);
-      showToast("예산 및 고정비 정보가 저장되었습니다 ✅", "success");
+      showToast("예산 및 고정비 정보가 저장되었습니다", "success");
     },
     onError: () => {
       showToast("저장 중 오류가 발생했습니다 ❌", "error");

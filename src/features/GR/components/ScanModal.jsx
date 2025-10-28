@@ -15,9 +15,9 @@ export default function ScanModal({ onClose, onSuccess }) {
       setLoading(true);
       const data = await searchPOByBarcode(barcode);
       setPoData(data);
-      showToast("✅ 발주 정보를 불러왔습니다.", "success");
+      showToast("발주 정보를 불러왔습니다.", "success");
     } catch {
-      showToast("❌ 발주를 찾을 수 없습니다.", "error");
+      showToast("발주를 찾을 수 없습니다.", "error");
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ export default function ScanModal({ onClose, onSuccess }) {
     // ✅ 입고 생성 + 확정 API 호출
     await createAndConfirmGR(poData.poId);
 
-    showToast("✅ 입고가 완료되었습니다!", "success");
+    showToast("입고가 완료되었습니다!", "success");
 
     // ✅ 목록 갱신 or 상위 콜백 호출
     if (typeof onSuccess === "function") onSuccess();

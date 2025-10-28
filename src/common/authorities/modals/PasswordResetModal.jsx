@@ -28,7 +28,7 @@ const PasswordResetModal = ({ isOpen, onClose }) => {
             // ⭐️ 실제 API 호출
             await requestPasswordReset(id, email);
 
-            setMessage('✅ 이메일로 비밀번호 재설정 링크가 발송되었습니다.');
+            setMessage('이메일로 비밀번호 재설정 링크가 발송되었습니다.');
             
             // 성공 후 입력 필드 초기화
             setId('');
