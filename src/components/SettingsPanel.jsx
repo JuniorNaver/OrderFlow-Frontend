@@ -7,6 +7,8 @@ import FinanceManageTab from "../common/storeconfigs/pages/FinanceManageTab";
 import AccountManage from "../common/authorities/pages/AccountManage";
 import { useAuth } from "../common/authorities/component/useAuth";
 
+import MyPage from '../common/authorities/pages/MyPage'; 
+
 const SettingsPanel = ({ open, onClose }) => {
   const { user } = useAuth(); // ✅ 실제 로그인 사용자 정보
   const isAdmin = user?.roleId?.includes("ADMIN");
@@ -14,7 +16,7 @@ const SettingsPanel = ({ open, onClose }) => {
 
   const [visible, setVisible] = useState(false);
   const [animate, setAnimate] = useState(false);
-  const [activeMainTab, setActiveMainTab] = useState("store");
+  const [activeMainTab, setActiveMainTab] = useState("store"); 
   const [activeStoreSubTab, setActiveStoreSubTab] = useState("info");
 
   useEffect(() => {
@@ -78,7 +80,7 @@ const SettingsPanel = ({ open, onClose }) => {
           </button>
         </div>
 
-        {/* 메인 탭 */}
+        {/* ⭐️ 메인 탭 영역: 마이페이지 탭 포함 */}
         <div className="flex border-b text-sm font-medium text-gray-600">
           <button
             className={`flex-1 py-2 text-center transition-colors ${activeMainTab === "store"
@@ -98,6 +100,15 @@ const SettingsPanel = ({ open, onClose }) => {
           >
             {tabLabel("계정 설정", "계정")}
           </button>
+          <button
+            className={`flex-1 py-2 text-center transition-colors ${activeMainTab === "my-page"
+                ? "text-blue-600 border-b-2 border-blue-600 bg-gray-50"
+                : "hover:text-blue-500"
+              }`}
+            onClick={() => setActiveMainTab("my-page")}
+          >
+            {tabLabel("마이페이지", "나의 정보")}
+          </button>
         </div>
 
         {/* 콘텐츠 */}
@@ -105,7 +116,7 @@ const SettingsPanel = ({ open, onClose }) => {
           {/* 🏪 지점 설정 */}
           {activeMainTab === "store" && (
             <>
-              {/* 서브탭 */}
+              {/* 서브탭 (생략된 서브탭 콘텐츠는 그대로 유지됩니다) */}
               <div className="flex mb-3 border-b text-sm font-medium text-gray-500">
                 <button
                   className={`flex-1 py-2 text-center ${activeStoreSubTab === "info"
@@ -136,7 +147,6 @@ const SettingsPanel = ({ open, onClose }) => {
                 </button>
               </div>
 
-              {/* 내부 콘텐츠 - 권한별 분기 */}
               {activeStoreSubTab === "info" &&
                 (isAdmin ? <StoreAdminTab /> : <StoreEnvTab storeId={storeId} />)}
               {activeStoreSubTab === "capacity" &&
@@ -157,6 +167,9 @@ const SettingsPanel = ({ open, onClose }) => {
 
           {/* 👤 계정 설정 */}
           {activeMainTab === "account" && <AccountManage />}
+          
+          {/* ⭐️ 마이페이지 탭: MyPage 컴포넌트를 렌더링합니다. */}
+          {activeMainTab === "my-page" && <MyPage />}
         </div>
       </div>
     </div>
