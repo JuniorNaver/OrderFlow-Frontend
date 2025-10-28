@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="relative z-0 p-6 space-y-6">
       {/* breadcrumbs */}
       <nav className="text-sm text-gray-500">
         <Link to="/" className="hover:underline">홈</Link>
