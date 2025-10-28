@@ -105,6 +105,19 @@ export const logoutUser = async () => {
 // ============================================================================
 
 /**
+ * ⭐️ 비밀번호 재설정 이메일 요청을 서버에 전송합니다. ⭐️
+ * * 백엔드: AuthController.requestPasswordReset()
+ * 엔드포인트: POST /api/auth/password/reset-request
+ * * @param {string} userId 사용자 아이디
+ * @param {string} email 사용자 이메일
+ * @returns {Promise<void>} 204 No Content
+ */
+export const requestPasswordResetEmail = async (userId, email) => {
+  // 백엔드 DTO에 맞게 userId와 email을 함께 전송
+  return await ApiClient.post("/auth/password/reset-request", { userId, email });
+};
+
+/**
  * 비밀번호 재설정 토큰의 유효성을 서버에 확인합니다.
  * @param {string} token
  * @returns {boolean} 유효한 경우 true, 실패 시 false
@@ -114,7 +127,8 @@ export const logoutUser = async () => {
  */
 export const validateResetToken = async (token) => {
   try {
-    await ApiClient.get(`/auth/password/validate-token?token=${token}`);
+    // ⚠️ GET 요청은 body를 보내지 않으므로 쿼리 파라미터로 처리합니다.
+    await ApiClient.get(`/auth/password/validate-token?token=${token}`); 
     return true;
   } catch (error) {
     console.error("토큰 유효성 검사 실패:", error.response?.data || error.message);
