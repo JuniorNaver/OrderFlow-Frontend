@@ -83,7 +83,7 @@ const RoleManage = () => {
             setOriginalPermissions(finalPermissions);
             setCurrentPermissions(finalPermissions);
             setStatus({ message: '최신 권한 데이터 로드 완료', type: 'success' });
-            showToast('✅ 권한 데이터 로드 완료', 'success'); // ✅ 토스트 추가
+            showToast('권한 데이터 로드 완료', 'success'); // ✅ 토스트 추가
 
         } catch (error) {
             console.error('권한 조회 실패:', error.response || error);
@@ -156,7 +156,7 @@ const RoleManage = () => {
             await axios.put(API_URL, updateDtos, config);
             await fetchPermissions();
             setStatus({ message: '권한 변경 사항이 성공적으로 저장되었습니다.', type: 'success' });
-            showToast('✅ 권한이 성공적으로 저장되었습니다.', 'success'); // ✅ 토스트 추가
+            showToast('권한이 성공적으로 저장되었습니다.', 'success'); // ✅ 토스트 추가
 
         } catch (error) {
             console.error('권한 저장 실패:', error.response || error);

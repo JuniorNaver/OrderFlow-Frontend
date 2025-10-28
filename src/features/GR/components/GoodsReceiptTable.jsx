@@ -47,7 +47,7 @@ export default function GoodsReceiptTable({ receipts, onSelect }) {
         <POItemListModal
           items={selectedItems}
           onConfirm={() => {
-            alert("입고 확정 기능은 준비 중입니다 ✅");
+            alert("입고 확정 기능은 준비 중입니다");
             setSelectedItems(null);
           }}
           onClose={() => setSelectedItems(null)}

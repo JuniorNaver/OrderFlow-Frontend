@@ -51,7 +51,7 @@ const StoreAdminTab = () => {
     mutationFn: (data) => storeApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(["stores"]);
-      showToast("지점이 등록되었습니다 ✅", "success");
+      showToast("지점이 등록되었습니다", "success");
     },
     onError: () => {
       showToast("지점 등록 중 오류가 발생했습니다 ❌", "error");
@@ -63,7 +63,7 @@ const StoreAdminTab = () => {
     mutationFn: ({ storeId, data }) => storeApi.update(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["stores"]);
-      showToast("저장되었습니다 ✅", "success");
+      showToast("저장되었습니다", "success");
       setEditMode(false);
     },
     onError: () => {

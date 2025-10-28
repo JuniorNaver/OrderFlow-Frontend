@@ -26,7 +26,7 @@ const StoreEnvTab = ({ storeId }) => {
     mutationFn: async (dto) => await storeApi.updateEnv(storeId, dto),
     onSuccess: () => {
       queryClient.invalidateQueries(["store-env", storeId]);
-      showToast("운영환경이 저장되었습니다 ✅", "success");
+      showToast("운영환경이 저장되었습니다", "success");
       setEditMode(false);
     },
     onError: () => {
