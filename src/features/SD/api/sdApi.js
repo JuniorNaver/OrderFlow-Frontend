@@ -47,3 +47,12 @@ export const deleteItemFromOrder = async (orderId, itemId) => {
   const res = await ApiClient.delete(`${SD_BASE}/${orderId}/delete-item/${itemId}`);
   return res; // ✅
 };
+
+// ✅ 상품명으로 검색
+export const searchProductsByName = async (name) => {
+  if (!name || name.trim() === "") return []; // 빈 문자열이면 검색 안 함
+  const res = await ApiClient.get(`${SD_BASE}/search`, {
+    params: { name },
+  });
+  return res;
+};
