@@ -167,14 +167,11 @@ function PaymentSection({
 
             <button
               onClick={async () => {
-                await completeOrder(currentOrder.orderId);
-                const newOrder = await createOrder();
-                localStorage.setItem("currentOrder", JSON.stringify(newOrder));
-                if (window.clearSalesItems) window.clearSalesItems();
-                setShowCompleteModal(false);
-                setPaidTotal(0);
-                if (onSuccess) onSuccess(newOrder);
-              }}
+                    setShowCompleteModal(false);
+                    setPaidTotal(0);
+                    // 부모가 완료 처리하도록 위임
+                    if (onSuccess) onSuccess();
+                  }}
               className="bg-blue-500 text-white px-6 py-2 rounded-xl hover:bg-blue-600 font-bold"
             >
               다음 주문으로
