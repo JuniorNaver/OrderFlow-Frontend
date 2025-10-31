@@ -1,207 +1,132 @@
-import { useState, useEffect } from "react";
-import { addItemToOrder } from "../../api/sdApi.js";
-import { updateItemQuantity } from "../../api/sdApi.js";
-import { deleteItemFromOrder } from "../../api/sdApi.js";
+import { useEffect } from "react";
+import { addItemToOrder, updateItemQuantity, deleteItemFromOrder } from "../../api/sdApi";
+import { useLoading } from "/src/components/providers/LoadingProvider";
+import { useToast } from "/src/components/providers/ToastProvider";
 
 export default function SalesTable({
   currentOrder,
+  items,                // ✅ 부모에서 내려온 상태 (유일한 소스)
+  onItemsChange,        // ✅ 부모에게 변경 전달
   onTotalChange,
-  onAddItem,
-  onItemsChange,
 }) {
-  const [items, setItems] = useState([]);
-  const [showLoading, setShowLoading] = useState(false);
+  const { showLoading, hideLoading } = useLoading();
+  const { showToast } = useToast();
 
+  // ✅ 총액 계산 (렌더링 시마다 자동 반영)
   useEffect(() => {
-  // ✅ 외부에서 테이블 아이템을 일괄 주입
-  window.loadSalesItems = (raw = []) => {
-    const mapped = raw.map((it, idx) => ({
-      id: it.no || idx,                         // SalesItem.no
-      gtin: it.gtin,                            // 상품 바코드
-      name: it.productName,                     // 상품명
-      price: Number(it.unitPrice ?? 0),           // 판매 단가 (sdPrice = unitPrice)
-      qty: Number(it.salesQuantity ?? 1),       // 수량
-      stock: Number(it.stockQuantity ?? 0),     // 표시용 재고
-      subtotal: Number(it.subtotal ?? 0),       // 소계 (백엔드 계산값)
-    }));
-    setItems(mapped);
-  };
-
-  window.clearSalesItems = () => {
-    setItems([]);
-  };
-}, []);
-
-  useEffect(() => {
-  onItemsChange?.(items);
-  const total = items.reduce((sum, it) => sum + (Number(it.price) * Number(it.qty)), 0);
-  onTotalChange?.(total);
-}, [items, onItemsChange, onTotalChange]);
-
-
-// ✅ 상품 추가 (DB 저장 + 화면 반영)
-const handleAddItem = async (product) => {
-  if (!currentOrder?.orderId) {
-    setShowLoading(true);
-    setTimeout(() => setShowLoading(false), 1500);
-    return;
-  }
-
-  try {
-    const savedItem = await addItemToOrder(currentOrder.orderId, {
-      gtin: product.gtin || product.id,
-      quantity: 1,
-    });
-
-    console.log("✅ DB 응답:", savedItem);
-
-    setItems((prev) => {
-  const existing = prev.find((it) => it.gtin === savedItem.gtin);
-
-   const resolvedPrice =
-      Number(
-        savedItem.unitPrice ??
-        savedItem.sdPrice ??
-        (savedItem.subtotal && savedItem.salesQuantity
-          ? savedItem.subtotal / savedItem.salesQuantity
-          : product.price ?? 0)
-      );
-
-  if (existing) {
-    const updatedOriginal = Number(savedItem.stockQuantity ?? existing.originalStock ?? 0);
-    const updatedStock = Math.max(0, updatedOriginal - Number(savedItem.salesQuantity ?? (existing.qty + 1)));
-    return prev.map((it) =>
-      it.gtin === savedItem.gtin
-        ? {
-            ...it,
-            qty: Number(savedItem.salesQuantity ?? (existing.qty + 1)),
-            stock: updatedStock,
-            price: resolvedPrice,
-            originalStock: updatedOriginal,
-          }
-        : it
+    const total = items.reduce(
+      (sum, it) => sum + (Number(it.price) || 0) * (it.qty || 0),
+      0
     );
-  } else {
-    const qty = Number(savedItem.salesQuantity ?? 1);
-    const baseOriginal = Number(savedItem.stockQuantity ?? product.stock ?? 0);
-    return [
-      ...prev,
-      {
-        id: savedItem.no || savedItem.id,
-        gtin: savedItem.gtin,
-        name: savedItem.productName || product.productName || "상품명 미등록",
-        qty,
-        price: resolvedPrice,
-        originalStock: baseOriginal,
-        stock: Math.max(0, baseOriginal - qty),
-      },
-    ];
-  }
-});
+    onTotalChange?.(total);
+  }, [items, onTotalChange]);
 
-  } catch (err) {
-    console.error("❌ 상품 추가 실패:", err);
-    alert("상품을 추가하지 못했습니다.");
-  }
-};
+  // ✅ 상품 추가 (검색/바코드 공용)
+  const handleAddItem = async (product) => {
+    if (!currentOrder?.orderId) return showToast("⛔ 주문이 없습니다.", "error");
 
+    try {
+      showLoading("상품 추가 중...");
+      const saved = await addItemToOrder(currentOrder.orderId, {
+        gtin: product.gtin || product.id,
+        quantity: 1,
+      });
+      hideLoading();
 
+      // ✅ 부모 상태 갱신
+      onItemsChange((prev) => {
+        const existing = prev.find((it) => it.gtin === saved.gtin);
+        const price = Number(saved.unitPrice ?? saved.sdPrice ?? product.price ?? 0);
 
+        if (existing) {
+          return prev.map((it) =>
+            it.gtin === saved.gtin
+              ? {
+                  ...it,
+                  qty: saved.salesQuantity ?? it.qty + 1,
+                  stock: saved.stockQuantity ?? it.stock,
+                  price,
+                  subtotal: saved.subtotal ?? price * (it.qty + 1),
+                }
+              : it
+          );
+        }
+
+        return [
+          ...prev,
+          {
+            id: saved.no || saved.id,
+            gtin: saved.gtin,
+            name: saved.productName || product.productName || "상품명 미등록",
+            qty: saved.salesQuantity ?? 1,
+            price,
+            stock: saved.stockQuantity ?? 0,
+            subtotal: saved.subtotal ?? price,
+          },
+        ];
+      });
+    } catch (err) {
+      hideLoading();
+      console.error("❌ 상품 추가 실패:", err);
+      showToast("상품 추가 중 오류 발생 ❌", "error");
+    }
+  };
 
   // ✅ 수량 변경
- const handleQuantityChange = async (id, delta) => {
-  console.log("⚡ handleQuantityChange 호출됨:", id, delta);
+  const handleQuantityChange = async (id, delta) => {
+    const target = items.find((it) => it.id === id);
+    if (!target) return;
+    const newQty = target.qty + delta;
+    if (newQty < 1) return showToast("⚠️ 최소 수량은 1개입니다.", "warning");
 
-  setItems((prev) =>
-    prev.map((item) => {
-      if (item.id !== id) return item;
+    try {
+      const res = await updateItemQuantity(id, newQty);
 
-      let newQty = item.qty + delta;
-      if (newQty < 1) return item;
-
-       const newStock = Math.max(0, Number(item.originalStock ?? 0) - newQty);
-     if (newStock < 0) {
-        alert("재고 수량이 부족합니다!");
-        return item;
-      }
-
-      // ✅ axios PATCH로 변경
-      (async () => {
-        try {
-          console.log("📦 PATCH 요청 시도:", id, newQty);
-          const res = await updateItemQuantity(id, newQty);
-          console.log("📬 PATCH 응답 성공:", res);
-          if (res?.unitPrice) {
-     setItems((prev) =>
-       prev.map((it) =>
-         it.id === id ? { ...it, price: Number(res.unitPrice) } : it
-       )
-     );
-   }
-        } catch (err) {
-          console.error("❌ PATCH 요청 실패:", err);
-        }
-      })();
-
-      return { ...item, qty: newQty, stock: newStock };
-    })
-  );
-};
-
-
+      onItemsChange((prev) =>
+        prev.map((it) =>
+          it.id === id
+            ? {
+                ...it,
+                qty: res.salesQuantity ?? newQty,
+                stock: res.stockQuantity ?? it.stock,
+                price: Number(res.unitPrice ?? it.price),
+                subtotal:
+                  Number(res.subtotal) ??
+                  Number(res.unitPrice ?? it.price) * newQty,
+              }
+            : it
+        )
+      );
+    } catch (err) {
+      console.error("❌ 수량 변경 실패:", err);
+      showToast("수량 변경 중 오류 발생 ❌", "error");
+    }
+  };
 
   // ✅ 상품 삭제
   const handleDeleteItem = async (itemId) => {
-  if (!currentOrder?.orderId) return alert("⛔ 주문이 없습니다.");
-  if (!window.confirm("이 상품을 삭제하시겠습니까?")) return;
+    if (!currentOrder?.orderId) return showToast("⛔ 주문이 없습니다.", "error");
+    if (!window.confirm("이 상품을 삭제하시겠습니까?")) return;
 
-  try {
-    const updated = await deleteItemFromOrder(currentOrder.orderId, itemId);
-    setItems(updated.salesItems || []);
-    alert("✅ 상품이 삭제되었습니다.");
-  } catch (err) {
-    console.error("❌ 삭제 실패:", err);
-    alert("삭제 중 오류가 발생했습니다.");
-  }
-};
+    try {
+      await deleteItemFromOrder(currentOrder.orderId, itemId);
+      onItemsChange((prev) => prev.filter((it) => it.id !== itemId));
+      showToast("✅ 상품이 삭제되었습니다.", "success");
+    } catch (err) {
+      console.error("❌ 삭제 실패:", err);
+      showToast("삭제 중 오류 ❌", "error");
+    }
+  };
 
-  // ✅ 총액 계산 → 부모로 전달
+  // ✅ 전역 등록 (검색/바코드용)
   useEffect(() => {
-    const total = items.reduce(
-      (sum, item) => sum + (Number(item.price) || 0) * (item.qty || 0),
-      0
-    );
-    if (onTotalChange) onTotalChange(total);
-  }, [items, onTotalChange]);
+    if (!currentOrder?.orderId) return;
+    window.addItemToSales = handleAddItem;
 
-  // ✅ 전역 함수 등록 (바코드/검색 등에서 접근)
-  // ✅ currentOrder가 생길 때마다 최신 addItemToSales 등록
-      useEffect(() => {
-        // 🛑 주문이 아직 생성되지 않았으면 등록하지 않음
-        if (!currentOrder?.orderId) return;
-
-        console.log("🪄 addItemToSales 등록됨 (orderId:", currentOrder.orderId, ")");
-
-        // ✅ 전역 함수 등록
-        window.addItemToSales = handleAddItem;
-        window.clearSalesItems = () => {
-          console.log("🧹 결제 완료 후 상품 목록 초기화");
-          setItems([]);
-          onTotalChange?.(0);
-        };
-
-        // ✅ 부모에게 콜백 전달
-        onAddItem?.(handleAddItem);
-
-        // ✅ 언마운트 시 정리
-        return () => {
-          delete window.addItemToSales;
-          delete window.clearSalesItems;
-        };
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [currentOrder]);
-
+    return () => {
+      delete window.addItemToSales;
+    };
+  }, [currentOrder]);
 
   return (
     <div className="bg-white shadow-xl rounded-2xl p-6">
@@ -217,42 +142,43 @@ const handleAddItem = async (product) => {
           </tr>
         </thead>
         <tbody>
-          {items.map((item, idx) => (
-            <tr key={item.id || item.gtin} className="border-b hover:bg-gray-50 text-gray-800">
-              <td className="p-3 text-center">{idx + 1}</td>
-              <td className="p-3">{item.name || "이름없음"}</td>
-              <td className="p-3 text-right">
-                ₩{item.price ? Number(item.price).toLocaleString() : 0}
-              </td>
-              <td className="p-3 text-center">
-                <div className="flex justify-center items-center gap-3">
+          {items.length > 0 ? (
+            items.map((item, idx) => (
+              <tr key={item.id || item.gtin} className="border-b hover:bg-gray-50 text-gray-800">
+                <td className="p-3 text-center">{idx + 1}</td>
+                <td className="p-3">{item.name || "이름없음"}</td>
+                <td className="p-3 text-right">
+                  ₩{item.price ? Number(item.price).toLocaleString() : 0}
+                </td>
+                <td className="p-3 text-center">
+                  <div className="flex justify-center items-center gap-3">
+                    <button
+                      onClick={() => handleQuantityChange(item.id, -1)}
+                      className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 text-lg"
+                    >
+                      -
+                    </button>
+                    <span className="w-[30px] text-center">{item.qty}</span>
+                    <button
+                      onClick={() => handleQuantityChange(item.id, +1)}
+                      className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                </td>
+                <td className="p-3 text-right">{item.stock ?? 0}</td>
+                <td className="p-3 text-center">
                   <button
-                    onClick={() => handleQuantityChange(item.id, -1)}
-                    className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 text-lg"
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
                   >
-                    -
+                    X
                   </button>
-                  <span className="w-[30px] text-center">{item.qty}</span>
-                  <button
-                    onClick={() => handleQuantityChange(item.id, +1)}
-                    className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 text-lg"
-                  >
-                    +
-                  </button>
-                </div>
-              </td>
-              <td className="p-3 text-right">{item.stock ?? 0}</td>
-              <td className="p-3 text-center">
-                <button
-                  onClick={() => handleDeleteItem(item.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
-                >
-                  X
-                </button>
-              </td>
-            </tr>
-          ))}
-          {items.length === 0 && (
+                </td>
+              </tr>
+            ))
+          ) : (
             <tr>
               <td colSpan="6" className="text-center text-gray-400 p-4">
                 상품이 없습니다.
