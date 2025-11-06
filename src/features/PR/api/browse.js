@@ -6,6 +6,6 @@ export const release         = (gtin, qty=1) => post("/inventory/release", { gti
 export const commit          = (gtin, qty=1) => post("/inventory/commit",  { gtin, qty });
 
 // browse
-export const fetchCorners    = (zone) => get("/browse/corners", { params: { zone } });
-export const fetchCategories = (zone, cornerId) => get("/browse/categories", { params: { zone, cornerId } });
-export const fetchProducts   = (kan, page=0, size=20) => get("/browse/products", { params: { kan, page, size } });
+export const fetchCorners    = (zone) => get("/corners", { params: { zone } });
+export const fetchCategories = (zone, cornerId) => get("/categories", { params: { zone, cornerId } });
+export const fetchProducts   = (kan, page=0, size=20) => get("/products", { params: { kan, page, size } });
